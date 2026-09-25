@@ -13,6 +13,10 @@ non-loopback network access, and writes results/judge_eval_<stamp>.json.
 
 ``--prod`` runs the production configuration (4 rotations, Choice only, rule-certain fast path);
 P4 fits calibration on a ``--split train`` run of it (``eval/fit_calibration.py``).
+
+A structured cell is judged as part of a table column: its value plus clean neighbours
+(``synth.column_peers``) go through ``slmjev.column.date_outliers``, as the R side will pass whole
+columns in P6.
 """
 
 from __future__ import annotations
@@ -27,7 +31,7 @@ from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from slmjev import calibrate, netguard, server, synth
+from slmjev import calibrate, column, netguard, server, synth
 from slmjev import judge as J
 from slmjev.labels import load_labels
 
@@ -46,12 +50,24 @@ def candidates(doc: dict) -> list[tuple[J.Candidate, dict]]:
     return out
 
 
+PEERS = 30  # clean neighbours of a cell in its synthetic table column
+
+
+def column_outlier(doc: dict) -> bool:
+    """Whether a cell's value stands out from its (synthetic) table column."""
+    if doc.get("kind") != "cell" or not doc.get("column"):
+        return False
+    peers = synth.column_peers(doc["column"], PEERS, doc["id"])
+    return bool(peers) and column.date_outliers([*peers, doc["text"]])[-1]
+
+
 def judge_doc(j: J.Judge, doc: dict, max_cands: int | None = None) -> list[dict]:
     rows = []
+    outlier = column_outlier(doc)
     for cand, gold in candidates(doc)[:max_cands]:
         n0 = len(getattr(j.backend, "calls", []))
         t0 = time.perf_counter()
-        rec = j.judge(doc["text"], cand, doc.get("column"))
+        rec = j.judge(doc["text"], cand, doc.get("column"), outlier)
         secs = time.perf_counter() - t0
         calls = getattr(j.backend, "calls", [])[n0:]
         rows.append({"doc": doc["id"], "chars": len(doc["text"]), "gold": gold, "rec": rec,
@@ -187,6 +203,9 @@ def summarize(rows: list[dict], identifiers: list[str]) -> dict:
         "property_type_acc": rate(type_ok, prop_n),
         "property_type_unknown": rate(type_unknown, prop_n),
         "property_type_wrong": rate(prop_n - type_ok - type_unknown, prop_n),
+        "review_reasons": {f"{'gold' if k[0] else 'decoy'}:{k[1]}": v for k, v in sorted(
+            Counter((r["gold"]["is_pii"], "+".join(r["rec"]["judge"].get("reasons") or ["error"]))
+                    for r in rows if r["rec"]["decision"] == "review").items())},
         "fast_path": {"n": len(fast), "gold": sum(r["gold"]["is_pii"] for r in fast),
                       "by_reason": dict(Counter(r["rec"]["judge"]["fast_path"] for r in fast))},
         "latency": {"calls": len(call_secs), "call_p50": _pct(call_secs, 0.5),
@@ -248,6 +267,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="a calibrate.save() file: calibrated confidence and thresholds")
     ap.add_argument("--notes", type=int, default=40)
     ap.add_argument("--cells", type=int, default=0)
+    ap.add_argument("--hard", type=int, default=0,
+                    help="hard-decoy notes instead (synth.generate_hard): fast-path precision")
     ap.add_argument("--seed", type=int, default=11)
     ap.add_argument("--max-cands", type=int, default=None, help="per document")
     ap.add_argument("--rotations", type=int, default=None, help="Choice rotations (default all)")
@@ -265,7 +286,8 @@ def main(argv: list[str] | None = None) -> int:
     labels = load_labels()
     if args.prod:
         args.rotations, args.choice_only = args.rotations or 4, True
-    docs = synth.generate(args.split, n_notes=args.notes, n_cells=args.cells, seed=args.seed)
+    docs = (synth.generate_hard(args.split, args.hard, seed=args.seed) if args.hard else
+            synth.generate(args.split, n_notes=args.notes, n_cells=args.cells, seed=args.seed))
     stamp = time.strftime("%Y%m%d-%H%M%S")
     out = args.out or Path("results") / f"judge_eval_{stamp}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -282,8 +304,9 @@ def main(argv: list[str] | None = None) -> int:
         # measure everything: all rotations by default, plus the advisory Noul and Score
         kw = dict(choice_rotations=args.rotations, ask_noul=not args.choice_only,
                   ask_score=not args.choice_only, fast_path=not args.no_fast_path, trace=True)
-        j = (J.Judge.calibrated(backend, args.calibration, **kw) if args.calibration
-             else J.Judge(backend, **kw))
+        model = None if args.url else os.environ.get(server.ENV_MODEL)
+        j = (J.Judge.calibrated(backend, args.calibration, model=model, **kw)
+             if args.calibration else J.Judge(backend, **kw))
         rows = []
         t0 = time.perf_counter()
         for i, d in enumerate(docs, 1):
@@ -296,6 +319,7 @@ def main(argv: list[str] | None = None) -> int:
                   "calibration": str(args.calibration) if args.calibration else None,
                   "seed": args.seed, "notes": args.notes, "cells": args.cells,
                   "rotations": args.rotations or "all", "generator": synth.GENERATOR_VERSION,
+                  "prompt": J.PROMPT_VERSION, "hard": args.hard,
                   "thresholds": j.thresholds.__dict__, "choice_only": args.choice_only,
                   "summary": summarize(rows, labels["identifiers"])}
         if args.cache_ab:

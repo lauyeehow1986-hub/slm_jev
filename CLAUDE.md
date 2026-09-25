@@ -186,6 +186,7 @@ slmjev/rules.py     ported SG detectors + NRIC/FIN checksum (R-parity tested)
 slmjev/policy.py    policy loader/resolver: span -> action (policy JSON lives in docs/private/)
 slmjev/synth.py     synthetic SG notes + cells with gold spans and decoys (seeded, split-hygienic)
 slmjev/judge.py     Choice (+ optional Noul/Score) over one prefix; logprob readout; rotations
+slmjev/column.py    column-level checks: date parsing, date outliers (a DOB in a date column)
 slmjev/netguard.py  loopback-only socket guard; loopback URL check
 slmjev/server.py    llama-server launcher (loopback, env API key, bounded cache)
 slmjev/calibrate.py temperature / isotonic calibration, thresholds, ECE, Brier, AUROC
@@ -233,9 +234,22 @@ models/             GGUF / adapters / calibration.json (gitignored)
     - `cell_review`: a context-free cell may be accepted but never dropped.
   - Test (382 oracle candidates): direct recall (flagged) 0.992, auto-accept precision 0.978,
     review 0.147, ECE 0.025. The fast path takes 19% of candidates.
-  - Remaining: DOBs misplaced into a date column need the R column profiler (P6). Compact dates
-    are read as `case_visit` (P5).
   - Gate status: INCOMPLETE (oracle proposer, no baseline F1).
+- [x] P4's open issues fixed in code (2026-09-25; see `docs/decisions/0005-open-issues.md`).
+  Prompt v2 (`judge.PROMPT_VERSION`), calibration refit (T ≈ 3.6).
+  - Fixes:
+    - the answer cue ends off-format answers;
+    - `fraction` family for `n/m`;
+    - compact dates in context asked as dates;
+    - `slmjev.column` date outliers (`column_outlier` review);
+    - tightened `postal_after_address`;
+    - `account_keyword`;
+    - `Judge.calibrated` refuses another prompt or model.
+  - Test: direct recall 1.000, auto-accept precision 1.000, review 0.071, ECE 0.020, 0 misses.
+  - Hard decoys: the fast path is 60/60 gold, but the model accepts some lab or bill values
+    after `PLT` / `platelets` / `total bill` (5 of 60). That is the first P5 target.
+  - The R profiler flags only shape outliers. P6 must pass whole columns so
+    `column.date_outliers` runs.
 - [ ] P5: QLoRA the judge (reusing the finetune_slm training plan), then export to GGUF.
 - [ ] P6: integrate as an `slm:jev` backend in structured_deidentification.
 - [ ] P7: benchmark against Privacy Filter, MediPhi and Presidio; write `docs/results.md`.
@@ -273,3 +287,6 @@ models/             GGUF / adapters / calibration.json (gitignored)
   - Then `python eval/fit_calibration.py --train <train.json> --test <test.json>` writes
     `models/calibration.json`.
   - `judge_eval.py --prod --calibration models/calibration.json` runs the judge end to end.
+  - `judge_eval.py --prod --hard 60 --split test --seed 41` runs hard decoys (fast-path precision).
+  - The calibration records `PROMPT_VERSION` and the model; `Judge.calibrated` refuses a mismatch.
+    Bump `PROMPT_VERSION` in `slmjev/judge.py` on any prompt, option or family change, then refit.

@@ -123,3 +123,28 @@ def test_write_jsonl_roundtrip(tmp_path):
     back = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
     assert back == docs
     assert manifest["n_docs"] == 10 and len(manifest["sha256"]) == 64
+
+
+def test_hard_decoys_never_trip_the_fast_path_and_their_postal_codes_do():
+    from slmjev import judge as J
+    docs = synth.generate_hard("dev", 200, seed=3)
+    assert len(docs) == 200 and all(d["template"] == "hard_decoy" for d in docs)
+    for d in docs:
+        synth.validate_doc(d, LABELS)
+        assert d["decoys"] and any(s["label"] == "postal_code" for s in d["spans"])
+        for s in d["decoys"]:
+            assert J.rule_certain(d["text"], J.Candidate(s["start"], s["end"])) is None, d["text"]
+        for s in d["spans"]:
+            if s["label"] == "postal_code":
+                assert J.rule_certain(d["text"], J.Candidate(s["start"], s["end"])), d["text"]
+    assert json.dumps(synth.generate_hard("dev", 20, seed=3)) == json.dumps(
+        synth.generate_hard("dev", 20, seed=3))
+
+
+def test_column_peers_are_clean_dates_for_date_columns_only():
+    from slmjev import column
+    peers = synth.column_peers("procedure_date", 30, "k1")
+    assert len(peers) == 30 and all(column.parse_date(p) for p in peers)
+    assert peers == synth.column_peers("procedure_date", 30, "k1")
+    assert not any(column.date_outliers(peers))
+    assert synth.column_peers("ward", 30, "k1") == []

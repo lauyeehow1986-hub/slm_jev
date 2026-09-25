@@ -15,7 +15,9 @@ inside a context window, and asks several typed questions over it:
 Rule-certain spans (a valid NRIC/FIN checksum, an email, a URL, a postal code after
 ``Singapore`` or a street address, an ID after an ID keyword) skip the model entirely
 (``rule_certain``). A structured cell's column header joins the prefix, and a whole cell that is
-ID-shaped, or date-shaped outside a date column, is never dropped (``cell_review``).
+ID-shaped, date-shaped outside a date column, or a date far from the rest of its column
+(``slmjev.column``) is never dropped (``cell_review``). A compact date after a date word or in a
+date column is asked as a date (``family_in_context``).
 Decisions compare the *calibrated* probability (``Judge.calibrator``, fitted in P4 by
 ``slmjev.calibrate``) with the thresholds.
 
@@ -51,6 +53,14 @@ from slmjev.netguard import check_loopback_url
 DETECTOR = "slm:jev"
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWX"
 RULE_CONFIDENCE = 0.99  # a rule-certain span, as rules.scan_text scores a validated hit
+
+# Bump on any change to the prompts, options or family routing: a calibration fitted for one
+# version is refused by another (``Judge.calibrated``).
+#   1: P3/P4.  2: "Answer with one letter:" cue, ``fraction`` family, compact dates in context.
+PROMPT_VERSION = 2
+# The answer cue. A bare "Answer:" was echoed ("Answer") instead of a letter when ``none`` sat at
+# letter E, the off-format answers of P4; the explicit cue gave full letter mass on dev.
+ANSWER_CUE = "Answer with one letter:"
 
 SYSTEM = ("You classify one marked span in clinical or administrative text from Singapore. "
           "Reply with exactly one option letter and nothing else.")
@@ -89,6 +99,7 @@ NONE_TEXT: dict[str, str] = {
     "numeric": "not personal (other date, lab value, dose, measurement)",
     "text": "not personal (ordinary words)",
     "alnum": "not personal (drug, test, ward/bed, measurement)",
+    "fraction": "not personal (duration like 3/7, BP like 120/80, ratio or score)",
     "all": "not personal",
 }
 _DATES = ["dob", "date_of_death"]
@@ -103,6 +114,9 @@ FAMILIES: dict[str, list[str]] = {
     "text": ["name", "address", *_SHI, "none"],
     "numeric": [*_CODES, *_DATES, "none"],
     "alnum": ["name", *_CODES, "address", *_SHI, "none"],
+    # n/m: a duration (3/7), a BP or a ratio. No ID has this shape, and offering the ID options
+    # let the model call a duration a case number (P4).
+    "fraction": [*_DATES, "none"],
     "all": [*OPTION_TEXT, "none"],
 }
 
@@ -120,6 +134,8 @@ def family_of(match: str) -> str:
     s = match.strip()
     if any(p.match(s) for p in _DATE_SHAPES):
         return "date"
+    if re.fullmatch(r"\d{1,3}/\d{1,3}", s):
+        return "fraction"
     if "@" in s or re.match(r"(?:https?://|www\.)", s, re.IGNORECASE):
         return "code"
     if re.fullmatch(r"\d{8}", s) and rules.parse_compact_date(s):
@@ -136,13 +152,15 @@ def family_of(match: str) -> str:
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _URL = re.compile(r"https?://\S+", re.IGNORECASE)
 _POSTAL_LEAD = re.compile(r"(?:\bSingapore\s*|\bS\(?)$")
-# The end of a street address: a block, a #floor-unit, or a street-type word, then at most a
-# short run of address text (no sentence break) before the postal code.
+# The end of a street address: a block, a #floor-unit, or a street-type word, then only
+# address-like tokens (numbers, units, Title-case building words) before the postal code. A
+# lower-case or all-caps word ("Block 4 clinic, platelets 245000", "PLT") breaks the address.
 _STREET_TYPES = (r"Blk|Block|Avenue|Ave|Road|Rd|Street|Drive|Crescent|Cres|Lorong|Lor|Jalan|Jln|"
                  r"Lane|Walk|Close|Place|Terrace|Rise|Link|Way|Grove|View|Heights|Green|Gardens?|"
                  r"Circle|Loop|Boulevard|Quay|Vale|Hill|Park")
-_ADDRESS_END = re.compile(rf"(?:\b(?:{_STREET_TYPES})\b\.?|#\s?\d{{1,3}}-\d{{1,5}})"
-                          r"[^\n.;:()]{0,40}?[,\s]\s*$", re.IGNORECASE)
+_ADDRESS_TOKEN = r"(?:\d{1,4}[A-Z]?|#\s?\d{1,3}-\d{1,5}|[A-Z][a-z][A-Za-z'&-]*)"
+_ADDRESS_END = re.compile(rf"(?:\b(?i:{_STREET_TYPES})\b\.?|#\s?\d{{1,3}}-\d{{1,5}})"
+                          rf"(?:[ ,]+{_ADDRESS_TOKEN}){{0,6}}[ ,]+$")
 _SG_SECTORS = {f"{i:02d}" for i in range(1, 83)}
 # An ID keyword right before the span. Acronyms are case-sensitive ("IC", not "ic").
 _ID_TAIL = r"\s*(?:[Nn]o\.?|[Nn]umber|#)?\s*[:(]?\s*$"
@@ -153,6 +171,10 @@ _ID_LEADS = [
     (re.compile(rf"\bMCR{_ID_TAIL}"), "other_id"),
 ]
 _ID_SHAPE = re.compile(r"[A-Z]{0,2}\d{5,}[A-Z]?")
+# A bank or billing account number after an account keyword: 8+ digits, optionally grouped by
+# hyphens or spaces (``250-03851-0``). The model called these ``none`` with certainty (0005).
+_ACCOUNT_LEAD = re.compile(rf"(?:\b[Aa]ccount|\b[Aa]/[Cc]|\b[Aa]cct){_ID_TAIL}")
+_ACCOUNT_SHAPE = re.compile(r"\d+(?:[- ]\d+){0,4}")
 
 
 def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
@@ -160,7 +182,8 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
 
     Only shapes a rule can confirm qualify: a valid NRIC/FIN checksum; a whole email or URL; a
     6-digit postal code right after ``Singapore``/``S(``, or ending a street address with a valid
-    sector; an ID-shaped token right after an ID keyword (``NRIC``, ``temp IC``, ``MRN``, ...).
+    sector; an ID-shaped token right after an ID keyword (``NRIC``, ``temp IC``, ``MRN``, ...),
+    or an account number right after ``account`` / ``a/c``.
     They skip the model; everything else is judged. Accepting is the fail-closed direction, since
     it only ever removes more."""
     m = text[cand.start - 1:cand.end].strip()
@@ -180,6 +203,9 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
         for lead, ident in _ID_LEADS:
             if lead.search(left[-24:]):
                 return ident, "id_keyword"
+    if (_ACCOUNT_SHAPE.fullmatch(m) and sum(c.isdigit() for c in m) >= 8
+            and _ACCOUNT_LEAD.search(left[-24:])):
+        return "other_id", "account_keyword"
     return None
 
 
@@ -332,7 +358,7 @@ def ask(backend: Backend, prefix: str, stem: str, options: Mapping[str, str],
     for order in orders:
         shown = [keys[i] for i in order]
         lines = "\n".join(f"{LETTERS[j]}) {options[k]}" for j, k in enumerate(shown))
-        dist = backend.first_token(prefix, f"{stem}\n{lines}\nAnswer:")
+        dist = backend.first_token(prefix, f"{stem}\n{lines}\n{ANSWER_CUE}")
         mass = letter_mass(dist, LETTERS[:len(shown)])
         total = sum(mass.values())
         masses.append(total)
@@ -409,18 +435,39 @@ def prefix_for(text: str, cand: Candidate, width: int = 160, column: str | None 
 
 # A structured-cell column whose values are dates; a whole-cell date elsewhere is misplaced.
 _DATE_COLUMN = re.compile(r"date|dob|birth|death|died|_dt$|^dt_|time", re.IGNORECASE)
+# A word that introduces a date, right before the span ("Admitted on", "DOB:", "dated").
+_DATE_LEAD = re.compile(r"(?:\b(?:on|dated?|since|until|till|DOB|born|birth|death|died)|"
+                        r"\bD\.O\.B\.?)\s*:?\s*$", re.IGNORECASE)
 
 
-def cell_review(text: str, cand: Candidate, family: str, column: str | None) -> str | None:
+def family_in_context(text: str, cand: Candidate, column: str | None = None) -> str:
+    """:func:`family_of`, refined by context code can check. An 8-digit compact date after a date
+    word, or as a whole cell of a date column, is asked as a date: offered the ID options as
+    well, the model called admission dates case numbers (P4)."""
+    m = text[cand.start - 1:cand.end].strip()
+    fam = family_of(m)
+    if fam == "numeric" and re.fullmatch(r"\d{8}", m):
+        whole_cell = column is not None and m == text.strip()
+        if (whole_cell and _DATE_COLUMN.search(column)) or _DATE_LEAD.search(
+                text[max(0, cand.start - 1 - 24):cand.start - 1]):
+            return "date"
+    return fam
+
+
+def cell_review(text: str, cand: Candidate, family: str, column: str | None,
+                column_outlier: bool = False) -> str | None:
     """A review reason for a whole structured cell the model may not drop, else None.
 
     A bare cell has no context but its header, and the model trusts the header: P4 saw case
     numbers in a ``ward`` column answered ``none`` with certainty. So a whole-cell value that is
-    date-shaped (outside a date column) or ID-shaped (5+ digits) is never dropped: where the
-    judge would drop it, it goes to review instead."""
+    date-shaped (outside a date column) or ID-shaped (5+ digits), or that the caller found to be
+    an outlier in its column (``slmjev.column.date_outliers``: a DOB typed into a procedure-date
+    column), is never dropped: where the judge would drop it, it goes to review instead."""
     m = text[cand.start - 1:cand.end].strip()
     if not column or m != text.strip():
         return None
+    if column_outlier:
+        return "column_outlier"
     if family == "date" or rules.parse_compact_date(m) is not None:
         return None if _DATE_COLUMN.search(column) else "misplaced_date"
     return "cell_id_shape" if sum(c.isdigit() for c in m) >= 5 else None
@@ -442,17 +489,30 @@ class Judge:
     trace: bool = False
 
     @classmethod
-    def calibrated(cls, backend: Backend, path: str | os.PathLike, **kw) -> Judge:
-        """A judge with the calibrator and thresholds fitted in ``path`` (``calibrate.save``)."""
-        cal, th, _ = calibrate.load(path)
+    def calibrated(cls, backend: Backend, path: str | os.PathLike, *,
+                   model: str | os.PathLike | None = None, **kw) -> Judge:
+        """A judge with the calibrator and thresholds fitted in ``path`` (``calibrate.save``).
+
+        A calibration only holds for the model and prompts it was fitted on, so it is refused
+        when its ``meta`` names another :data:`PROMPT_VERSION` or, when ``model`` is given,
+        another model file."""
+        cal, th, meta = calibrate.load(path)
+        if meta.get("prompt") != PROMPT_VERSION:
+            raise ValueError(f"{path}: fitted for prompt version {meta.get('prompt')!r}, "
+                             f"this judge is {PROMPT_VERSION}; refit it")
+        if model is not None and os.path.basename(str(meta.get("model") or "")) != \
+                os.path.basename(str(model)):
+            raise ValueError(f"{path}: fitted for model {meta.get('model')!r}, not {model!r}")
         base = kw.pop("thresholds", Thresholds())
         return cls(backend, calibrator=cal, thresholds=replace(
             base, drop_below=th["drop_below"], accept_at=th["accept_at"]), **kw)
 
-    def judge(self, text: str, cand: Candidate, column: str | None = None) -> dict:
-        """One span record. ``column`` is the header when ``text`` is a structured cell."""
+    def judge(self, text: str, cand: Candidate, column: str | None = None,
+              column_outlier: bool = False) -> dict:
+        """One span record. ``column`` is the header when ``text`` is a structured cell;
+        ``column_outlier`` says the cell's value stands out from the rest of its column."""
         match = text[cand.start - 1:cand.end]
-        family = cand.family or family_of(match)
+        family = cand.family or family_in_context(text, cand, column)
         rec: dict = {"start": cand.start, "end": cand.end, "match": match, "type": cand.type,
                      "identifier": None, "detector": DETECTOR, "confidence": None,
                      "p_identifier": None, "category": None, "category_probs": {},
@@ -540,8 +600,8 @@ class Judge:
 
         decision = decide(conf, cat_p, th, reasons)
         # a context-free cell may be accepted, never dropped
-        if decision == "not_identifier" and (cell_reason := cell_review(text, cand, family,
-                                                                        column)):
+        if decision == "not_identifier" and (cell_reason := cell_review(
+                text, cand, family, column, column_outlier)):
             decision = "review"
             reasons.append(cell_reason)
         rec["decision"] = decision
@@ -549,9 +609,9 @@ class Judge:
         info["reasons"] = reasons
         return rec
 
-    def judge_many(self, text: str, cands: Iterable[Candidate],
-                   column: str | None = None) -> list[dict]:
-        return [self.judge(text, c, column) for c in cands]
+    def judge_many(self, text: str, cands: Iterable[Candidate], column: str | None = None,
+                   column_outlier: bool = False) -> list[dict]:
+        return [self.judge(text, c, column, column_outlier) for c in cands]
 
 
 def _round(d: Mapping[str, float], nd: int = 4) -> dict[str, float]:

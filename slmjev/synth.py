@@ -41,8 +41,8 @@ from slmjev.labels import load_labels
 GENERATOR_VERSION = "synth.v1"
 SPLITS = ("train", "dev", "test")
 
-__all__ = ["GENERATOR_VERSION", "SPLITS", "generate", "load_labels", "validate_doc",
-           "write_jsonl"]
+__all__ = ["GENERATOR_VERSION", "SPLITS", "column_peers", "generate", "generate_hard",
+           "load_labels", "validate_doc", "write_jsonl"]
 
 _TYPES: dict[str, str] = load_labels()["types"]
 
@@ -226,8 +226,15 @@ def _date(rng: random.Random, lo: int, hi: int) -> dt.date:
     return start + dt.timedelta(days=rng.randrange((dt.date(hi, 12, 31) - start).days))
 
 
+_DATE_FORMATS = ("dmy_slash", "iso", "d_mon_y", "d-mon-y", "compact", "dmy_dot")
+
+
 def _fmt_date(rng: random.Random, d: dt.date) -> tuple[str, str]:
-    fmt = rng.choice(("dmy_slash", "iso", "d_mon_y", "d-mon-y", "compact", "dmy_dot"))
+    fmt = rng.choice(_DATE_FORMATS)
+    return _fmt_as(d, fmt), fmt
+
+
+def _fmt_as(d: dt.date, fmt: str) -> str:
     mon = _MONTHS[d.month - 1]
     return {
         "dmy_slash": f"{d.day:02d}/{d.month:02d}/{d.year}",
@@ -236,7 +243,7 @@ def _fmt_date(rng: random.Random, d: dt.date) -> tuple[str, str]:
         "d-mon-y": f"{d.day:02d}-{mon}-{d.year}",
         "compact": f"{d.year}{d.month:02d}{d.day:02d}",
         "dmy_dot": f"{d.day:02d}.{d.month:02d}.{d.year}",
-    }[fmt], fmt
+    }[fmt]
 
 
 def _card(rng: random.Random) -> str:
@@ -655,6 +662,49 @@ def generate(split: str, n_notes: int, n_cells: int, seed: int) -> list[dict]:
     for i in range(n_cells):
         template, column, doc, meta = _cell(rng, P)
         docs.append(_record(f"{split}-cell-{i:05d}", split, "cell", template, column, doc, meta))
+    return docs
+
+
+def column_peers(column: str, n: int, key: str) -> list[str]:
+    """``n`` clean values of ``column``, the rest of the table a cell sits in, for column-level
+    checks (``slmjev.column``). One date format per column, as in a real export. Only date columns
+    have peers; ``[]`` otherwise. Seeded by ``key`` alone, so :func:`generate` is unchanged."""
+    if column != "procedure_date":
+        return []
+    rng = random.Random(f"{GENERATOR_VERSION}:peers:{column}:{key}")
+    fmt = rng.choice(_DATE_FORMATS)
+    return [_fmt_as(_date(rng, 2019, 2026), fmt) for _ in range(n)]
+
+
+_HARD_PLACES = ("Block {b} Level {l} clinic", "Block {b}", "Tower Block", "#{l:02d}-{u} clinic")
+_HARD_LABS = ("platelets", "platelet count", "PLT", "WBC count", "total bill")
+
+
+def generate_hard(split: str, n: int, seed: int) -> list[dict]:
+    """Notes built to trip the rule-certain fast path (``judge.rule_certain``): a 6-digit lab
+    value with a valid postal sector right after a hospital block or unit, or right after an ID
+    keyword, each next to a real address with its postal code. The decoys measure the rules'
+    precision; the gold postal codes check that they still fire. Separate from :func:`generate`
+    (own seed stream), so the main corpus is unchanged."""
+    if split not in SPLITS:
+        raise ValueError(f"split must be one of {SPLITS}")
+    rng = random.Random(f"{GENERATOR_VERSION}:hard:{seed}:{split}")
+    P = _Pools(split)
+    docs = []
+    for i in range(n):
+        doc = _Doc()
+        value = rng.choice(_SECTORS) + _digits(rng, 4)
+        lab = rng.choice(_HARD_LABS)
+        if rng.random() < 0.7:
+            place = rng.choice(_HARD_PLACES).format(b=rng.randint(1, 9), l=rng.randint(1, 12),
+                                                    u=rng.randint(1, 99))
+            doc.add(f"Reviewed at {place}, {lab} ")
+        else:
+            doc.add(f"{rng.choice(('NRIC', 'FIN', 'MRN', 'Passport'))} verified; {lab} ")
+        doc.decoy(value, "measurement", kind="lab").add(". Lives at ")
+        _address(rng, P, doc)
+        doc.add(".")
+        docs.append(_record(f"{split}-hard-{i:05d}", split, "note", "hard_decoy", None, doc, {}))
     return docs
 
 

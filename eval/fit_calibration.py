@@ -167,8 +167,12 @@ def main(argv: list[str] | None = None) -> int:
     tr_meta, tr_rows = load_rows(args.train)
     te_meta, te_rows = load_rows(args.test)
     for m, name in ((tr_meta, "train"), (te_meta, "test")):
-        if m.get("split") != name or not m.get("prod"):
-            raise SystemExit(f"--{name} must be a --prod report on the {name} split")
+        if m.get("split") != name or not m.get("prod") or m.get("hard"):
+            raise SystemExit(f"--{name} must be a --prod report on the {name} split "
+                             "(not a --hard one)")
+    if tr_meta.get("prompt") is None or tr_meta.get("prompt") != te_meta.get("prompt"):
+        raise SystemExit(f"train and test must come from the same prompt version "
+                         f"(train {tr_meta.get('prompt')!r}, test {te_meta.get('prompt')!r})")
 
     f = fit(tr_rows, k=args.folds, recall_target=args.recall_target,
             precision_target=args.precision_target)
@@ -176,8 +180,8 @@ def main(argv: list[str] | None = None) -> int:
     th = replace(J.Thresholds(), drop_below=ch.drop_below, accept_at=ch.accept_at)
     base = J.Thresholds()
     meta = {"fitted": time.strftime("%Y-%m-%d"), "model": tr_meta.get("model"),
-            "generator": tr_meta.get("generator"), "train": {k: tr_meta.get(k) for k in (
-                "split", "seed", "notes", "cells", "rotations")},
+            "prompt": tr_meta.get("prompt"), "generator": tr_meta.get("generator"),
+            "train": {k: tr_meta.get(k) for k in ("split", "seed", "notes", "cells", "rotations")},
             "n": f["n"], "n_pos": f["n_pos"], "folds": f["folds"], "cv_nll": f["cv_nll"],
             "recall_target": args.recall_target, "precision_target": args.precision_target,
             "recall_at_drop_oof": ch.recall_at_drop,

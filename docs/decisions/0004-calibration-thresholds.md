@@ -105,8 +105,10 @@ in code, not in the thresholds:
 - **Remaining misses (2).** Both are DOBs misplaced into a `procedure_date` column (`19830112`,
   `20001207`). In a date column the judge cannot tell a birth date from a procedure date.
   - This is a column-level signal: a 1983 value among recent procedure dates.
-  - structured_deidentification's profiler (`profile.R`, misplaced-PII and outlier detection)
-    covers it, and P6 must keep that profiler in front of the judge.
+  - ~~structured_deidentification's profiler (`profile.R`, misplaced-PII and outlier detection)
+    covers it, and P6 must keep that profiler in front of the judge.~~ **Corrected in 0005:**
+    that profiler flags only *shape* outliers, so it cannot see `19830112` among `20230602`.
+    slm_jev now checks the values itself (`slmjev.column`).
 - **False accepts (5).**
   - Four are compact dates (`20230602`) and one is a duration (`5/7`), all read as `case_visit`.
   - They over-remove, the safe direction, but they cost utility. They are the P5 finetune's first
@@ -150,6 +152,8 @@ Passing so far: direct-identifier recall 0.992 (≥ 0.98), auto-accept precision
 the gated number, but it is reported. See `eval-log.md`.
 
 ## Next
+Superseded in part by 0005, which fixed the open issues below without a finetune.
+
 - **P5 (QLoRA):**
   - the targets are compact-date → `case_visit` false accepts, off-format answers on `n/7` and ICD
     codes, and category confusions (`device`, `other_id`);

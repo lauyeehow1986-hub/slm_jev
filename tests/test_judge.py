@@ -106,9 +106,39 @@ def test_permutation_averaging_removes_position_bias():
     ("tan@example.com", "code"), ("ahkow.tan@example.org", "code"), ("9123 4567", "numeric"),
     ("Blk 123 Ang Mo Kio Ave 3", "alnum"), ("HIV-1", "alnum"), ("SGH1234567", "alnum"),
     ("Tan Ah Kow", "text"), ("schizophrenia", "text"), ("91234567", "code"),
+    ("3/7", "fraction"), ("120/80", "fraction"), ("12/05/50", "date"),
 ])
 def test_family_of_uses_surface_shape(s, fam):
     assert J.family_of(s) == fam
+
+
+@pytest.mark.parametrize(("text", "sub", "column", "fam"), [
+    ("Admitted on 20230602 for review", "20230602", None, "date"),
+    ("DOB: 19830112", "19830112", None, "date"),
+    ("D.O.B. 19830112", "19830112", None, "date"),
+    ("dated 20230602", "20230602", None, "date"),
+    ("Ref 20230602 on file", "20230602", None, "numeric"),  # no date word before it
+    ("Contact 91234567 today", "91234567", None, "code"),
+    ("20230602", "20230602", "procedure_date", "date"),  # a whole cell of a date column
+    ("20230602", "20230602", "serial_no", "numeric"),
+    ("3/7", "3/7", None, "fraction"),
+])
+def test_family_in_context_reads_compact_dates_after_date_words(text, sub, column, fam):
+    assert J.family_in_context(text, _addr(text, sub), column) == fam
+
+
+def test_fractions_are_offered_no_id_options():
+    fake = Fake(script({"none": 0.9}))
+    J.Judge(fake).judge("Fever for 5/7, BP 120/80", _addr("Fever for 5/7, BP 120/80", "5/7"))
+    opts = {_TEXT_TO_KEY[m[2]] for _, q in fake.calls for line in q.split("\n")
+            if (m := _OPT.match(line))}
+    assert opts == set(J.FAMILIES["fraction"]) and "case_visit" not in opts
+
+
+def test_questions_end_with_the_answer_cue():
+    fake = Fake(script({"none": 0.9}))
+    J.Judge(fake).judge(TEXT, cand("S1234567A"))
+    assert fake.calls and all(q.endswith(f"\n{J.ANSWER_CUE}") for _, q in fake.calls)
 
 
 def test_every_family_has_none_and_fits_the_letters():
@@ -290,6 +320,8 @@ def test_property_model_question_is_opt_in_and_never_overrides_rules():
     ("passport no. E12345678 seen", "E12345678", "national_id"),
     ("MRN: 12345678.", "12345678", "mrn"),
     ("Seen by Dr Nair (MCR M97984B).", "M97984B", "other_id"),
+    ("Refund to bank account 250-03851-0.", "250-03851-0", "other_id"),
+    ("Paid from a/c no. 0123 456789.", "0123 456789", "other_id"),
 ])
 def test_rule_certain_spans_skip_the_model(t, sub, ident):
     fake = Fake(script({"none": 0.99}))
@@ -311,6 +343,13 @@ def test_rule_certain_spans_skip_the_model(t, sub, ident):
     ("ref: tan@", "tan@"),
     ("clinic 1234567", "1234567"),  # "ic" inside a word is no keyword
     ("NRIC 3/7", "3/7"),  # not ID-shaped
+    ("account balance 1234567", "1234567"),  # not right after the keyword; 7 digits
+    ("bank account 250-038", "250-038"),  # too few digits for an account number
+    # hard decoys: a hospital block or unit, then a lab value in a valid postal sector
+    ("Reviewed at Block 4 Level 3 clinic, platelets 245000.", "245000"),
+    ("Reviewed at Tower Block, PLT 245000.", "245000"),
+    ("Reviewed at #05-12 clinic, WBC count 245000.", "245000"),
+    ("Reviewed at Block 7, total bill 245000.", "245000"),
 ])
 def test_uncertain_shapes_still_go_to_the_model(t, sub):
     fake = Fake(script({"none": 0.99}))
@@ -361,6 +400,20 @@ def test_context_free_cells_are_never_dropped(value, column, reason):
     assert r["decision"] == "not_identifier"
 
 
+def test_column_outliers_are_never_dropped():
+    # a DOB in a procedure-date column: the model may drop a date there, the column check may not
+    fake = Fake(script({"none": 0.99}))
+    r = J.Judge(fake).judge("19830112", J.Candidate(1, 8), column="procedure_date")
+    assert r["decision"] == "not_identifier"
+    r = J.Judge(fake).judge("19830112", J.Candidate(1, 8), column="procedure_date",
+                            column_outlier=True)
+    assert r["decision"] == "review" and "column_outlier" in r["judge"]["reasons"]
+    # free text has no column: the flag does not apply
+    t = "seen 19830112 today"
+    r = J.Judge(fake).judge(t, J.Candidate(6, 13), column_outlier=True)
+    assert r["decision"] == "not_identifier"
+
+
 # --- calibrated decisions --------------------------------------------------------------------
 
 
@@ -370,12 +423,28 @@ def test_decisions_use_the_calibrated_probability(tmp_path):
     raw = J.Judge(fake).judge(TEXT, cand("S1234567A"))
     assert raw["decision"] == "identifier"
     path = tmp_path / "cal.json"
-    calibrate.save(path, calibrate.Temperature(4.0), {"drop_below": 0.02, "accept_at": 0.9}, {})
-    j = J.Judge.calibrated(Fake(script({"none": 0.10, "mrn": 0.90})), path)
+    calibrate.save(path, calibrate.Temperature(4.0), {"drop_below": 0.02, "accept_at": 0.9},
+                   {"prompt": J.PROMPT_VERSION, "model": "C:/m/Qwen3-1.7B-Q4_K_M.gguf"})
+    j = J.Judge.calibrated(Fake(script({"none": 0.10, "mrn": 0.90})), path,
+                           model="D:/other/Qwen3-1.7B-Q4_K_M.gguf")  # same file, moved
     r = j.judge(TEXT, cand("S1234567A"))
     assert r["p_identifier"] == pytest.approx(0.9, abs=1e-3)
     assert r["confidence"] < 0.9 and r["decision"] == "review"  # softened below accept_at
     assert j.thresholds.drop_below == 0.02 and j.thresholds.accept_at == 0.9
+
+
+@pytest.mark.parametrize(("meta", "model", "err"), [
+    ({}, None, "prompt version"),
+    ({"prompt": J.PROMPT_VERSION - 1, "model": "q.gguf"}, None, "prompt version"),
+    ({"prompt": J.PROMPT_VERSION, "model": "q.gguf"}, "other.gguf", "model"),
+    ({"prompt": J.PROMPT_VERSION}, "q.gguf", "model"),
+])
+def test_calibration_for_another_prompt_or_model_is_refused(tmp_path, meta, model, err):
+    from slmjev import calibrate
+    path = tmp_path / "cal.json"
+    calibrate.save(path, calibrate.Temperature(2.0), {"drop_below": 0.02, "accept_at": 0.9}, meta)
+    with pytest.raises(ValueError, match=err):
+        J.Judge.calibrated(Fake(script({"none": 0.9})), path, model=model)
 
 
 def test_judge_output_resolves_against_a_policy():

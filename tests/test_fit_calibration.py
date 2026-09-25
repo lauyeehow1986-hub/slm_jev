@@ -75,13 +75,15 @@ def test_replay_matches_the_judge_rule_and_fails_closed():
 
 def test_main_writes_a_loadable_calibration(tmp_path):
     for name, seed in (("train", 1), ("test", 2)):
-        doc = {"split": name, "prod": True, "model": "fake", "rows": _rows(seed=seed)}
+        doc = {"split": name, "prod": True, "model": "fake", "prompt": 2,
+               "rows": _rows(seed=seed)}
         (tmp_path / f"{name}.json").write_text(json.dumps(doc), encoding="utf-8")
     out = tmp_path / "models" / "calibration.json"
     assert fc.main(["--train", str(tmp_path / "train.json"), "--test",
                     str(tmp_path / "test.json"), "--out", str(out),
                     "--report", str(tmp_path / "report.json")]) == 0
     cal, th, meta = calibrate.load(out)
+    assert meta["prompt"] == 2 and meta["model"] == "fake"
     assert 0 <= th["drop_below"] <= th["accept_at"] <= 1 and meta["n"] == 300
     rep = json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
     assert rep["test"]["calibrated"]["decisions"]["n"] == 302
@@ -92,5 +94,15 @@ def test_main_refuses_a_non_prod_or_wrong_split_report(tmp_path):
     for name in ("train", "test"):
         (tmp_path / f"{name}.json").write_text(json.dumps(doc), encoding="utf-8")
     with pytest.raises(SystemExit):
+        fc.main(["--train", str(tmp_path / "train.json"), "--test", str(tmp_path / "test.json"),
+                 "--out", str(tmp_path / "c.json")])
+
+
+@pytest.mark.parametrize(("tr", "te"), [(None, None), (1, 2), (2, None)])
+def test_main_refuses_reports_from_different_prompts(tmp_path, tr, te):
+    for name, prompt in (("train", tr), ("test", te)):
+        doc = {"split": name, "prod": True, "model": "fake", "prompt": prompt, "rows": _rows()}
+        (tmp_path / f"{name}.json").write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(SystemExit, match="prompt"):
         fc.main(["--train", str(tmp_path / "train.json"), "--test", str(tmp_path / "test.json"),
                  "--out", str(tmp_path / "c.json")])
