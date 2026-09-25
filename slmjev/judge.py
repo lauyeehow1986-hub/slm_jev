@@ -9,8 +9,15 @@ inside a context window, and asks several typed questions over it:
 - **Noul**: an optional yes/no cross-check, "is this personal data about a person?". It only
   affects decisions when ``Thresholds.disagree_at`` is set.
 - **Score**: optional sensitivity on an ordinal scale, read as a probability-weighted position.
-- **Context**: the property kind of an address. The date role comes from the Choice itself. The
-  policy's ``by`` rules resolve from these.
+- **Context** for the policy's ``by`` rules: the date role comes from the Choice itself, and an
+  address's property kind/type from address rules (optionally the model when rules cannot tell).
+
+Rule-certain spans (a valid NRIC/FIN checksum, an email, a URL, a postal code after
+``Singapore`` or a street address, an ID after an ID keyword) skip the model entirely
+(``rule_certain``). A structured cell's column header joins the prefix, and a whole cell that is
+ID-shaped, or date-shaped outside a date column, is never dropped (``cell_review``).
+Decisions compare the *calibrated* probability (``Judge.calibrator``, fitted in P4 by
+``slmjev.calibrate``) with the thresholds.
 
 Probabilities are the option-letter mass of the first answer token, from the backend's logprobs.
 Letter-order bias is large on small models (docs/decisions/0002), so every question is asked in
@@ -28,20 +35,22 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import statistics
 import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Protocol
 
-from slmjev import rules
+from slmjev import calibrate, rules
 from slmjev.netguard import check_loopback_url
 
 DETECTOR = "slm:jev"
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWX"
+RULE_CONFIDENCE = 0.99  # a rule-certain span, as rules.scan_text scores a validated hit
 
 SYSTEM = ("You classify one marked span in clinical or administrative text from Singapore. "
           "Reply with exactly one option letter and nothing else.")
@@ -122,7 +131,82 @@ def family_of(match: str) -> str:
     return "numeric" if re.search(r"\s", s) else "code"
 
 
+# --- rule-certain spans and address context -------------------------------------------------
+
+_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+_URL = re.compile(r"https?://\S+", re.IGNORECASE)
+_POSTAL_LEAD = re.compile(r"(?:\bSingapore\s*|\bS\(?)$")
+# The end of a street address: a block, a #floor-unit, or a street-type word, then at most a
+# short run of address text (no sentence break) before the postal code.
+_STREET_TYPES = (r"Blk|Block|Avenue|Ave|Road|Rd|Street|Drive|Crescent|Cres|Lorong|Lor|Jalan|Jln|"
+                 r"Lane|Walk|Close|Place|Terrace|Rise|Link|Way|Grove|View|Heights|Green|Gardens?|"
+                 r"Circle|Loop|Boulevard|Quay|Vale|Hill|Park")
+_ADDRESS_END = re.compile(rf"(?:\b(?:{_STREET_TYPES})\b\.?|#\s?\d{{1,3}}-\d{{1,5}})"
+                          r"[^\n.;:()]{0,40}?[,\s]\s*$", re.IGNORECASE)
+_SG_SECTORS = {f"{i:02d}" for i in range(1, 83)}
+# An ID keyword right before the span. Acronyms are case-sensitive ("IC", not "ic").
+_ID_TAIL = r"\s*(?:[Nn]o\.?|[Nn]umber|#)?\s*[:(]?\s*$"
+_ID_LEADS = [
+    (re.compile(r"(?:\bNRIC|\bFIN|\b[Tt]emp(?:orary)? IC|\bIC|\b[Pp]assport|"
+                rf"\b[Bb]irth [Cc]ert(?:ificate)?){_ID_TAIL}"), "national_id"),
+    (re.compile(rf"\bMRN{_ID_TAIL}"), "mrn"),
+    (re.compile(rf"\bMCR{_ID_TAIL}"), "other_id"),
+]
+_ID_SHAPE = re.compile(r"[A-Z]{0,2}\d{5,}[A-Z]?")
+
+
+def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
+    """``(identifier, reason)`` when code alone is sure the span identifies someone, else None.
+
+    Only shapes a rule can confirm qualify: a valid NRIC/FIN checksum; a whole email or URL; a
+    6-digit postal code right after ``Singapore``/``S(``, or ending a street address with a valid
+    sector; an ID-shaped token right after an ID keyword (``NRIC``, ``temp IC``, ``MRN``, ...).
+    They skip the model; everything else is judged. Accepting is the fail-closed direction, since
+    it only ever removes more."""
+    m = text[cand.start - 1:cand.end].strip()
+    left = text[max(0, cand.start - 1 - 80):cand.start - 1]
+    if rules.nric_valid(m):
+        return "national_id", "nric_checksum"
+    if _EMAIL.fullmatch(m):
+        return "email", "email_shape"
+    if _URL.fullmatch(m):
+        return "other_id", "url_shape"
+    if re.fullmatch(r"\d{6}", m):
+        if _POSTAL_LEAD.search(left[-12:]):
+            return "postal_code", "postal_keyword"
+        if m[:2] in _SG_SECTORS and _ADDRESS_END.search(left):
+            return "postal_code", "postal_after_address"
+    if _ID_SHAPE.fullmatch(m):
+        for lead, ident in _ID_LEADS:
+            if lead.search(left[-24:]):
+                return ident, "id_keyword"
+    return None
+
+
+_BLOCK = re.compile(r"\b(?:Blk|Block)\s*\d+[A-Za-z]?\b", re.IGNORECASE)
+_UNIT = re.compile(r"#\s?\d{1,3}-\d{1,5}\b")
+
+
+def address_context(text: str, cand: Candidate, category: str) -> dict[str, str]:
+    """Property context from the address text itself; ``unknown`` whenever rules cannot tell.
+
+    ``Blk``/``Block`` marks public housing and a ``#NN-NN`` unit marks a non-landed home. Nothing
+    in an address proves a home is landed, so rules never say ``landed``."""
+    if category == "address":
+        s = text[cand.start - 1:cand.end]
+    else:  # a postal code: the address it follows, on the same line
+        left = text[max(0, cand.start - 1 - 120):cand.start - 1]
+        s = left.rsplit("\n", 1)[-1]
+    if _BLOCK.search(s):
+        return {"property_kind": "hdb", "property_type": "non_landed"}
+    if _UNIT.search(s):
+        return {"property_kind": "unknown", "property_type": "non_landed"}
+    return {"property_kind": "unknown", "property_type": "unknown"}
+
+
 # Property kind of an address, for policies that treat landed and non-landed homes differently.
+# Asked of the model only when rules cannot tell and ``Judge.ask_property`` is on: zero-shot it
+# answered 0/12 correctly in P3 (docs/decisions/0003).
 PROPERTY_OPTIONS: dict[str, str] = {
     "hdb": "a public housing (HDB) flat",
     "condo": "a private condominium or apartment",
@@ -289,6 +373,21 @@ class Thresholds:
     min_mass: float = 0.50  # letter mass below this: off-format, review
 
 
+def decide(conf: float, cat_p: float, th: Thresholds, reasons: list[str]) -> str:
+    """``identifier``, ``not_identifier`` or ``review`` from the *calibrated* probability (the
+    thresholds live in that space). Any prior ``reasons`` force review; review reasons found here
+    are appended to ``reasons``."""
+    if conf < th.drop_below and not reasons:
+        return "not_identifier"
+    if conf >= th.accept_at and cat_p >= th.category_at and not reasons:
+        return "identifier"
+    if th.drop_below <= conf < th.accept_at:
+        reasons.append("uncertain")
+    if cat_p < th.category_at:
+        reasons.append("category_uncertain")
+    return "review"
+
+
 def context_window(text: str, start: int, end: int, width: int = 160) -> str:
     """The span marked ``[[...]]`` with up to ``width`` characters either side."""
     s, e = start - 1, end
@@ -302,8 +401,29 @@ def context_window(text: str, start: int, end: int, width: int = 160) -> str:
     return f"{lead}{clean(left)}[[{clean(text[s:e])}]]{clean(right)}{tail}"
 
 
-def prefix_for(text: str, cand: Candidate, width: int = 160) -> str:
-    return f"Text:\n{context_window(text, cand.start, cand.end, width)}\n\n"
+def prefix_for(text: str, cand: Candidate, width: int = 160, column: str | None = None) -> str:
+    """The shared prompt prefix; a structured cell's ``column`` header comes first."""
+    head = f"Column: {' '.join(column.split())[:60]}\n" if column else ""
+    return f"{head}Text:\n{context_window(text, cand.start, cand.end, width)}\n\n"
+
+
+# A structured-cell column whose values are dates; a whole-cell date elsewhere is misplaced.
+_DATE_COLUMN = re.compile(r"date|dob|birth|death|died|_dt$|^dt_|time", re.IGNORECASE)
+
+
+def cell_review(text: str, cand: Candidate, family: str, column: str | None) -> str | None:
+    """A review reason for a whole structured cell the model may not drop, else None.
+
+    A bare cell has no context but its header, and the model trusts the header: P4 saw case
+    numbers in a ``ward`` column answered ``none`` with certainty. So a whole-cell value that is
+    date-shaped (outside a date column) or ID-shaped (5+ digits) is never dropped: where the
+    judge would drop it, it goes to review instead."""
+    m = text[cand.start - 1:cand.end].strip()
+    if not column or m != text.strip():
+        return None
+    if family == "date" or rules.parse_compact_date(m) is not None:
+        return None if _DATE_COLUMN.search(column) else "misplaced_date"
+    return "cell_id_shape" if sum(c.isdigit() for c in m) >= 5 else None
 
 
 @dataclass
@@ -317,10 +437,20 @@ class Judge:
     calibrator: Callable[[float], float] | None = None
     ask_noul: bool = False  # advisory unless thresholds.disagree_at is set
     ask_score: bool = False  # advisory sensitivity (docs/decisions/0003)
-    ask_context: bool = True
+    ask_property: bool = False  # ask the model when address rules cannot tell
+    fast_path: bool = True  # rule-certain spans skip the model (see rule_certain)
     trace: bool = False
 
-    def judge(self, text: str, cand: Candidate) -> dict:
+    @classmethod
+    def calibrated(cls, backend: Backend, path: str | os.PathLike, **kw) -> Judge:
+        """A judge with the calibrator and thresholds fitted in ``path`` (``calibrate.save``)."""
+        cal, th, _ = calibrate.load(path)
+        base = kw.pop("thresholds", Thresholds())
+        return cls(backend, calibrator=cal, thresholds=replace(
+            base, drop_below=th["drop_below"], accept_at=th["accept_at"]), **kw)
+
+    def judge(self, text: str, cand: Candidate, column: str | None = None) -> dict:
+        """One span record. ``column`` is the header when ``text`` is a structured cell."""
         match = text[cand.start - 1:cand.end]
         family = cand.family or family_of(match)
         rec: dict = {"start": cand.start, "end": cand.end, "match": match, "type": cand.type,
@@ -329,7 +459,16 @@ class Judge:
                      "sensitivity": None, "needs_review": True, "decision": "review",
                      "context": {}, "judge": {"family": family, "errors": []}}
         info = rec["judge"]
-        prefix = prefix_for(text, cand, self.width)
+        if self.fast_path and (sure := rule_certain(text, cand)):
+            ident, reason = sure
+            rec.update(identifier=ident, category=ident, category_probs={ident: 1.0},
+                       type=cand.type or ident, p_identifier=RULE_CONFIDENCE,
+                       confidence=RULE_CONFIDENCE, decision="identifier", needs_review=False)
+            if ident == "postal_code":
+                rec["context"] = address_context(text, cand, ident)
+            info.update(fast_path=reason, reasons=[])
+            return rec
+        prefix = prefix_for(text, cand, self.width, column)
         span = match.replace('"', "'").replace("\n", " ")
         th = self.thresholds
         try:
@@ -342,7 +481,7 @@ class Judge:
             return rec
         cat, cat_p = choice.top
         p_id = 1.0 - choice.probs["none"]
-        rec.update(category=cat, category_probs=_round(choice.probs), p_identifier=round(p_id, 4),
+        rec.update(category=cat, category_probs=_round(choice.probs), p_identifier=round(p_id, 6),
                    identifier=None if cat == "none" else cat,
                    type=cand.type or (None if cat == "none" else cat))
         conf = self.calibrator(p_id) if self.calibrator else p_id
@@ -381,36 +520,38 @@ class Judge:
         if cat in _DATES or (family == "date" and cat == "none"):
             role = cat if cat in _DATES else "other"
             ctx["date_role"] = role if cat_p >= th.category_at else "unknown"
-        if self.ask_context and (choice.probs.get("address", 0) + choice.probs.get(
-                "postal_code", 0)) >= 0.2:
-            try:
-                pk = ask(self.backend, prefix, PROPERTY_STEM, PROPERTY_OPTIONS,
-                         rotations(len(PROPERTY_OPTIONS)), th.min_mass)
-                kind, kind_p = pk.top
-                kind = kind if kind_p >= th.category_at else "unknown"
-                ctx["property_kind"] = kind
-                ctx["property_type"] = PROPERTY_TYPE.get(kind, "unknown")
-            except JudgeError as e:
-                info["errors"].append(f"property: {e}")
-                ctx["property_kind"] = ctx["property_type"] = "unknown"
+        p_addr = choice.probs.get("address", 0) + choice.probs.get("postal_code", 0)
+        if p_addr >= 0.2:
+            addr_cat = "postal_code" if choice.probs.get("postal_code", 0) > choice.probs.get(
+                "address", 0) else "address"
+            ctx.update(address_context(text, cand, addr_cat))
+            if self.ask_property and ctx["property_kind"] == "unknown":
+                try:
+                    pk = ask(self.backend, prefix, PROPERTY_STEM, PROPERTY_OPTIONS,
+                             rotations(len(PROPERTY_OPTIONS)), th.min_mass)
+                    kind, kind_p = pk.top
+                    if kind_p >= th.category_at and kind != "unknown":
+                        model_type = PROPERTY_TYPE[kind]
+                        # rules outrank the model: keep a rule-set type unless the model agrees
+                        if ctx["property_type"] in ("unknown", model_type):
+                            ctx.update(property_kind=kind, property_type=model_type)
+                except JudgeError as e:
+                    info["errors"].append(f"property: {e}")
 
-        if p_id < th.drop_below and not reasons:
-            decision = "not_identifier"
-        elif p_id >= th.accept_at and cat_p >= th.category_at and not reasons:
-            decision = "identifier"
-        else:
+        decision = decide(conf, cat_p, th, reasons)
+        # a context-free cell may be accepted, never dropped
+        if decision == "not_identifier" and (cell_reason := cell_review(text, cand, family,
+                                                                        column)):
             decision = "review"
-            if th.drop_below <= p_id < th.accept_at:
-                reasons.append("uncertain")
-            if cat_p < th.category_at:
-                reasons.append("category_uncertain")
+            reasons.append(cell_reason)
         rec["decision"] = decision
         rec["needs_review"] = decision == "review"
         info["reasons"] = reasons
         return rec
 
-    def judge_many(self, text: str, cands: Iterable[Candidate]) -> list[dict]:
-        return [self.judge(text, c) for c in cands]
+    def judge_many(self, text: str, cands: Iterable[Candidate],
+                   column: str | None = None) -> list[dict]:
+        return [self.judge(text, c, column) for c in cands]
 
 
 def _round(d: Mapping[str, float], nd: int = 4) -> dict[str, float]:

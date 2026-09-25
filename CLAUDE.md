@@ -188,15 +188,15 @@ slmjev/synth.py     synthetic SG notes + cells with gold spans and decoys (seede
 slmjev/judge.py     Choice (+ optional Noul/Score) over one prefix; logprob readout; rotations
 slmjev/netguard.py  loopback-only socket guard; loopback URL check
 slmjev/server.py    llama-server launcher (loopback, env API key, bounded cache)
-slmjev/calibrate.py ECE, Brier, AUROC (* temperature / isotonic calibration: P4)
+slmjev/calibrate.py temperature / isotonic calibration, thresholds, ECE, Brier, AUROC
 slmjev/engine.py    * JSON stdin → spans stdout; network forbidden
 data/synthetic/     generator code committed; generated data gitignored
-eval/               harness (judge_eval.py) + gold spans (synthetic only)
+eval/               judge_eval.py harness, fit_calibration.py; gold spans (synthetic only)
 results/            eval outputs (gitignored)
 tests/              test_<module>.py; fixtures synthetic only
 docs/decisions/     short decision records + eval-log.md
 docs/private/       DAFA and anything internal (gitignored)
-models/             GGUF / adapters (gitignored)
+models/             GGUF / adapters / calibration.json (gitignored)
 ```
 
 ## Phases / status
@@ -222,7 +222,20 @@ models/             GGUF / adapters (gitignored)
   - About 2.5 s per candidate on CPU, far too slow for bulk. Next: skip the judge for
     rule-certain spans, and fix the proposer gaps.
   - Gate status: INCOMPLETE (oracle proposer, no calibration, no baseline F1).
-- [ ] P4: calibration and thresholds; decide the `needs_review` policy.
+- [x] P4: calibration and thresholds, and the `needs_review` policy (2026-09-25; see
+  `docs/decisions/0004-calibration-thresholds.md`).
+  - Temperature scaling (T ≈ 3.7) won on grouped CV. Thresholds are chosen from out-of-fold scores
+    and saved with provenance in `models/calibration.json`. **Refit on any change** of model,
+    prompt or generator.
+  - Confident misses (p ≈ 0) are fixed in code, not by thresholds:
+    - rule-certain `id_keyword` and `postal_after_address`;
+    - the column header in the prefix;
+    - `cell_review`: a context-free cell may be accepted but never dropped.
+  - Test (382 oracle candidates): direct recall (flagged) 0.992, auto-accept precision 0.978,
+    review 0.147, ECE 0.025. The fast path takes 19% of candidates.
+  - Remaining: DOBs misplaced into a date column need the R column profiler (P6). Compact dates
+    are read as `case_visit` (P5).
+  - Gate status: INCOMPLETE (oracle proposer, no baseline F1).
 - [ ] P5: QLoRA the judge (reusing the finetune_slm training plan), then export to GGUF.
 - [ ] P6: integrate as an `slm:jev` backend in structured_deidentification.
 - [ ] P7: benchmark against Privacy Filter, MediPhi and Presidio; write `docs/results.md`.
@@ -254,3 +267,9 @@ models/             GGUF / adapters (gitignored)
   - It finds `detect_r.R` in the sibling structured_deidentification worktree, or in
     `$env:SLMJEV_SD_ROOT`.
   - Use script files, because long multiline `Rscript -e` segfaults on this machine.
+- Judge eval and calibration: set `SLMJEV_LLAMA_SERVER`, `SLMJEV_JUDGE_MODEL` and `PYTHONPATH=.`.
+  - Run `python eval/judge_eval.py --prod --split train --seed 21 --out <train.json>`, and the
+    same with `--split test --seed 31`.
+  - Then `python eval/fit_calibration.py --train <train.json> --test <test.json>` writes
+    `models/calibration.json`.
+  - `judge_eval.py --prod --calibration models/calibration.json` runs the judge end to end.

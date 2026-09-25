@@ -1,4 +1,4 @@
-"""Zero-shot judge evaluation on the synthetic dev split (P3). Synthetic data only.
+"""Judge evaluation on a synthetic split (P3, P4). Synthetic data only.
 
 Candidates come from an *oracle proposer*: every gold span plus every decoy the generator
 planted. That measures the judge alone. The end-to-end system also depends on the proposer,
@@ -10,6 +10,9 @@ which is measured separately.
 
 It starts its own llama-server (loopback, random key, CPU) unless --url is given, forbids all
 non-loopback network access, and writes results/judge_eval_<stamp>.json.
+
+``--prod`` runs the production configuration (4 rotations, Choice only, rule-certain fast path);
+P4 fits calibration on a ``--split train`` run of it (``eval/fit_calibration.py``).
 """
 
 from __future__ import annotations
@@ -48,7 +51,7 @@ def judge_doc(j: J.Judge, doc: dict, max_cands: int | None = None) -> list[dict]
     for cand, gold in candidates(doc)[:max_cands]:
         n0 = len(getattr(j.backend, "calls", []))
         t0 = time.perf_counter()
-        rec = j.judge(doc["text"], cand)
+        rec = j.judge(doc["text"], cand, doc.get("column"))
         secs = time.perf_counter() - t0
         calls = getattr(j.backend, "calls", [])[n0:]
         rows.append({"doc": doc["id"], "chars": len(doc["text"]), "gold": gold, "rec": rec,
@@ -67,8 +70,16 @@ def _argmax(d: dict) -> str:
     return max(d, key=d.__getitem__)
 
 
+def _prob_metrics(p: list[float], y: list[bool]) -> dict:
+    return {"auroc": calibrate.auroc(p, y), "ece": calibrate.ece(p, y) if p else None,
+            "brier": calibrate.brier(p, y) if p else None,
+            "nll": calibrate.nll(p, y) if p else None}
+
+
 def summarize(rows: list[dict], identifiers: list[str]) -> dict:
-    ok = [r for r in rows if r["rec"]["p_identifier"] is not None]
+    fast = [r for r in rows if r["rec"]["judge"].get("fast_path")]
+    ok = [r for r in rows if r["rec"]["p_identifier"] is not None
+          and not r["rec"]["judge"].get("fast_path")]  # model-judged: calibration applies
     gold = [r for r in rows if r["gold"]["is_pii"]]
     decoy = [r for r in rows if not r["gold"]["is_pii"]]
     dec = Counter((r["gold"]["is_pii"], r["rec"]["decision"]) for r in rows)
@@ -116,12 +127,15 @@ def summarize(rows: list[dict], identifiers: list[str]) -> dict:
         if want and "date_role" in ctx:
             role_n += 1
             role_ok += ctx["date_role"] == want
-    prop_n = prop_ok = 0
-    for r in ok:
+    prop_n = prop_ok = type_ok = type_unknown = 0
+    for r in rows:
         g, ctx = r["gold"], r["rec"]["context"]
         if g["label"] in ("address", "postal_code") and g.get("property"):
             prop_n += 1
             prop_ok += ctx.get("property_kind") == g["property"]
+            got = ctx.get("property_type", "unknown")
+            type_unknown += got == "unknown"
+            type_ok += got == J.PROPERTY_TYPE.get(g["property"])
 
     # latency
     call_secs = [c["secs"] for r in rows for c in r["calls"]]
@@ -134,7 +148,8 @@ def summarize(rows: list[dict], identifiers: list[str]) -> dict:
     per_1k = [s / c * 1000 for s, c in per_doc.values() if c]
 
     return {
-        "n": len(rows), "n_gold": len(gold), "n_decoy": len(decoy), "n_failed": len(rows) - len(ok),
+        "n": len(rows), "n_gold": len(gold), "n_decoy": len(decoy),
+        "n_failed": sum(r["rec"]["p_identifier"] is None for r in rows),
         "decisions": {f"{'gold' if k[0] else 'decoy'}:{k[1]}": v for k, v in sorted(dec.items())},
         "recall_flagged": rate(flagged_gold, len(gold)),
         "recall_flagged_direct": rate(sum(r["rec"]["decision"] != "not_identifier"
@@ -153,6 +168,7 @@ def summarize(rows: list[dict], identifiers: list[str]) -> dict:
                          "acc_at_0.5": rate(sum((a >= 0.5) == b for a, b in zip(p, y,
                                                                                 strict=True)),
                                             len(p))},
+        "confidence": _prob_metrics([r["rec"]["confidence"] for r in ok], y),
         "p_noul": {"auroc": calibrate.auroc([a for a, _ in noul], [b for _, b in noul]),
                    "ece": calibrate.ece([a for a, _ in noul], [b for _, b in noul])
                    if noul else None,
@@ -168,6 +184,11 @@ def summarize(rows: list[dict], identifiers: list[str]) -> dict:
                        if d_p4 else None},
         "date_role_acc": rate(role_ok, role_n), "date_role_n": role_n,
         "property_kind_acc": rate(prop_ok, prop_n), "property_n": prop_n,
+        "property_type_acc": rate(type_ok, prop_n),
+        "property_type_unknown": rate(type_unknown, prop_n),
+        "property_type_wrong": rate(prop_n - type_ok - type_unknown, prop_n),
+        "fast_path": {"n": len(fast), "gold": sum(r["gold"]["is_pii"] for r in fast),
+                      "by_reason": dict(Counter(r["rec"]["judge"]["fast_path"] for r in fast))},
         "latency": {"calls": len(call_secs), "call_p50": _pct(call_secs, 0.5),
                     "call_p95": _pct(call_secs, 0.95),
                     "cand_p50": _pct([r["secs"] for r in rows], 0.5),
@@ -191,7 +212,7 @@ def cache_ab(url: str, key: str, docs: list[dict], n: int) -> dict:
             for cand, _ in candidates(d):
                 if done >= n:
                     break
-                j.judge(d["text"], cand)
+                j.judge(d["text"], cand, d.get("column"))
                 done += 1
         secs = [c["secs"] for c in b.calls]
         out["cached" if cache else "uncached"] = {
@@ -219,6 +240,12 @@ def run_parallel(url: str, key: str, docs: list[dict], workers: int,
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="zero-shot judge eval on synthetic dev data")
+    ap.add_argument("--split", choices=synth.SPLITS, default="dev")
+    ap.add_argument("--prod", action="store_true",
+                    help="production config: 4 rotations, Choice only, fast path")
+    ap.add_argument("--no-fast-path", action="store_true")
+    ap.add_argument("--calibration", type=Path, default=None,
+                    help="a calibrate.save() file: calibrated confidence and thresholds")
     ap.add_argument("--notes", type=int, default=40)
     ap.add_argument("--cells", type=int, default=0)
     ap.add_argument("--seed", type=int, default=11)
@@ -236,7 +263,9 @@ def main(argv: list[str] | None = None) -> int:
 
     netguard.forbid_network()
     labels = load_labels()
-    docs = synth.generate("dev", n_notes=args.notes, n_cells=args.cells, seed=args.seed)
+    if args.prod:
+        args.rotations, args.choice_only = args.rotations or 4, True
+    docs = synth.generate(args.split, n_notes=args.notes, n_cells=args.cells, seed=args.seed)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     out = args.out or Path("results") / f"judge_eval_{stamp}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -251,8 +280,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         backend = J.LlamaServer(url, key)
         # measure everything: all rotations by default, plus the advisory Noul and Score
-        j = J.Judge(backend, choice_rotations=args.rotations, ask_noul=not args.choice_only,
-                    ask_score=not args.choice_only, trace=True)
+        kw = dict(choice_rotations=args.rotations, ask_noul=not args.choice_only,
+                  ask_score=not args.choice_only, fast_path=not args.no_fast_path, trace=True)
+        j = (J.Judge.calibrated(backend, args.calibration, **kw) if args.calibration
+             else J.Judge(backend, **kw))
         rows = []
         t0 = time.perf_counter()
         for i, d in enumerate(docs, 1):
@@ -260,10 +291,12 @@ def main(argv: list[str] | None = None) -> int:
             if i % 5 == 0 or i == len(docs):
                 print(f"{i}/{len(docs)} docs, {len(rows)} candidates, "
                       f"{time.perf_counter() - t0:.0f}s", flush=True)
-        report = {"model": os.environ.get(server.ENV_MODEL, "(external)"), "split": "dev",
+        report = {"model": os.environ.get(server.ENV_MODEL, "(external)"), "split": args.split,
+                  "prod": args.prod, "fast_path": not args.no_fast_path,
+                  "calibration": str(args.calibration) if args.calibration else None,
                   "seed": args.seed, "notes": args.notes, "cells": args.cells,
                   "rotations": args.rotations or "all", "generator": synth.GENERATOR_VERSION,
-                  "thresholds": j.thresholds.__dict__,
+                  "thresholds": j.thresholds.__dict__, "choice_only": args.choice_only,
                   "summary": summarize(rows, labels["identifiers"])}
         if args.cache_ab:
             report["cache_ab"] = cache_ab(url, key, docs, args.cache_ab)

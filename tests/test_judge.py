@@ -60,7 +60,7 @@ def script(choice, noul=None, score=None, prop=None):
     return s
 
 
-TEXT = "Pt Tan Ah Kow, NRIC S1234567D, admitted 03/02/2025. DOB 12/05/1950. Hb 12.1."
+TEXT = "Pt Tan Ah Kow, ref S1234567A, admitted 03/02/2025. DOB 12/05/1950. Hb 12.1."
 NOUL_GATED = J.Thresholds(disagree_at=0.5)
 
 
@@ -102,7 +102,7 @@ def test_permutation_averaging_removes_position_bias():
 
 @pytest.mark.parametrize(("s", "fam"), [
     ("12/05/1950", "date"), ("1950-05-12", "date"), ("12 May 1950", "date"),
-    ("May 12, 1950", "date"), ("19500512", "numeric"), ("S1234567D", "code"),
+    ("May 12, 1950", "date"), ("19500512", "numeric"), ("S1234567A", "code"),
     ("tan@example.com", "code"), ("ahkow.tan@example.org", "code"), ("9123 4567", "numeric"),
     ("Blk 123 Ang Mo Kio Ave 3", "alnum"), ("HIV-1", "alnum"), ("SGH1234567", "alnum"),
     ("Tan Ah Kow", "text"), ("schizophrenia", "text"), ("91234567", "code"),
@@ -133,9 +133,9 @@ def test_context_window_marks_span_and_escapes_brackets():
 def test_clear_identifier_is_accepted_with_contract_fields():
     fake = Fake(script({"national_id": 0.95, "none": 0.01}, noul=0.97,
                        score={"high": 0.9, "moderate": 0.1}))
-    r = J.Judge(fake, ask_score=True).judge(TEXT, cand("S1234567D", type="nric"))
-    assert r["match"] == "S1234567D" and r["start"] == TEXT.index("S1234567D") + 1
-    assert r["end"] - r["start"] + 1 == len("S1234567D")
+    r = J.Judge(fake, ask_score=True).judge(TEXT, cand("S1234567A", type="nric"))
+    assert r["match"] == "S1234567A" and r["start"] == TEXT.index("S1234567A") + 1
+    assert r["end"] - r["start"] + 1 == len("S1234567A")
     assert r["detector"] == "slm:jev" and r["type"] == "nric"
     assert r["category"] == r["identifier"] == "national_id"
     assert r["decision"] == "identifier" and r["needs_review"] is False
@@ -153,7 +153,7 @@ def test_clear_decoy_is_dropped():
 
 def test_uncertain_goes_to_review():
     fake = Fake(script({"none": 0.5, "mrn": 0.4}, noul=0.5))
-    r = J.Judge(fake).judge(TEXT, cand("S1234567D"))
+    r = J.Judge(fake).judge(TEXT, cand("S1234567A"))
     assert r["decision"] == "review" and r["needs_review"]
     assert "uncertain" in r["judge"]["reasons"]
 
@@ -181,7 +181,7 @@ def test_stems_name_the_span():
 
 def test_low_category_confidence_goes_to_review():
     fake = Fake(script({"mrn": 0.45, "case_visit": 0.45, "none": 0.0}, noul=1.0))
-    r = J.Judge(fake).judge(TEXT, cand("S1234567D"))
+    r = J.Judge(fake).judge(TEXT, cand("S1234567A"))
     assert r["decision"] == "review" and "category_uncertain" in r["judge"]["reasons"]
 
 
@@ -207,26 +207,26 @@ def test_noul_failure_blocks_a_drop():
 
 def test_score_failure_is_advisory_only():
     fake = Fake(script({"national_id": 0.99, "none": 0.0}, noul=1.0), fail={J.SCORE_STEM})
-    r = J.Judge(fake, ask_score=True).judge(TEXT, cand("S1234567D"))
+    r = J.Judge(fake, ask_score=True).judge(TEXT, cand("S1234567A"))
     assert r["decision"] == "identifier" and r["sensitivity"] is None
 
 
 def test_all_questions_share_one_prefix():
     fake = Fake(script({"national_id": 0.99, "none": 0.0}, noul=1.0))
     J.Judge(fake, choice_rotations=None, ask_noul=True, ask_score=True).judge(
-        TEXT, cand("S1234567D"))
+        TEXT, cand("S1234567A"))
     prefixes = {p for p, _ in fake.calls}
-    assert len(prefixes) == 1 and "[[S1234567D]]" in prefixes.pop()
+    assert len(prefixes) == 1 and "[[S1234567A]]" in prefixes.pop()
     # code family: all 10 rotations + 2 Noul + 2 Score orders
     assert len(fake.calls) == 10 + 2 + 2
 
 
 def test_default_is_choice_only_at_four_rotations():
     fake = Fake(script({"national_id": 0.99, "none": 0.0}, noul=1.0))
-    J.Judge(fake).judge(TEXT, cand("S1234567D"))
+    J.Judge(fake).judge(TEXT, cand("S1234567A"))
     assert len(fake.calls) == 4
     fake = Fake(script({"national_id": 0.99, "none": 0.0}, noul=1.0))
-    J.Judge(fake, choice_rotations=2, ask_noul=True).judge(TEXT, cand("S1234567D"))
+    J.Judge(fake, choice_rotations=2, ask_noul=True).judge(TEXT, cand("S1234567A"))
     assert len(fake.calls) == 2 + 2
 
 
@@ -242,15 +242,140 @@ def test_date_roles_come_from_the_choice():
     assert j.judge(TEXT, cand("12/05/1950"))["context"] == {"date_role": "unknown"}
 
 
-def test_property_kind_is_asked_for_addresses():
+def _addr(t, sub):
+    i = t.index(sub)
+    return J.Candidate(i + 1, i + len(sub))
+
+
+def test_property_comes_from_address_rules():
     t = "Lives at Blk 123 Ang Mo Kio Ave 3 #05-12 Singapore 560123."
-    i = t.index("Blk")
-    c = J.Candidate(i + 1, i + len("Blk 123 Ang Mo Kio Ave 3 #05-12"))
-    fake = Fake(script({"address": 0.95, "none": 0.0}, noul=1.0, prop={"hdb": 0.9}))
-    r = J.Judge(fake).judge(t, c)
+    fake = Fake(script({"address": 0.95, "none": 0.0}, prop={"landed": 0.9}))
+    r = J.Judge(fake).judge(t, _addr(t, "Blk 123 Ang Mo Kio Ave 3 #05-12"))
     assert r["context"] == {"property_kind": "hdb", "property_type": "non_landed"}
-    fake = Fake(script({"address": 0.95, "none": 0.0}, noul=1.0, prop={"landed": 0.4}))
-    assert J.Judge(fake).judge(t, c)["context"]["property_type"] == "unknown"
+    assert all(J.PROPERTY_STEM not in q for _, q in fake.calls)  # rules decided; no question
+    t2 = "Addr: 12 Holland Road #03-04 The Verdana, Singapore 278960."
+    r = J.Judge(fake).judge(t2, _addr(t2, "12 Holland Road #03-04 The Verdana"))
+    assert r["context"] == {"property_kind": "unknown", "property_type": "non_landed"}
+    t3 = "Addr: 75 Jalan Kechubong, Singapore 537890."
+    r = J.Judge(fake).judge(t3, _addr(t3, "75 Jalan Kechubong"))
+    assert r["context"] == {"property_kind": "unknown", "property_type": "unknown"}
+
+
+def test_property_model_question_is_opt_in_and_never_overrides_rules():
+    t3 = "Addr: 75 Jalan Kechubong, Singapore 537890."
+    fake = Fake(script({"address": 0.95, "none": 0.0}, prop={"landed": 0.9}))
+    r = J.Judge(fake, ask_property=True).judge(t3, _addr(t3, "75 Jalan Kechubong"))
+    assert r["context"] == {"property_kind": "landed", "property_type": "landed"}
+    fake = Fake(script({"address": 0.95, "none": 0.0}, prop={"landed": 0.4}))
+    r = J.Judge(fake, ask_property=True).judge(t3, _addr(t3, "75 Jalan Kechubong"))
+    assert r["context"]["property_type"] == "unknown"
+    t2 = "Addr: 12 Holland Road #03-04 The Verdana, Singapore 278960."
+    fake = Fake(script({"address": 0.95, "none": 0.0}, prop={"landed": 0.9}))
+    r = J.Judge(fake, ask_property=True).judge(t2, _addr(t2, "12 Holland Road #03-04 The Verdana"))
+    assert r["context"]["property_type"] == "non_landed"  # the unit number outranks the model
+
+
+# --- rule-certain fast path ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("t", "sub", "ident"), [
+    ("NRIC S1234567D on file", "S1234567D", "national_id"),
+    ("mail tan.ak@example.com today", "tan.ak@example.com", "email"),
+    ("see https://example.org/p?id=3 now", "https://example.org/p?id=3", "other_id"),
+    ("Blk 5 Bedok North St 1 #02-11, Singapore 460005.", "460005", "postal_code"),
+    ("12 Holland Road S(278960)", "278960", "postal_code"),
+    ("Block 395 Clementi Avenue 2, #17-495, 120395. Seen", "120395", "postal_code"),
+    ("Stays at 17 Lorong Chuan, 556745.", "556745", "postal_code"),
+    ("(temp IC Y5308811O). NOK", "Y5308811O", "national_id"),
+    ("passport no. E12345678 seen", "E12345678", "national_id"),
+    ("MRN: 12345678.", "12345678", "mrn"),
+    ("Seen by Dr Nair (MCR M97984B).", "M97984B", "other_id"),
+])
+def test_rule_certain_spans_skip_the_model(t, sub, ident):
+    fake = Fake(script({"none": 0.99}))
+    r = J.Judge(fake).judge(t, _addr(t, sub))
+    assert fake.calls == []
+    assert r["decision"] == "identifier" and not r["needs_review"]
+    assert r["identifier"] == ident and r["judge"]["fast_path"]
+    assert r["confidence"] == J.RULE_CONFIDENCE
+    if ident == "postal_code" and "Blk" in t:
+        assert r["context"]["property_type"] == "non_landed"
+
+
+@pytest.mark.parametrize(("t", "sub"), [
+    ("ref S1234567A on file", "S1234567A"),  # bad checksum, no ID keyword
+    ("Hb 460005 x", "460005"),  # six digits, no postal keyword
+    ("Ward 64 Bed 18, 801556", "801556"),  # no street before it
+    ("Clementi Avenue 2, 991234", "991234"),  # sector 99 does not exist
+    ("Lorong Chuan. Lab 556745", "556745"),  # sentence break after the street
+    ("ref: tan@", "tan@"),
+    ("clinic 1234567", "1234567"),  # "ic" inside a word is no keyword
+    ("NRIC 3/7", "3/7"),  # not ID-shaped
+])
+def test_uncertain_shapes_still_go_to_the_model(t, sub):
+    fake = Fake(script({"none": 0.99}))
+    J.Judge(fake).judge(t, _addr(t, sub))
+    assert fake.calls
+    fake = Fake(script({"none": 0.99}))
+    J.Judge(fake, fast_path=False).judge("NRIC S1234567D", J.Candidate(6, 14))
+    assert fake.calls  # the fast path can be switched off
+
+
+# --- structured cells ------------------------------------------------------------------------
+
+
+def test_cell_column_joins_the_prefix():
+    fake = Fake(script({"dob": 0.9, "none": 0.05}))
+    r = J.Judge(fake).judge("2 Feb 1940", J.Candidate(1, 10), column="date_of\nbirth")
+    assert {p for p, _ in fake.calls} == {"Column: date_of birth\nText:\n[[2 Feb 1940]]\n\n"}
+    assert r["decision"] == "identifier"
+    J.Judge(fake).judge("2 Feb 1940", J.Candidate(1, 10))
+    assert fake.calls[-1][0].startswith("Text:")  # free text: no column line
+
+
+@pytest.mark.parametrize(("value", "column", "reason"), [
+    ("2 Feb 1940", "diagnosis", "misplaced_date"),
+    ("19781225", "serial_no", "misplaced_date"),
+    ("7739353318R", "ward", "cell_id_shape"),  # a case number the header talks the model out of
+    ("535856", "ward", "cell_id_shape"),
+    ("2 Feb 1940", "procedure_date", None),  # a date column: the model may drop it
+    ("2 Feb 1940", "DOB", None),
+    ("2 Feb 1940", None, None),  # free text keeps its context
+    ("10 mg", "dose", None),
+    ("Ward 64 Bed 18", "ward", None),  # four digits: not ID-shaped
+])
+def test_context_free_cells_are_never_dropped(value, column, reason):
+    fake = Fake(script({"none": 0.99}))
+    r = J.Judge(fake).judge(value, J.Candidate(1, len(value)), column=column)
+    assert (r["decision"] == "review") is (reason is not None)
+    if reason:
+        assert reason in r["judge"]["reasons"]
+    # the rule only blocks a drop: a confident identifier in the same cell is still accepted
+    label = "dob" if J.family_of(value) in ("date", "numeric") else "case_visit"
+    sure = Fake(script({label: 0.97, "none": 0.0}))
+    r = J.Judge(sure).judge(value, J.Candidate(1, len(value)), column=column)
+    assert r["decision"] == "identifier"
+    # part of a cell has context around it: the rule does not apply
+    t = f"seen {value} today"
+    r = J.Judge(fake).judge(t, J.Candidate(6, 5 + len(value)), column=column)
+    assert r["decision"] == "not_identifier"
+
+
+# --- calibrated decisions --------------------------------------------------------------------
+
+
+def test_decisions_use_the_calibrated_probability(tmp_path):
+    from slmjev import calibrate
+    fake = Fake(script({"none": 0.10, "mrn": 0.90}))
+    raw = J.Judge(fake).judge(TEXT, cand("S1234567A"))
+    assert raw["decision"] == "identifier"
+    path = tmp_path / "cal.json"
+    calibrate.save(path, calibrate.Temperature(4.0), {"drop_below": 0.02, "accept_at": 0.9}, {})
+    j = J.Judge.calibrated(Fake(script({"none": 0.10, "mrn": 0.90})), path)
+    r = j.judge(TEXT, cand("S1234567A"))
+    assert r["p_identifier"] == pytest.approx(0.9, abs=1e-3)
+    assert r["confidence"] < 0.9 and r["decision"] == "review"  # softened below accept_at
+    assert j.thresholds.drop_below == 0.02 and j.thresholds.accept_at == 0.9
 
 
 def test_judge_output_resolves_against_a_policy():

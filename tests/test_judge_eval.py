@@ -33,5 +33,8 @@ def test_summary_runs_end_to_end_on_a_fake_backend():
     assert s["n"] == len(rows) == s["n_gold"] + s["n_decoy"]
     assert s["n_failed"] == 0 and 0 <= s["recall_flagged"] <= 1
     assert s["latency"]["cache_share"] == 0.95
-    assert s["order_bias"]["n"] == len(rows)
+    fast = s["fast_path"]["n"]
+    assert fast > 0 and s["fast_path"]["gold"] == fast  # rule-certain spans are all gold
+    assert s["order_bias"]["n"] == len(rows) - fast
+    assert s["confidence"]["auroc"] is not None
     assert sum(v["n"] for v in s["per_label"].values()) == s["n_gold"]
