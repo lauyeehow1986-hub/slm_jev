@@ -173,6 +173,7 @@ Every eval run appends one row to `docs/decisions/eval-log.md`.
 schemas/            span.v1.json, labels.v1.json (versioned; never edited in place)
 slmjev/rules.py     ported SG detectors + NRIC/FIN checksum (R-parity tested)
 slmjev/policy.py    policy loader/resolver: span -> action (policy JSON lives in docs/private/)
+slmjev/synth.py     synthetic SG notes + cells with gold spans and decoys (seeded, split-hygienic)
 slmjev/judge.py     batched Noul/Choice/Score over one prefix; logprob readout; option permutation
 slmjev/calibrate.py temperature / isotonic calibration, ECE
 slmjev/engine.py    JSON stdin → spans stdout; network forbidden
@@ -189,9 +190,14 @@ models/             GGUF / adapters (gitignored)
 - [x] P1: port the rules to `slmjev/rules.py`, with the R-parity test (2026-09-25; see
   `docs/decisions/0001-rules-parity.md`). Watchlist/learned detectors are not ported yet; pass
   them as `extra=` `Detector`s.
-- [ ] P2: synthetic Singapore corpus with gold spans. Cover SG names (Chinese, Malay, Indian,
-  Eurasian), NRIC/FIN, temp IC, MRN and case numbers, SG addresses and postal codes, SHI mentions,
-  and misplaced PII.
+- [x] P2: synthetic Singapore corpus with gold spans (2026-09-25). The generator is
+  `slmjev/synth.py`, driven by `data/synthetic/generate.py`; labels are in
+  `schemas/labels.v1.json`, and the conventions are documented in `data/synthetic/README.md`.
+  - Dates carry a role (DOB or death is gold, the rest are decoys), and addresses carry a
+    property kind, so the judge can supply the policy's context.
+  - Proposer gap found on this corpus: the rules miss named-month dates (`12 Mar 1990`), about
+    half of DOBs. There are no rules at all for names, addresses, SHI, vehicles or licences;
+    fixing this is P3 proposer work.
 - [ ] P3: zero-shot judge on Qwen3-1.7B. Measure order bias, and batched vs separate latency.
 - [ ] P4: calibration and thresholds; decide the `needs_review` policy.
 - [ ] P5: QLoRA the judge (reusing the finetune_slm training plan), then export to GGUF.
@@ -215,9 +221,10 @@ models/             GGUF / adapters (gitignored)
 - Commit messages use conventional style: `feat(rules):`, `test(judge):`, `docs:`.
 
 ## Commands (Windows)
-- Tests: `uv run pytest -q` (needs `uv sync` once, which downloads pytest/ruff: ask first).
-  Until then, the system Python works: `python -m pytest -q` (pytest is installed globally).
-- Lint: `ruff check .`
+- Tests: `uv run --system-certs pytest -q`.
+- Lint: `uv run --system-certs ruff check .`
+- Synthetic corpus: `uv run --system-certs python data/synthetic/generate.py`, which writes to
+  `data/synthetic/out/` (gitignored).
 - Set `PYTHONIOENCODING=utf-8` for Python scripts.
 - Parity golden: `& "C:\Program Files\R\R-4.5.2\bin\Rscript.exe" tests\parity\dump_r.R`.
   - It rewrites `tests/parity/r_expected.json` from `tests/parity/cases.json`.
