@@ -95,12 +95,19 @@ working list until DAFA is mapped:
 
 The choice set always includes `none`.
 
-## DAFA mapping — TODO (user to supply)
+## DAFA mapping — supplied 2026-09-25, LOCAL ONLY
 DAFA is an internal SingHealth standard that isn't publicly available.
 - **Do not invent DAFA rules, clause numbers or categories.**
-- When the user supplies the document, put it in `docs/private/` (gitignored). Build a mapping from
-  DAFA categories to the labels above, and record it in `docs/decisions/`.
-- Ask before committing anything that quotes or paraphrases DAFA.
+- The user supplied the rules on 2026-09-25. They must **stay on the local laptop**, and they are
+  never committed, pushed or quoted in committed files, commit messages or PRs. That includes the
+  mapping and the policy derived from them. Everything lives in the main checkout's gitignored
+  `docs/private/`:
+  - `dafa_rules.md`: the rules as supplied.
+  - `dafa_mapping.md`: the mapping to the labels above, plus open interpretations.
+  - `dafa_policy.json`: the machine-readable policy that `slmjev.policy.load_policy()` loads.
+- Committed code stays **policy-agnostic**. `slmjev/policy.py` knows only the policy *shape*, and
+  its tests use made-up policies. Before each commit, check that the staged diff holds no DAFA
+  content.
 
 ## Output contract
 Each span record uses structured_deidentification's schema (`app/R/engine_py.R`,
@@ -165,6 +172,7 @@ Every eval run appends one row to `docs/decisions/eval-log.md`.
 ```
 schemas/            span.v1.json, labels.v1.json (versioned; never edited in place)
 slmjev/rules.py     ported SG detectors + NRIC/FIN checksum (R-parity tested)
+slmjev/policy.py    policy loader/resolver: span -> action (policy JSON lives in docs/private/)
 slmjev/judge.py     batched Noul/Choice/Score over one prefix; logprob readout; option permutation
 slmjev/calibrate.py temperature / isotonic calibration, ECE
 slmjev/engine.py    JSON stdin → spans stdout; network forbidden
@@ -189,7 +197,9 @@ models/             GGUF / adapters (gitignored)
 - [ ] P5: QLoRA the judge (reusing the finetune_slm training plan), then export to GGUF.
 - [ ] P6: integrate as an `slm:jev` backend in structured_deidentification.
 - [ ] P7: benchmark against Privacy Filter, MediPhi and Presidio; write `docs/results.md`.
-- [ ] DAFA: map it once the user supplies the document.
+- [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
+  policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
+  `docs/private/dafa_mapping.md`.
 
 ## Git and safety
 - This repo's root is `C:\Users\lauye\Downloads\slm_jev`, with `origin` =
