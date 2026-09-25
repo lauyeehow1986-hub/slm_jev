@@ -162,9 +162,15 @@ Every eval run appends one row to `docs/decisions/eval-log.md`.
 ## Tech stack
 - Python ≥ 3.11 via `uv`. It needs `--system-certs` on this machine.
 - Stdlib-first. Tests use `pytest`. Lint with `ruff` (E, F, I, UP, B, SIM), line length 100.
-- The GGUF logprob runtime is **not chosen yet** (llama-cpp-python, or the llama.cpp CLI or server;
-  Defender quarantined `llama-server.exe` before, see finetune_slm `docs/decisions/0002`). **Ask
-  before installing any package or pulling any model.**
+- The GGUF logprob runtime is **`llama-server`, called directly** (`docs/decisions/0002-judge-runtime.md`).
+  - Launch it with `--host 127.0.0.1`, an `--api-key`, `--no-webui`, `--reasoning off`, `-np 1`
+    and `-ngl 0`.
+  - The dev build is the one Unsloth Studio installed:
+    `%USERPROFILE%\.unsloth\llama.cpp\build\bin\Release\llama-server.exe`.
+  - **Never go through Unsloth's own API**: it rejects logprobs, and its internal server is
+    unauthenticated with open CORS.
+  - The client is stdlib `urllib`, and it refuses non-loopback URLs.
+- **Ask before installing any package or pulling any model.**
 - R 4.5.2 (`C:\Program Files\R\R-4.5.2\bin\Rscript.exe`, not on PATH) is used only for the parity
   tests.
 
