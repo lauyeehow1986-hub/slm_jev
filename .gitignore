@@ -1,0 +1,22 @@
+# Never commit real data, models or internal standards (repo is PUBLIC)
+data/*
+!data/synthetic/
+data/synthetic/*
+!data/synthetic/*.py
+!data/synthetic/*.R
+!data/synthetic/README.md
+models/
+adapters/
+*.gguf
+*.safetensors
+*.onnx
+docs/private/
+results/
+.env*
+
+# Python / tooling
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
