@@ -36,15 +36,13 @@ from collections.abc import Callable
 from pathlib import Path
 
 from slmjev import rules
+from slmjev.labels import load_labels
 
 GENERATOR_VERSION = "synth.v1"
 SPLITS = ("train", "dev", "test")
-LABELS_PATH = Path(__file__).resolve().parents[1] / "schemas" / "labels.v1.json"
 
-
-def load_labels(path: Path = LABELS_PATH) -> dict:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
-
+__all__ = ["GENERATOR_VERSION", "SPLITS", "generate", "load_labels", "validate_doc",
+           "write_jsonl"]
 
 _TYPES: dict[str, str] = load_labels()["types"]
 

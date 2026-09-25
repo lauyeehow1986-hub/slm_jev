@@ -163,8 +163,12 @@ Every eval run appends one row to `docs/decisions/eval-log.md`.
 - Python ≥ 3.11 via `uv`. It needs `--system-certs` on this machine.
 - Stdlib-first. Tests use `pytest`. Lint with `ruff` (E, F, I, UP, B, SIM), line length 100.
 - The GGUF logprob runtime is **`llama-server`, called directly** (`docs/decisions/0002-judge-runtime.md`).
-  - Launch it with `--host 127.0.0.1`, an `--api-key`, `--no-webui`, `--reasoning off`, `-np 1`
-    and `-ngl 0`.
+  - Launch it with `slmjev.server.start()`: `--host 127.0.0.1`, `--no-webui`, `--reasoning off`,
+    `-np 1`, `-ngl 0` and `--cache-ram 256`. The default host prompt cache (8 GiB) took the 1.7B
+    server to 6.5 GB, over the model share.
+  - The API key is fresh per launch and passed in `LLAMA_API_KEY`, never on the command line.
+    `start()` refuses a server that answers without it.
+  - Paths come from `SLMJEV_LLAMA_SERVER` (the binary) and `SLMJEV_JUDGE_MODEL` (the GGUF).
   - The dev build is the one Unsloth Studio installed:
     `%USERPROFILE%\.unsloth\llama.cpp\build\bin\Release\llama-server.exe`.
   - **Never go through Unsloth's own API**: it rejects logprobs, and its internal server is
@@ -174,17 +178,21 @@ Every eval run appends one row to `docs/decisions/eval-log.md`.
 - R 4.5.2 (`C:\Program Files\R\R-4.5.2\bin\Rscript.exe`, not on PATH) is used only for the parity
   tests.
 
-## Planned layout
+## Layout (planned items marked *)
 ```
 schemas/            span.v1.json, labels.v1.json (versioned; never edited in place)
+slmjev/labels.py    cached loader for schemas/labels.v1.json
 slmjev/rules.py     ported SG detectors + NRIC/FIN checksum (R-parity tested)
 slmjev/policy.py    policy loader/resolver: span -> action (policy JSON lives in docs/private/)
 slmjev/synth.py     synthetic SG notes + cells with gold spans and decoys (seeded, split-hygienic)
-slmjev/judge.py     batched Noul/Choice/Score over one prefix; logprob readout; option permutation
-slmjev/calibrate.py temperature / isotonic calibration, ECE
-slmjev/engine.py    JSON stdin → spans stdout; network forbidden
+slmjev/judge.py     Choice (+ optional Noul/Score) over one prefix; logprob readout; rotations
+slmjev/netguard.py  loopback-only socket guard; loopback URL check
+slmjev/server.py    llama-server launcher (loopback, env API key, bounded cache)
+slmjev/calibrate.py ECE, Brier, AUROC (* temperature / isotonic calibration: P4)
+slmjev/engine.py    * JSON stdin → spans stdout; network forbidden
 data/synthetic/     generator code committed; generated data gitignored
-eval/               harness + gold spans (synthetic only)
+eval/               harness (judge_eval.py) + gold spans (synthetic only)
+results/            eval outputs (gitignored)
 tests/              test_<module>.py; fixtures synthetic only
 docs/decisions/     short decision records + eval-log.md
 docs/private/       DAFA and anything internal (gitignored)
@@ -204,7 +212,16 @@ models/             GGUF / adapters (gitignored)
   - Proposer gap found on this corpus: the rules miss named-month dates (`12 Mar 1990`), about
     half of DOBs. There are no rules at all for names, addresses, SHI, vehicles or licences;
     fixing this is P3 proposer work.
-- [ ] P3: zero-shot judge on Qwen3-1.7B. Measure order bias, and batched vs separate latency.
+- [x] P3: zero-shot judge on Qwen3-1.7B (2026-09-25; see `docs/decisions/0003-zero-shot-judge.md`
+  and `eval/judge_eval.py`).
+  - The Choice carries the decision (`p_identifier = 1 − P(none)`), asked in 4 evenly spaced
+    rotations. On 180 oracle candidates: AUROC 0.98, ECE 0.04, direct-identifier recall
+    (flagged) 0.98, auto-accept precision 0.98, review rate 0.19.
+  - Zero-shot Noul (yes/no) and Score are position-dominated or uninformative, so they are
+    opt-in and advisory only. `property_kind` from the model failed (0/12), so it moves to rules.
+  - About 2.5 s per candidate on CPU, far too slow for bulk. Next: skip the judge for
+    rule-certain spans, and fix the proposer gaps.
+  - Gate status: INCOMPLETE (oracle proposer, no calibration, no baseline F1).
 - [ ] P4: calibration and thresholds; decide the `needs_review` policy.
 - [ ] P5: QLoRA the judge (reusing the finetune_slm training plan), then export to GGUF.
 - [ ] P6: integrate as an `slm:jev` backend in structured_deidentification.
