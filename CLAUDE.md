@@ -178,7 +178,9 @@ models/             GGUF / adapters (gitignored)
 
 ## Phases / status
 - [x] P0: scaffold and this CLAUDE.md (2026-09-25).
-- [ ] P1: port the rules to `slmjev/rules.py`, with the R-parity test.
+- [x] P1: port the rules to `slmjev/rules.py`, with the R-parity test (2026-09-25; see
+  `docs/decisions/0001-rules-parity.md`). Watchlist/learned detectors are not ported yet; pass
+  them as `extra=` `Detector`s.
 - [ ] P2: synthetic Singapore corpus with gold spans. Cover SG names (Chinese, Malay, Indian,
   Eurasian), NRIC/FIN, temp IC, MRN and case numbers, SG addresses and postal codes, SHI mentions,
   and misplaced PII.
@@ -203,8 +205,12 @@ models/             GGUF / adapters (gitignored)
 - Commit messages use conventional style: `feat(rules):`, `test(judge):`, `docs:`.
 
 ## Commands (Windows)
-To be filled in as of P1. Expected:
-- Tests: `uv run pytest -q`
+- Tests: `uv run pytest -q` (needs `uv sync` once, which downloads pytest/ruff: ask first).
+  Until then, the system Python works: `python -m pytest -q` (pytest is installed globally).
+- Lint: `ruff check .`
 - Set `PYTHONIOENCODING=utf-8` for Python scripts.
-- Parity: `& "C:\Program Files\R\R-4.5.2\bin\Rscript.exe" tests\parity\dump_r.R`. Use script files,
-  because long multiline `Rscript -e` segfaults on this machine.
+- Parity golden: `& "C:\Program Files\R\R-4.5.2\bin\Rscript.exe" tests\parity\dump_r.R`.
+  - It rewrites `tests/parity/r_expected.json` from `tests/parity/cases.json`.
+  - It finds `detect_r.R` in the sibling structured_deidentification worktree, or in
+    `$env:SLMJEV_SD_ROOT`.
+  - Use script files, because long multiline `Rscript -e` segfaults on this machine.

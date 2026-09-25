@@ -7,7 +7,7 @@ layer answers typed questions with calibrated probabilities:
 - which of the 15 SingHealth identifiers or SHI categories is it?
 - how sensitive is it?
 
-Status: **P0, scaffold only.** See [CLAUDE.md](CLAUDE.md) for the design, constraints and roadmap.
+Status: **P1.** The Singapore rule detectors are ported to `slmjev/rules.py`, with R-parity tests. See [CLAUDE.md](CLAUDE.md) for the design, constraints and roadmap.
 
 - Runs fully offline. Nothing leaves the machine.
 - Only synthetic data is kept in this repository.

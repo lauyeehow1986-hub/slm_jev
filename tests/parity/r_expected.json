@@ -1,0 +1,1926 @@
+{
+  "generated_by": "tests/parity/dump_r.R",
+  "r_version": "R version 4.5.2 (2025-10-31 ucrt)",
+  "pcre_version": "10.46 2025-08-27",
+  "scan": [
+    {
+      "id": "basic",
+      "spans": [
+        {
+          "start": 21,
+          "end": 29,
+          "match": "S1234567D",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 52,
+          "end": 64,
+          "match": "+65 9123 4567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 37,
+          "end": 46,
+          "match": "12/03/2021",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date",
+          "confidence": 0.75
+        }
+      ],
+      "dedup": [
+        {
+          "start": 52,
+          "end": 64,
+          "match": "+65 9123 4567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 37,
+          "end": 46,
+          "match": "12/03/2021",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date",
+          "confidence": 0.75
+        },
+        {
+          "start": 21,
+          "end": 29,
+          "match": "S1234567D",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        }
+      ]
+    },
+    {
+      "id": "nric_series",
+      "spans": [
+        {
+          "start": 1,
+          "end": 9,
+          "match": "s1234567d",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 18,
+          "end": 26,
+          "match": "S1234567A",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.2
+        },
+        {
+          "start": 39,
+          "end": 47,
+          "match": "T1234567J",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 50,
+          "end": 58,
+          "match": "F1234567N",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 61,
+          "end": 69,
+          "match": "G1234567X",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 72,
+          "end": 80,
+          "match": "M1234567K",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 83,
+          "end": 91,
+          "match": "M1234567A",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.2
+        }
+      ],
+      "dedup": [
+        {
+          "start": 1,
+          "end": 9,
+          "match": "s1234567d",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 39,
+          "end": 47,
+          "match": "T1234567J",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 50,
+          "end": 58,
+          "match": "F1234567N",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 61,
+          "end": 69,
+          "match": "G1234567X",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 72,
+          "end": 80,
+          "match": "M1234567K",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 18,
+          "end": 26,
+          "match": "S1234567A",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.2
+        },
+        {
+          "start": 83,
+          "end": 91,
+          "match": "M1234567A",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.2
+        }
+      ]
+    },
+    {
+      "id": "temp_ic_case",
+      "spans": [
+        {
+          "start": 9,
+          "end": 17,
+          "match": "X1234567A",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:temp_ic",
+          "confidence": 0.8
+        },
+        {
+          "start": 23,
+          "end": 34,
+          "match": "y1234567890b",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:temp_ic",
+          "confidence": 0.8
+        },
+        {
+          "start": 45,
+          "end": 55,
+          "match": "1234567890A",
+          "type": "case",
+          "identifier": "case_visit",
+          "detector": "rule:case",
+          "confidence": 0.7
+        }
+      ],
+      "dedup": [
+        {
+          "start": 23,
+          "end": 34,
+          "match": "y1234567890b",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:temp_ic",
+          "confidence": 0.8
+        },
+        {
+          "start": 45,
+          "end": 55,
+          "match": "1234567890A",
+          "type": "case",
+          "identifier": "case_visit",
+          "detector": "rule:case",
+          "confidence": 0.7
+        },
+        {
+          "start": 9,
+          "end": 17,
+          "match": "X1234567A",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:temp_ic",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "email_url_ip",
+      "spans": [
+        {
+          "start": 8,
+          "end": 28,
+          "match": "tan.ahkow@example.com",
+          "type": "email",
+          "identifier": "email",
+          "detector": "rule:email",
+          "confidence": 0.97
+        },
+        {
+          "start": 35,
+          "end": 60,
+          "match": "https://example.org/p?id=1",
+          "type": "url",
+          "identifier": "other_id",
+          "detector": "rule:url",
+          "confidence": 0.95
+        },
+        {
+          "start": 67,
+          "end": 76,
+          "match": "10.0.0.256",
+          "type": "ip",
+          "identifier": "other_id",
+          "detector": "rule:ip",
+          "confidence": 0.3
+        },
+        {
+          "start": 82,
+          "end": 93,
+          "match": "192.168.1.10",
+          "type": "ip",
+          "identifier": "other_id",
+          "detector": "rule:ip",
+          "confidence": 0.99
+        }
+      ],
+      "dedup": [
+        {
+          "start": 35,
+          "end": 60,
+          "match": "https://example.org/p?id=1",
+          "type": "url",
+          "identifier": "other_id",
+          "detector": "rule:url",
+          "confidence": 0.95
+        },
+        {
+          "start": 8,
+          "end": 28,
+          "match": "tan.ahkow@example.com",
+          "type": "email",
+          "identifier": "email",
+          "detector": "rule:email",
+          "confidence": 0.97
+        },
+        {
+          "start": 82,
+          "end": 93,
+          "match": "192.168.1.10",
+          "type": "ip",
+          "identifier": "other_id",
+          "detector": "rule:ip",
+          "confidence": 0.99
+        },
+        {
+          "start": 67,
+          "end": 76,
+          "match": "10.0.0.256",
+          "type": "ip",
+          "identifier": "other_id",
+          "detector": "rule:ip",
+          "confidence": 0.3
+        }
+      ]
+    },
+    {
+      "id": "postal",
+      "spans": [
+        {
+          "start": 33,
+          "end": 48,
+          "match": "Singapore 560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 56,
+          "end": 63,
+          "match": "S(560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 67,
+          "end": 73,
+          "match": "S560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 76,
+          "end": 92,
+          "match": "Singapore  560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 98,
+          "end": 113,
+          "match": "Singapore\n560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 67,
+          "end": 73,
+          "match": "S560123",
+          "type": "passport",
+          "identifier": "national_id",
+          "detector": "rule:passport",
+          "confidence": 0.35
+        },
+        {
+          "start": 43,
+          "end": 48,
+          "match": "560123",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 58,
+          "end": 63,
+          "match": "560123",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 67,
+          "end": 73,
+          "match": "S560123",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 87,
+          "end": 92,
+          "match": "560123",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 108,
+          "end": 113,
+          "match": "560123",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 121,
+          "end": 126,
+          "match": "560123",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ],
+      "dedup": [
+        {
+          "start": 76,
+          "end": 92,
+          "match": "Singapore  560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 33,
+          "end": 48,
+          "match": "Singapore 560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 98,
+          "end": 113,
+          "match": "Singapore\n560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 56,
+          "end": 63,
+          "match": "S(560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 67,
+          "end": 73,
+          "match": "S560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 121,
+          "end": 126,
+          "match": "560123",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ]
+    },
+    {
+      "id": "postal6_on",
+      "spans": [
+        {
+          "start": 26,
+          "end": 41,
+          "match": "Singapore 560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 36,
+          "end": 41,
+          "match": "560123",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 49,
+          "end": 54,
+          "match": "560123",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 60,
+          "end": 66,
+          "match": "1234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 36,
+          "end": 41,
+          "match": "560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal6",
+          "confidence": 0.5
+        },
+        {
+          "start": 49,
+          "end": 54,
+          "match": "560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal6",
+          "confidence": 0.5
+        }
+      ],
+      "dedup": [
+        {
+          "start": 26,
+          "end": 41,
+          "match": "Singapore 560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal",
+          "confidence": 0.6
+        },
+        {
+          "start": 60,
+          "end": 66,
+          "match": "1234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 49,
+          "end": 54,
+          "match": "560123",
+          "type": "postal",
+          "identifier": "postal_code",
+          "detector": "rule:postal6",
+          "confidence": 0.5
+        }
+      ]
+    },
+    {
+      "id": "compact_dates",
+      "spans": [
+        {
+          "start": 15,
+          "end": 22,
+          "match": "31011990",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 86,
+          "end": 93,
+          "match": "30021990",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 5,
+          "end": 12,
+          "match": "19900131",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 15,
+          "end": 22,
+          "match": "31011990",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 25,
+          "end": 32,
+          "match": "01311990",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 35,
+          "end": 49,
+          "match": "19901231 143000",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 52,
+          "end": 66,
+          "match": "19901231T143000",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 69,
+          "end": 83,
+          "match": "19901231t143000",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.15
+        },
+        {
+          "start": 86,
+          "end": 93,
+          "match": "30021990",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.15
+        },
+        {
+          "start": 96,
+          "end": 103,
+          "match": "01020304",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.15
+        },
+        {
+          "start": 106,
+          "end": 113,
+          "match": "12345678",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.15
+        },
+        {
+          "start": 116,
+          "end": 123,
+          "match": "20000229",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 126,
+          "end": 133,
+          "match": "19000229",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.15
+        },
+        {
+          "start": 5,
+          "end": 12,
+          "match": "19900131",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 15,
+          "end": 22,
+          "match": "31011990",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 25,
+          "end": 32,
+          "match": "01311990",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 35,
+          "end": 42,
+          "match": "19901231",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 44,
+          "end": 49,
+          "match": "143000",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 86,
+          "end": 93,
+          "match": "30021990",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 96,
+          "end": 103,
+          "match": "01020304",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 106,
+          "end": 113,
+          "match": "12345678",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 116,
+          "end": 123,
+          "match": "20000229",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 126,
+          "end": 133,
+          "match": "19000229",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ],
+      "dedup": [
+        {
+          "start": 35,
+          "end": 49,
+          "match": "19901231 143000",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 52,
+          "end": 66,
+          "match": "19901231T143000",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 69,
+          "end": 83,
+          "match": "19901231t143000",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.15
+        },
+        {
+          "start": 5,
+          "end": 12,
+          "match": "19900131",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 15,
+          "end": 22,
+          "match": "31011990",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 25,
+          "end": 32,
+          "match": "01311990",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 116,
+          "end": 123,
+          "match": "20000229",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.99
+        },
+        {
+          "start": 86,
+          "end": 93,
+          "match": "30021990",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 96,
+          "end": 103,
+          "match": "01020304",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 106,
+          "end": 113,
+          "match": "12345678",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 126,
+          "end": 133,
+          "match": "19000229",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ]
+    },
+    {
+      "id": "sep_dates",
+      "spans": [
+        {
+          "start": 1,
+          "end": 10,
+          "match": "2021-03-12",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date",
+          "confidence": 0.75
+        },
+        {
+          "start": 16,
+          "end": 23,
+          "match": "1990/1/5",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date",
+          "confidence": 0.75
+        },
+        {
+          "start": 29,
+          "end": 36,
+          "match": "5-1-1990",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date",
+          "confidence": 0.75
+        },
+        {
+          "start": 42,
+          "end": 51,
+          "match": "32/13/2020",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date",
+          "confidence": 0.75
+        }
+      ],
+      "dedup": [
+        {
+          "start": 1,
+          "end": 10,
+          "match": "2021-03-12",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date",
+          "confidence": 0.75
+        },
+        {
+          "start": 42,
+          "end": 51,
+          "match": "32/13/2020",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date",
+          "confidence": 0.75
+        },
+        {
+          "start": 16,
+          "end": 23,
+          "match": "1990/1/5",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date",
+          "confidence": 0.75
+        },
+        {
+          "start": 29,
+          "end": 36,
+          "match": "5-1-1990",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date",
+          "confidence": 0.75
+        }
+      ]
+    },
+    {
+      "id": "card_mrn",
+      "spans": [
+        {
+          "start": 55,
+          "end": 63,
+          "match": "AB1234567",
+          "type": "passport",
+          "identifier": "national_id",
+          "detector": "rule:passport",
+          "confidence": 0.35
+        },
+        {
+          "start": 55,
+          "end": 63,
+          "match": "AB1234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 66,
+          "end": 76,
+          "match": "SGH12345678",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 6,
+          "end": 24,
+          "match": "4111 1111 1111 1111",
+          "type": "account",
+          "identifier": "other_id",
+          "detector": "rule:creditcard",
+          "confidence": 0.99
+        },
+        {
+          "start": 30,
+          "end": 48,
+          "match": "4111-1111-1111-1112",
+          "type": "account",
+          "identifier": "other_id",
+          "detector": "rule:creditcard",
+          "confidence": 0.2
+        }
+      ],
+      "dedup": [
+        {
+          "start": 6,
+          "end": 24,
+          "match": "4111 1111 1111 1111",
+          "type": "account",
+          "identifier": "other_id",
+          "detector": "rule:creditcard",
+          "confidence": 0.99
+        },
+        {
+          "start": 30,
+          "end": 48,
+          "match": "4111-1111-1111-1112",
+          "type": "account",
+          "identifier": "other_id",
+          "detector": "rule:creditcard",
+          "confidence": 0.2
+        },
+        {
+          "start": 66,
+          "end": 76,
+          "match": "SGH12345678",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 55,
+          "end": 63,
+          "match": "AB1234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ]
+    },
+    {
+      "id": "phones",
+      "spans": [
+        {
+          "start": 8,
+          "end": 15,
+          "match": "61234567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 18,
+          "end": 26,
+          "match": "6123-4567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 29,
+          "end": 37,
+          "match": "8123 4567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 61,
+          "end": 71,
+          "match": "+6591234567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 74,
+          "end": 84,
+          "match": "65-91234567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 87,
+          "end": 95,
+          "match": "3123 4567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 8,
+          "end": 15,
+          "match": "61234567",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.15
+        },
+        {
+          "start": 40,
+          "end": 47,
+          "match": "51234567",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.15
+        },
+        {
+          "start": 77,
+          "end": 84,
+          "match": "91234567",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.15
+        },
+        {
+          "start": 8,
+          "end": 15,
+          "match": "61234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 40,
+          "end": 47,
+          "match": "51234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 50,
+          "end": 58,
+          "match": "912345678",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 62,
+          "end": 71,
+          "match": "6591234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 77,
+          "end": 84,
+          "match": "91234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ],
+      "dedup": [
+        {
+          "start": 61,
+          "end": 71,
+          "match": "+6591234567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 74,
+          "end": 84,
+          "match": "65-91234567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 18,
+          "end": 26,
+          "match": "6123-4567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 29,
+          "end": 37,
+          "match": "8123 4567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 87,
+          "end": 95,
+          "match": "3123 4567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 50,
+          "end": 58,
+          "match": "912345678",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 8,
+          "end": 15,
+          "match": "61234567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 40,
+          "end": 47,
+          "match": "51234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ]
+    },
+    {
+      "id": "passport",
+      "spans": [
+        {
+          "start": 10,
+          "end": 17,
+          "match": "E1234567",
+          "type": "passport",
+          "identifier": "national_id",
+          "detector": "rule:passport",
+          "confidence": 0.35
+        },
+        {
+          "start": 19,
+          "end": 27,
+          "match": "K12345678",
+          "type": "passport",
+          "identifier": "national_id",
+          "detector": "rule:passport",
+          "confidence": 0.35
+        },
+        {
+          "start": 29,
+          "end": 36,
+          "match": "AB123456",
+          "type": "passport",
+          "identifier": "national_id",
+          "detector": "rule:passport",
+          "confidence": 0.35
+        },
+        {
+          "start": 10,
+          "end": 17,
+          "match": "E1234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 19,
+          "end": 27,
+          "match": "K12345678",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 29,
+          "end": 36,
+          "match": "AB123456",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ],
+      "dedup": [
+        {
+          "start": 19,
+          "end": 27,
+          "match": "K12345678",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 10,
+          "end": 17,
+          "match": "E1234567",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        },
+        {
+          "start": 29,
+          "end": 36,
+          "match": "AB123456",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ]
+    },
+    {
+      "id": "unicode",
+      "spans": [
+        {
+          "start": 6,
+          "end": 14,
+          "match": "S1234567D",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 41,
+          "end": 49,
+          "match": "T1234567J",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 54,
+          "end": 62,
+          "match": "S1234567D",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 18,
+          "end": 26,
+          "match": "9123 4567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 32,
+          "end": 39,
+          "match": "12345678",
+          "type": "date",
+          "identifier": "dob",
+          "detector": "rule:date_compact",
+          "confidence": 0.15
+        },
+        {
+          "start": 32,
+          "end": 39,
+          "match": "12345678",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ],
+      "dedup": [
+        {
+          "start": 6,
+          "end": 14,
+          "match": "S1234567D",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 41,
+          "end": 49,
+          "match": "T1234567J",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 54,
+          "end": 62,
+          "match": "S1234567D",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 18,
+          "end": 26,
+          "match": "9123 4567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        },
+        {
+          "start": 32,
+          "end": 39,
+          "match": "12345678",
+          "type": "mrn",
+          "identifier": "mrn",
+          "detector": "rule:mrn",
+          "confidence": 0.4
+        }
+      ]
+    },
+    {
+      "id": "whitespace",
+      "spans": [
+        {
+          "start": 5,
+          "end": 13,
+          "match": "S1234567D",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 23,
+          "end": 31,
+          "match": "T1234567J",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 37,
+          "end": 45,
+          "match": "F1234567N",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        }
+      ],
+      "dedup": [
+        {
+          "start": 5,
+          "end": 13,
+          "match": "S1234567D",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 23,
+          "end": 31,
+          "match": "T1234567J",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        },
+        {
+          "start": 37,
+          "end": 45,
+          "match": "F1234567N",
+          "type": "nric",
+          "identifier": "national_id",
+          "detector": "rule:nric",
+          "confidence": 0.99
+        }
+      ]
+    },
+    {
+      "id": "no_hits",
+      "spans": [],
+      "dedup": []
+    },
+    {
+      "id": "empty",
+      "spans": [],
+      "dedup": []
+    },
+    {
+      "id": "dense",
+      "spans": [
+        {
+          "start": 1,
+          "end": 32,
+          "match": "S1234567D91234567tan@example.com",
+          "type": "email",
+          "identifier": "email",
+          "detector": "rule:email",
+          "confidence": 0.97
+        },
+        {
+          "start": 10,
+          "end": 17,
+          "match": "91234567",
+          "type": "phone",
+          "identifier": "phone",
+          "detector": "rule:phone",
+          "confidence": 0.7
+        }
+      ],
+      "dedup": [
+        {
+          "start": 1,
+          "end": 32,
+          "match": "S1234567D91234567tan@example.com",
+          "type": "email",
+          "identifier": "email",
+          "detector": "rule:email",
+          "confidence": 0.97
+        }
+      ]
+    }
+  ],
+  "classify": [
+    {
+      "value": "S1234567D",
+      "postal6": false,
+      "hits": {
+        "nric": 0.99
+      }
+    },
+    {
+      "value": " s1234567d ",
+      "postal6": false,
+      "hits": {
+        "nric": 0.99
+      }
+    },
+    {
+      "value": "S1234567A",
+      "postal6": false,
+      "hits": {
+        "nric": 0.2
+      }
+    },
+    {
+      "value": "19900131",
+      "postal6": false,
+      "hits": {
+        "date_compact": 0.99,
+        "mrn": 0.4
+      }
+    },
+    {
+      "value": "12345678",
+      "postal6": false,
+      "hits": {
+        "date_compact": 0.15,
+        "mrn": 0.4
+      }
+    },
+    {
+      "value": "560123",
+      "postal6": false,
+      "hits": {
+        "mrn": 0.4
+      }
+    },
+    {
+      "value": "560123",
+      "postal6": true,
+      "hits": {
+        "mrn": 0.4,
+        "postal6": 0.5
+      }
+    },
+    {
+      "value": "Singapore 560123",
+      "postal6": false,
+      "hits": {
+        "postal": 0.6
+      }
+    },
+    {
+      "value": "4111111111111111",
+      "postal6": false,
+      "hits": {
+        "creditcard": 0.99
+      }
+    },
+    {
+      "value": "1.2.3.4",
+      "postal6": false,
+      "hits": {
+        "ip": 0.99
+      }
+    },
+    {
+      "value": "999.1.1.1",
+      "postal6": false,
+      "hits": {
+        "ip": 0.3
+      }
+    },
+    {
+      "value": "",
+      "postal6": false,
+      "hits": {}
+    },
+    {
+      "value": "   ",
+      "postal6": false,
+      "hits": {}
+    },
+    {
+      "value": "hello world",
+      "postal6": false,
+      "hits": {}
+    },
+    {
+      "value": "X1234567A",
+      "postal6": false,
+      "hits": {
+        "temp_ic": 0.8
+      }
+    },
+    {
+      "value": "1234567890A",
+      "postal6": false,
+      "hits": {
+        "case": 0.7
+      }
+    },
+    {
+      "value": "AB1234567",
+      "postal6": false,
+      "hits": {
+        "passport": 0.35,
+        "mrn": 0.4
+      }
+    },
+    {
+      "value": "tan@example.com",
+      "postal6": false,
+      "hits": {
+        "email": 0.97
+      }
+    },
+    {
+      "value": "\t91234567\n",
+      "postal6": false,
+      "hits": {
+        "phone": 0.7,
+        "date_compact": 0.15,
+        "mrn": 0.4
+      }
+    },
+    {
+      "value": "+65 9123 4567",
+      "postal6": false,
+      "hits": {
+        "phone": 0.7
+      }
+    },
+    {
+      "value": "19901231T143000",
+      "postal6": false,
+      "hits": {
+        "date_compact": 0.99
+      }
+    },
+    {
+      "value": "S1234567D S1234567D",
+      "postal6": false,
+      "hits": {}
+    }
+  ],
+  "nric": [
+    {
+      "x": "S1234567D",
+      "ok": true
+    },
+    {
+      "x": "s1234567d",
+      "ok": true
+    },
+    {
+      "x": " S1234567D ",
+      "ok": true
+    },
+    {
+      "x": "S1234567A",
+      "ok": false
+    },
+    {
+      "x": "T1234567J",
+      "ok": true
+    },
+    {
+      "x": "F1234567N",
+      "ok": true
+    },
+    {
+      "x": "G1234567X",
+      "ok": true
+    },
+    {
+      "x": "M1234567K",
+      "ok": true
+    },
+    {
+      "x": "M1234567A",
+      "ok": false
+    },
+    {
+      "x": "A1234567D",
+      "ok": false
+    },
+    {
+      "x": "S123456D",
+      "ok": false
+    },
+    {
+      "x": "S12345678D",
+      "ok": false
+    },
+    {
+      "x": "",
+      "ok": false
+    },
+    {
+      "x": "S0000000J",
+      "ok": true
+    },
+    {
+      "x": "T0000000G",
+      "ok": true
+    },
+    {
+      "x": "F0000000X",
+      "ok": true
+    },
+    {
+      "x": "G0000000R",
+      "ok": true
+    },
+    {
+      "x": "M0000000X",
+      "ok": false
+    }
+  ],
+  "compact_date": [
+    {
+      "s": "19900131",
+      "date": "1990-01-31"
+    },
+    {
+      "s": "31011990",
+      "date": "1990-01-31"
+    },
+    {
+      "s": "01311990",
+      "date": "1990-01-31"
+    },
+    {
+      "s": "19901231 143000",
+      "date": "1990-12-31"
+    },
+    {
+      "s": "19901231T143000",
+      "date": "1990-12-31"
+    },
+    {
+      "s": "19901231t143000",
+      "date": null
+    },
+    {
+      "s": "30021990",
+      "date": null
+    },
+    {
+      "s": "01020304",
+      "date": null
+    },
+    {
+      "s": "12345678",
+      "date": null
+    },
+    {
+      "s": "20000229",
+      "date": "2000-02-29"
+    },
+    {
+      "s": "19000229",
+      "date": null
+    },
+    {
+      "s": "1990123",
+      "date": null
+    },
+    {
+      "s": "199012310",
+      "date": null
+    },
+    {
+      "s": " 19900131 ",
+      "date": "1990-01-31"
+    },
+    {
+      "s": "21001231",
+      "date": "2100-12-31"
+    },
+    {
+      "s": "21010101",
+      "date": null
+    },
+    {
+      "s": "00000000",
+      "date": null
+    },
+    {
+      "s": "99999999",
+      "date": null
+    },
+    {
+      "s": "13131990",
+      "date": null
+    },
+    {
+      "s": "12131990",
+      "date": "1990-12-13"
+    }
+  ],
+  "luhn": [
+    {
+      "x": "4111111111111111",
+      "ok": true
+    },
+    {
+      "x": "4111 1111 1111 1111",
+      "ok": true
+    },
+    {
+      "x": "4111111111111112",
+      "ok": false
+    },
+    {
+      "x": "79927398713",
+      "ok": false
+    },
+    {
+      "x": "0000000000000",
+      "ok": true
+    },
+    {
+      "x": "",
+      "ok": false
+    },
+    {
+      "x": "abc",
+      "ok": false
+    },
+    {
+      "x": "5555-5555-5555-4444",
+      "ok": true
+    }
+  ]
+}
