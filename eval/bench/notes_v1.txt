@@ -1,0 +1,163 @@
+# notes_v1 — hand-written, realistic-style Singapore clinical notes with gold spans (P7).
+#
+# SYNTHETIC: NOT REAL PATIENT DATA. Every person, name, NRIC/FIN, MRN, phone number, address,
+# email and health detail below is invented for testing. The NRIC/FINs are drawn at random with
+# a valid checksum, and the phone numbers and emails are made up; any match to a real person,
+# number or mailbox is coincidental. Written for P7 by the same author as the generator in
+# slmjev/synth.py, so it is NOT independent of the generator; it differs in style (long notes,
+# headers, capitals, abbreviations, lab tables) and in several ID formats.
+#
+# Format: a note starts with "=== <id> | <kind> ===". A gold span is {{label|text}}; the label
+# is one of the 15 identifiers, an SHI category, or date_other (a date that is neither a DOB
+# nor a date of death: outside the 15 identifiers, scored only in the "all dates" view).
+# Clinician and next-of-kin names are gold names. Institutions, employers and schools are not
+# gold. Lines starting with "#" are comments.
+
+=== n01 | discharge summary ===
+DISCHARGE SUMMARY
+Patient: {{name|TAN AH KOW}}      NRIC: {{national_id|S3287836I}}      MRN: {{mrn|20318845}}
+DOB: {{dob|14/02/1951}}      Admission no.: {{case_visit|A2403391}}
+Admitted: {{date_other|02/03/2024}}      Discharged: {{date_other|09/03/2024}}
+Attending: Dr {{name|Lim Wei Ming}} (Cardiology)
+
+Diagnosis: NSTEMI. Background of T2DM, HTN, HLD.
+Course: Coronary angiogram on {{date_other|04/03/2024}} showed 90% LAD stenosis; PCI with 1 DES.
+Post-procedure uneventful. Hb 11.2, Plt 245, Cr 98.
+Discharge meds: aspirin 100mg OM, ticagrelor 90mg BD, atorvastatin 40mg ON, metformin 850mg BD.
+Follow-up: cardiology clinic in 4 weeks. Daughter ({{name|Tan Mei Ling}}, {{phone|9734 2210}}) to accompany.
+
+=== n02 | referral letter ===
+Dear Dr {{name|Ravi Chandran}},
+
+Re: Mdm {{name|Siti Nurhaliza binte Abdul Rahman}} ({{national_id|S0098054D}}), DOB {{dob|3 May 1968}}
+
+Thank you for seeing this 55-year-old lady with poorly controlled asthma. She lives at
+{{address|Blk 412 Bedok North Avenue 2, #08-117}}, Singapore {{postal_code|460412}} with her
+husband and two children, and can be reached at {{phone|+65 8812 0937}} or {{email|siti.nr68@gmail.com}}.
+She was admitted twice last year for exacerbations. She reports low mood since her mother's
+death and was started on sertraline by her GP for {{mental_health|depression}}.
+
+Yours sincerely,
+Dr {{name|Karen Ong}}
+Family Physician, Bedok Polyclinic
+Tel {{phone|6243 6888}}   Fax {{fax|6243 6889}}
+
+=== n03 | nursing progress note ===
+0730 Pt alert, GCS 15. T 37.2 HR 88 BP 132/78 SpO2 97% RA. Pain score 2/10.
+1015 Wife Mdm {{name|Chong Lai Fong}} visited, updated on plan. Requested callback on {{phone|9123 8845}}.
+1400 Dressing to L foot wound changed, minimal exudate. Pt ambulating with frame.
+SN {{name|Nur Aqilah}}
+
+=== n04 | ED triage ===
+ED TRIAGE   P2
+NAME: {{name|MUTHU KRISHNAN S/O RAMASAMY}}   IC: {{national_id|S4708877A}}
+AGE 67 M. C/O SOB X 3/7, WORSE ON EXERTION. PMHX: CCF, AF ON WARFARIN, CKD3.
+ALLERGY: PENICILLIN (RASH).
+NOK: SON {{name|VIJAY}} HP {{phone|81239046}}
+BROUGHT IN BY SCDF AMBULANCE.
+
+=== n05 | medical social work ===
+Medical social work note, {{date_other|15/05/2024}}.
+Met Mr {{name|Jason Teo Kok Wah}} (MRN {{mrn|30011752}}) on the ward at the team's request. He is a
+34-year-old delivery rider, {{hiv_sti|HIV-positive}} since 2019 and on ART, with a history of
+{{substance_use|methamphetamine use}}; last use reported 2 months ago. He is staying with a friend at
+{{address|25 Jalan Kembangan}}, {{postal_code|419110}} after being evicted. Financial counselling
+done; referred to the Community Health Assist Scheme.
+
+=== n06 | laboratory report ===
+LABORATORY REPORT
+Patient Name : {{name|LEE SOO CHIN}}            Sex/Age : F / 58
+NRIC/FIN     : {{national_id|S0794038F}}            Lab No  : {{other_id|24L0339127}}
+Ward/Clinic  : SOC ENDO                   Requested by : Dr {{name|Ang Boon Huat}}
+Collected    : {{date_other|21/06/2024}} 08:12
+
+HbA1c              8.4 %        (4.0 - 6.0)  H
+Fasting glucose    9.8 mmol/L   (3.9 - 6.0)  H
+LDL-C              3.1 mmol/L
+eGFR               54 mL/min/1.73m2
+
+=== n07 | telephone encounter ===
+Tel consult {{date_other|3 July 2024}} 1420h. Caller: {{name|Aisyah}} (daughter), {{phone|9016 4432}}.
+Mother ({{name|Rohani bte Salleh}}, DOB {{dob|19.11.1947}}) had a fall at home this morning, no LOC,
+able to weight bear. Advised to attend polyclinic if pain worsens. Daughter's email for
+appointment letters: {{email|aisyah.salleh@outlook.com}}.
+
+=== n08 | radiology report ===
+CT BRAIN (NON-CONTRAST)
+Accession: {{other_id|RAD-24-0918273}}    Patient: {{name|Goh Chee Keong}}    ID: {{mrn|MRN0412258}}
+Clinical: fall, on apixaban, ?ICH.
+Findings: No intracranial haemorrhage. Chronic small vessel ischaemic changes. No midline shift.
+Impression: No acute intracranial abnormality.
+Reported by: Dr {{name|Hannah Koh}}, Radiology, {{date_other|04/07/2024}}
+
+=== n09 | psychiatry review ===
+Psychiatry outpatient review. Ms {{name|Deborah Fernandez}}, 29F, seen with her partner.
+Diagnosis: {{mental_health|bipolar affective disorder type II}}, currently euthymic on lithium
+400mg ON (level 0.7). Past {{mental_health|suicide attempt}} by overdose in 2021.
+She is {{reproductive_sexual|12 weeks pregnant}} and considering options; discussed
+{{reproductive_sexual|termination of pregnancy}} vs continuing with lithium dose adjustment and
+fetal echo. Next review in 4 weeks. Contact: {{phone|8577 1203}}.
+
+=== n10 | cancer genetics ===
+Cancer genetics clinic. Mrs {{name|Wong Pei Shan}}, 44, {{genetic|BRCA2 pathogenic variant}}
+confirmed on panel testing (lab ref {{other_id|GX-7781-24}}). Her sister {{name|Wong Pei Ling}} has
+been offered cascade testing. Risk-reducing surgery options discussed; she will decide after
+speaking to her husband.
+
+=== n11 | ward round (no PII) ===
+Ward round. Day 3 post laparoscopic cholecystectomy. Afebrile, tolerating diet, wound clean and
+dry. Drain removed. Plan: discharge tomorrow if well, TCU 2/52 with bloods (FBC, LFT).
+
+=== n12 | pharmacy (no PII) ===
+Pharmacy intervention: enoxaparin adjusted from 60mg BD to 40mg OD for CrCl 28 mL/min. Team
+informed via secure chat. Ref policy PH-017, page 4.
+
+=== n13 | fluid balance (no PII) ===
+Fluid balance: input 2150 mL, output 1830 mL. Weight 64.2 kg (from 65.0). Repeat U/E at 0600.
+Ward 64 Bed 18 to be cleaned before transfer.
+
+=== n14 | occupational injury ===
+Occupational injury. Mr {{name|Md Rafiqul Islam}}, Bangladeshi, work permit holder, FIN
+{{national_id|G6178583W}}, passport {{national_id|BG0417782}}. Employer: Kian Huat Construction
+Pte Ltd, supervisor Mr {{name|Heng}} ({{phone|6555 0192}}). Crush injury R index finger at
+worksite. X-ray: tuft fracture. Dormitory address {{address|10 Kranji Loop}}, {{postal_code|739554}}.
+
+=== n15 | cardiac device clinic ===
+Cardiac device clinic. Pt {{name|Ong Beng Hock}} has a dual-chamber pacemaker (Medtronic Azure XT,
+serial {{device|RNB603712S}}) implanted {{date_other|12/08/2019}}. Remote monitoring ID
+{{device|MDT-44190827}}. Battery 7.5 years. Next check in 6 months.
+
+=== n16 | death note ===
+Mr {{name|Lau Kim Seng}}, DOB {{dob|01/01/1939}}, was pronounced dead on {{date_of_death|17/08/2024}}
+at 0345h by Dr {{name|Farhan Yusof}}. Cause of death: 1a pneumonia, 1b advanced dementia.
+Next of kin informed (son, {{phone|9678 2231}}).
+
+=== n17 | paediatric clinic ===
+Paeds clinic. {{name|Ethan Lim Jun Hao}}, 6 yo, NRIC {{national_id|T6970282H}}, brought by mother
+{{name|Chloe Tan}}. Mild persistent asthma on Seretide 125 1 puff BD. Mother requests MC for 2 days;
+email {{email|chloe.tan.sg@yahoo.com.sg}}.
+
+=== n18 | endoscopy ===
+Procedure: OGD. Indication: dyspepsia. Scope serial {{device|2715834}}. Endoscopist: Dr {{name|Tay}}.
+Pt sticker: {{name|NG KAH HENG}} {{national_id|M4409237Q}}
+Findings: mild antral gastritis, CLO test sent. No ulcer.
+
+=== n19 | appointment admin ===
+Appointment reschedule request from {{email|kelvin.chua1985@hotmail.com}}: Mr {{name|Kelvin Chua}}
+(case {{case_visit|2024-OP-118832}}) cannot attend on {{date_other|22 Aug}}, asks for a Saturday
+slot. Home phone {{phone|6452 7719}}. New address: {{address|88 Sengkang East Way, #12-34}}
+S{{postal_code|544691}}.
+
+=== n20 | infectious diseases clinic ===
+ID clinic. {{name|Adrian Seah}}, 41M. {{hiv_sti|HIV}} on Biktarvy, VL undetectable, CD4 612. Treated
+for {{hiv_sti|syphilis}} in 2023. Partner notification discussed. {{reproductive_sexual|MSM}}.
+Contact via {{phone|+65 9345 6602}} only (does not want calls at work).
+
+=== n21 | physiotherapy (no PII) ===
+Physiotherapy: chest physio done, incentive spirometry 1500 mL, ambulated 40 m with Zimmer frame,
+SpO2 maintained above 94%. Continue BD sessions.
+
+=== n22 | home visit ===
+Home visit to Mr {{name|Anthony de Souza}} at {{address|17 Jalan Bunga Rampai}}, Singapore
+{{postal_code|538376}}. Lives alone; bathroom grab bars installed. Carer {{name|Maria Santos}}
+(helper, FIN {{national_id|F4923005L}}) present during the visit.

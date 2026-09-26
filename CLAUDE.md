@@ -280,7 +280,15 @@ models/             GGUF / adapters / calibration.json (gitignored)
   - SD side: branch `claude/slm-jev-backend` in structured_deidentification (mode `jev` in
     `run_engine.py`, `se_jev_scan`, opt-in checkbox and `--jev`, `smoke5_jev.R`). Unsure spans
     bypass SD's confidence floor, and a failed scan stops the export.
-- [ ] P7: benchmark against Privacy Filter, MediPhi and Presidio; write `docs/results.md`.
+- [x] P7: benchmark against rules, Presidio, Privacy Filter, MediPhi and Qwen2.5-3B (2026-09-26;
+  see `docs/results.md`). Synthetic only: SD's 20-note A/B set and 22 hand-written notes.
+  - slm:jev leads on the realistic-style notes (identifier F1 0.964; MediPhi 0.890, Privacy
+    Filter 0.893) and is the only system that finds SHI (recall 0.818, precision 0.600).
+  - **The release gate fails:** direct recall is 0.929 and 0.952, from 7 silent misses. Five are
+    proposer gaps (short street forms, single given names), and two are lab reference numbers the
+    judge dropped. Fixes must be checked on a new, unseen set.
+  - Found an SD bug: `detect_llm._parse_spans` drops long notes when llama-cli truncates the
+    prompt echo. The fix is uncommitted on SD branch `claude/slm-jev-backend`.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.
@@ -321,6 +329,8 @@ models/             GGUF / adapters / calibration.json (gitignored)
     Bump `PROMPT_VERSION` in `slmjev/judge.py` on any prompt, option or family change, then refit.
 - End to end (P6): `python eval/e2e_eval.py --split test --seed 31 --calibration <cal.json>`
   (`--hard 60 --seed 41`, `--labs 100 --seed 51`) runs the proposer + judge as the engine does.
+- Benchmark (P7): `python eval/bench.py --set eval/bench/notes_v1.txt --systems ...` (flags in
+  its docstring and `docs/results.md`; `--reuse <report>` re-runs only some systems).
 - Engine: `echo {"texts": [...]} | python -m slmjev.engine` (`--probe` checks the files).
   structured_deidentification calls it through `run_engine.py jev` with `SLMJEV_ROOT` set.
 - Judge finetune (P5): `python finetune/build_data.py` writes `data/sft/` (gitignored).

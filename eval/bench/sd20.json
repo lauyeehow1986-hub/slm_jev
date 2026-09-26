@@ -1,0 +1,303 @@
+{
+  "name": "sd20",
+  "source": "structured_deidentification LLM A/B gold set (ab_llm.R, 2026-09-06), rebuilt by eval/bench/make_sd20.R; synthetic",
+  "offsets": "1-based, end inclusive",
+  "docs": [
+    {
+      "id": "sd20-01",
+      "text": "Patient John Tan seen today, follow-up with Dr Sarah Lim next week.",
+      "spans": [
+        {
+          "start": 9,
+          "end": 16,
+          "match": "John Tan",
+          "label": "name"
+        },
+        {
+          "start": 48,
+          "end": 56,
+          "match": "Sarah Lim",
+          "label": "name"
+        }
+      ]
+    },
+    {
+      "id": "sd20-02",
+      "text": "Spoke to daughter Mary Goh on 9123 4567 re discharge plan.",
+      "spans": [
+        {
+          "start": 19,
+          "end": 26,
+          "match": "Mary Goh",
+          "label": "name"
+        },
+        {
+          "start": 31,
+          "end": 39,
+          "match": "9123 4567",
+          "label": "phone"
+        }
+      ]
+    },
+    {
+      "id": "sd20-03",
+      "text": "Referred by Dr Rajesh Kumar; wristband NRIC S8053491D confirmed.",
+      "spans": [
+        {
+          "start": 16,
+          "end": 27,
+          "match": "Rajesh Kumar",
+          "label": "name"
+        },
+        {
+          "start": 45,
+          "end": 53,
+          "match": "S8053491D",
+          "label": "national_id"
+        }
+      ]
+    },
+    {
+      "id": "sd20-04",
+      "text": "Contact next of kin at tan.family@gmail.com or call +65 8123 4567.",
+      "spans": [
+        {
+          "start": 24,
+          "end": 43,
+          "match": "tan.family@gmail.com",
+          "label": "email"
+        },
+        {
+          "start": 53,
+          "end": 65,
+          "match": "+65 8123 4567",
+          "label": "phone"
+        }
+      ]
+    },
+    {
+      "id": "sd20-05",
+      "text": "Lives at Blk 123 Tampines St 11 #05-432, Singapore 521123.",
+      "spans": [
+        {
+          "start": 10,
+          "end": 39,
+          "match": "Blk 123 Tampines St 11 #05-432",
+          "label": "address"
+        },
+        {
+          "start": 52,
+          "end": 57,
+          "match": "521123",
+          "label": "postal_code"
+        }
+      ]
+    },
+    {
+      "id": "sd20-06",
+      "text": "DOB 12/03/1975, admitted 04/07/2023 under Dr Lee Wei Xiong.",
+      "spans": [
+        {
+          "start": 5,
+          "end": 14,
+          "match": "12/03/1975",
+          "label": "dob"
+        },
+        {
+          "start": 26,
+          "end": 35,
+          "match": "04/07/2023",
+          "label": "date_other"
+        },
+        {
+          "start": 46,
+          "end": 58,
+          "match": "Lee Wei Xiong",
+          "label": "name"
+        }
+      ]
+    },
+    {
+      "id": "sd20-07",
+      "text": "Nurse Priya Devi documented vitals; patient stable overnight.",
+      "spans": [
+        {
+          "start": 7,
+          "end": 16,
+          "match": "Priya Devi",
+          "label": "name"
+        }
+      ]
+    },
+    {
+      "id": "sd20-08",
+      "text": "Call husband Ahmad bin Ismail, hp 8123 9977 after 6pm.",
+      "spans": [
+        {
+          "start": 14,
+          "end": 29,
+          "match": "Ahmad bin Ismail",
+          "label": "name"
+        },
+        {
+          "start": 35,
+          "end": 43,
+          "match": "8123 9977",
+          "label": "phone"
+        }
+      ]
+    },
+    {
+      "id": "sd20-09",
+      "text": "Old records under name Grace Wong-Lim, ic T7209511H.",
+      "spans": [
+        {
+          "start": 24,
+          "end": 37,
+          "match": "Grace Wong-Lim",
+          "label": "name"
+        },
+        {
+          "start": 43,
+          "end": 51,
+          "match": "T7209511H",
+          "label": "national_id"
+        }
+      ]
+    },
+    {
+      "id": "sd20-10",
+      "text": "Seen with wife Madam Ng Bee Choo; Malay translator arranged.",
+      "spans": [
+        {
+          "start": 22,
+          "end": 32,
+          "match": "Ng Bee Choo",
+          "label": "name"
+        }
+      ]
+    },
+    {
+      "id": "sd20-11",
+      "text": "Fax the report to 6789 0123 attention Dr Chua in cardiology.",
+      "spans": [
+        {
+          "start": 19,
+          "end": 27,
+          "match": "6789 0123",
+          "label": "fax"
+        },
+        {
+          "start": 42,
+          "end": 45,
+          "match": "Chua",
+          "label": "name"
+        }
+      ]
+    },
+    {
+      "id": "sd20-12",
+      "text": "Email the echo results to sister at siti.rahman@example.com please.",
+      "spans": [
+        {
+          "start": 37,
+          "end": 59,
+          "match": "siti.rahman@example.com",
+          "label": "email"
+        }
+      ]
+    },
+    {
+      "id": "sd20-13",
+      "text": "Patient Kumar s/o Ramasamy, staying at Woodlands Ave 6, ic S4742229I.",
+      "spans": [
+        {
+          "start": 9,
+          "end": 26,
+          "match": "Kumar s/o Ramasamy",
+          "label": "name"
+        },
+        {
+          "start": 40,
+          "end": 54,
+          "match": "Woodlands Ave 6",
+          "label": "address"
+        },
+        {
+          "start": 60,
+          "end": 68,
+          "match": "S4742229I",
+          "label": "national_id"
+        }
+      ]
+    },
+    {
+      "id": "sd20-14",
+      "text": "Confirmed next appointment 15 Jan 2024 with the cardiology clinic.",
+      "spans": [
+        {
+          "start": 28,
+          "end": 38,
+          "match": "15 Jan 2024",
+          "label": "date_other"
+        }
+      ]
+    },
+    {
+      "id": "sd20-15",
+      "text": "Spoke with Dr Tan and Nurse Lim regarding the transfer.",
+      "spans": [
+        {
+          "start": 15,
+          "end": 17,
+          "match": "Tan",
+          "label": "name"
+        },
+        {
+          "start": 29,
+          "end": 31,
+          "match": "Lim",
+          "label": "name"
+        }
+      ]
+    },
+    {
+      "id": "sd20-16",
+      "text": "Mother Faridah bte Osman reachable at +65 9012 3456 daytime.",
+      "spans": [
+        {
+          "start": 8,
+          "end": 24,
+          "match": "Faridah bte Osman",
+          "label": "name"
+        },
+        {
+          "start": 39,
+          "end": 51,
+          "match": "+65 9012 3456",
+          "label": "phone"
+        }
+      ]
+    },
+    {
+      "id": "sd20-17",
+      "text": "Patient reviewed in clinic; stable, no acute concerns.",
+      "spans": []
+    },
+    {
+      "id": "sd20-18",
+      "text": "Routine follow up, nil significant, plan repeat echo in 6 months.",
+      "spans": []
+    },
+    {
+      "id": "sd20-19",
+      "text": "Bloods sent, awaiting troponin and BNP results this afternoon.",
+      "spans": []
+    },
+    {
+      "id": "sd20-20",
+      "text": "Chest pain resolved with GTN, ECG unremarkable, discharged well.",
+      "spans": []
+    }
+  ]
+}
