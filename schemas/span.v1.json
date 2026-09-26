@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "slmjev/span.v1.json",
+  "title": "slm_jev span record, v1",
+  "description": "One span returned by `python -m slmjev.engine`. The first seven fields are structured_deidentification's span contract (app/R/engine_py.R); the rest are slm_jev's. Offsets are 1-based and `end` is inclusive. A published version is never edited in place.",
+  "type": "object",
+  "required": ["row", "start", "end", "match", "type", "identifier", "detector", "confidence",
+               "p_identifier", "category", "category_probs", "sensitivity", "needs_review",
+               "decision"],
+  "properties": {
+    "row": {"type": "integer", "minimum": 1, "description": "1-based index of the text in the request"},
+    "start": {"type": "integer", "minimum": 1},
+    "end": {"type": "integer", "minimum": 1},
+    "match": {"type": "string", "description": "text[start-1:end]"},
+    "type": {"type": ["string", "null"], "description": "detector type hint (e.g. nric, postal) or the judged category"},
+    "identifier": {"type": ["string", "null"], "description": "an identifier or SHI id from labels.v1.json; for a review span judged `none`, the most likely other label; null only if the judge failed and no type hint exists"},
+    "detector": {"const": "slm:jev"},
+    "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "calibrated p(identifier); null if the judge failed"},
+    "p_identifier": {"type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "raw 1 - p(none) from option-token logprobs"},
+    "category": {"type": ["string", "null"], "description": "top Choice option, `none` included"},
+    "category_probs": {"type": "object", "additionalProperties": {"type": "number"}},
+    "sensitivity": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "needs_review": {"type": "boolean"},
+    "decision": {"enum": ["identifier", "review", "not_identifier"], "description": "not_identifier appears only with include_dropped"},
+    "reasons": {"type": "array", "items": {"type": "string"}, "description": "why the span needs review"},
+    "errors": {"type": "array", "items": {"type": "string"}},
+    "fast_path": {"type": ["string", "null"], "description": "the rule that accepted the span without the model"},
+    "sources": {"type": "array", "items": {"type": "string"}, "description": "the proposers that proposed the span"},
+    "context": {"type": "object", "description": "code-derived context, e.g. date_role, property_kind"}
+  },
+  "additionalProperties": true
+}

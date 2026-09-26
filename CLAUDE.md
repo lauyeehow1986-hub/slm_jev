@@ -167,13 +167,16 @@ Every eval run appends one row to `docs/decisions/eval-log.md`.
     `-np 1`, `-ngl 0` and `--cache-ram 256`. The default host prompt cache (8 GiB) took the 1.7B
     server to 6.5 GB, over the model share.
   - The API key is fresh per launch and passed in `LLAMA_API_KEY`, never on the command line.
-    `start()` refuses a server that answers without it.
+    `start()` picks a free port by default, and refuses a server that answers without the key
+    or rejects it (a foreign server on the port).
   - Paths come from `SLMJEV_LLAMA_SERVER` (the binary) and `SLMJEV_JUDGE_MODEL` (the GGUF).
   - The dev build is the one Unsloth Studio installed:
     `%USERPROFILE%\.unsloth\llama.cpp\build\bin\Release\llama-server.exe`.
   - **Never go through Unsloth's own API**: it rejects logprobs, and its internal server is
     unauthenticated with open CORS.
-  - The client is stdlib `urllib`, and it refuses non-loopback URLs.
+  - The client is stdlib `http.client` (`netguard.loopback_request`), and it refuses
+    non-loopback and non-`http` URLs. Not `urllib`: it reads proxy variables and builds a TLS
+    context, which aborts SD's bundled Python when `SSLKEYLOGFILE` is set (see 0007).
 - **Ask before installing any package or pulling any model.**
 - R 4.5.2 (`C:\Program Files\R\R-4.5.2\bin\Rscript.exe`, not on PATH) is used only for the parity
   tests.
@@ -191,9 +194,11 @@ slmjev/sft.py       judge finetune examples: the judge's exact Choice prompts + 
 slmjev/netguard.py  loopback-only socket guard; loopback URL check
 slmjev/server.py    llama-server launcher (loopback, env API key, bounded cache)
 slmjev/calibrate.py temperature / isotonic calibration, thresholds, ECE, Brier, AUROC
-slmjev/engine.py    * JSON stdin → spans stdout; network forbidden
+slmjev/propose.py   high-recall candidate proposer: rules + surface shapes + SHI lexicon
+slmjev/engine.py    the slm:jev backend: JSON stdin → spans stdout; fails closed; network forbidden
 data/synthetic/     generator code committed; generated data gitignored
-eval/               judge_eval.py harness, fit_calibration.py; gold spans (synthetic only)
+eval/               judge_eval.py (oracle proposer), e2e_eval.py (real proposer),
+                    fit_calibration.py; gold spans (synthetic only)
 finetune/           build_data.py, train_judge.py (LoRA, CUDA venv), export_gguf.py (P5)
 results/            eval outputs (gitignored)
 tests/              test_<module>.py; fixtures synthetic only
@@ -265,7 +270,16 @@ models/             GGUF / adapters / calibration.json (gitignored)
     check this before the finetune sees real data.
   - Run it with `SLMJEV_JUDGE_MODEL=models/p5/slmjev-judge-p5-qwen3-1.7b-Q4_K_M.gguf` and
     `--calibration models/calibration_p5.json`, both gitignored.
-- [ ] P6: integrate as an `slm:jev` backend in structured_deidentification.
+- [x] P6: the `slm:jev` backend (2026-09-26; see `docs/decisions/0007-proposer-engine.md`).
+  - `slmjev/propose.py` covers every gold label on train, dev and test at about 40 candidates per
+    1k characters (test was looked at once). `slmjev/engine.py` is the backend: JSON on stdin,
+    spans on stdout, exit 2 with `{"error"}` on any failure.
+  - End to end on test (P5 judge, real proposer): flagged recall 1.000, precision 1.000,
+    0 false accepts, review 0.032. Hard and labs: flagged recall 1.000, precision 1.000, 0 false accepts, 0 reviews (after a postal fast-path fix the labs set exposed).
+  - **Latency blocks bulk use:** 59 s per 1k characters p50 (p95 261 s) on this CPU.
+  - SD side: branch `claude/slm-jev-backend` in structured_deidentification (mode `jev` in
+    `run_engine.py`, `se_jev_scan`, opt-in checkbox and `--jev`, `smoke5_jev.R`). Unsure spans
+    bypass SD's confidence floor, and a failed scan stops the export.
 - [ ] P7: benchmark against Privacy Filter, MediPhi and Presidio; write `docs/results.md`.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
@@ -305,6 +319,10 @@ models/             GGUF / adapters / calibration.json (gitignored)
   - `judge_eval.py --prod --labs 200 --split test --seed 51` runs lab/bill decoys (unseen words).
   - The calibration records `PROMPT_VERSION` and the model; `Judge.calibrated` refuses a mismatch.
     Bump `PROMPT_VERSION` in `slmjev/judge.py` on any prompt, option or family change, then refit.
+- End to end (P6): `python eval/e2e_eval.py --split test --seed 31 --calibration <cal.json>`
+  (`--hard 60 --seed 41`, `--labs 100 --seed 51`) runs the proposer + judge as the engine does.
+- Engine: `echo {"texts": [...]} | python -m slmjev.engine` (`--probe` checks the files).
+  structured_deidentification calls it through `run_engine.py jev` with `SLMJEV_ROOT` set.
 - Judge finetune (P5): `python finetune/build_data.py` writes `data/sft/` (gitignored).
   - Train and export with the Unsloth Studio venv's Python, which has torch + CUDA:
     `%USERPROFILE%/.unsloth/studio/unsloth_studio/Scripts/python.exe`, with `PYTHONPATH=.`.

@@ -1,5 +1,11 @@
+import os
 import socket
+import subprocess
 import sys
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 import pytest
 
@@ -54,6 +60,83 @@ def test_server_start_needs_existing_files(tmp_path):
         server.start(tmp_path / "nope.exe", tmp_path / "nope.gguf")
     with pytest.raises(FileNotFoundError):
         server.start(sys.executable, tmp_path / "nope.gguf")
+
+
+class _Foreign(BaseHTTPRequestHandler):
+    """Someone else's llama-server: healthy, but it enforces a key we do not have."""
+
+    def do_GET(self):  # noqa: N802
+        status = 200 if self.path == "/health" else 401
+        data = b'{"status": "ok"}' if status == 200 else b'{"error": "key"}'
+        self.send_response(status)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def log_message(self, *a):
+        pass
+
+
+@pytest.fixture
+def foreign():
+    srv = HTTPServer(("127.0.0.1", 0), _Foreign)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    yield srv.server_port
+    srv.shutdown()
+
+
+def test_loopback_request_is_plain_http_to_this_machine(foreign):
+    status, body = netguard.loopback_request(f"http://127.0.0.1:{foreign}/health")
+    assert status == 200 and b"ok" in body
+    assert netguard.loopback_request(f"http://127.0.0.1:{foreign}/v1/models")[0] == 401
+    with pytest.raises(netguard.NetworkForbidden):
+        netguard.loopback_request("http://203.0.113.9/health")
+    with pytest.raises(netguard.NetworkForbidden):
+        netguard.loopback_request(f"https://127.0.0.1:{foreign}/health")
+
+
+def test_server_start_never_adopts_a_foreign_server(foreign, tmp_path):
+    # our "llama-server" (python given llama flags) dies at once; the healthy server on the port
+    # rejects our key, so start() must fail instead of returning a handle to it
+    model = tmp_path / "m.gguf"
+    model.write_bytes(b"")
+    with pytest.raises(RuntimeError, match="exited"):
+        server.start(sys.executable, model, port=foreign, wait=20)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="job objects are Windows-only")
+def test_server_child_dies_with_a_crashed_parent(tmp_path):
+    # the parent starts a long-lived child the way start() does, then dies without cleanup
+    pidfile = tmp_path / "pid"
+    parent = (
+        "import os, subprocess, sys\n"
+        "from slmjev import server\n"
+        "D = subprocess.DEVNULL\n"  # detached stdio, as start() runs it: it outlives a parent
+        "p = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'],"
+        " stdin=D, stdout=D, stderr=D)\n"
+        "job = server._kill_with_parent(p)\n"
+        f"open({str(pidfile)!r}, 'w').write(str(p.pid) if job else '')\n"
+        "os._exit(1)\n")
+    root = str(Path(server.__file__).resolve().parents[1])
+    subprocess.run([sys.executable, "-c", parent], env=os.environ | {"PYTHONPATH": root},
+                   timeout=30, check=False)
+    pid = int(pidfile.read_text())
+    deadline = time.monotonic() + 10
+    while _alive(pid) and time.monotonic() < deadline:
+        time.sleep(0.2)
+    assert not _alive(pid)
+
+
+def _alive(pid: int) -> bool:
+    out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True,
+                         text=True, check=False).stdout
+    return str(pid) in out
+
+
+def test_free_port_is_bindable():
+    p = server.free_port()
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", p))
 
 
 def test_labels_load_and_cache_copy():

@@ -271,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cache-ab", type=int, default=0, help="candidates for the cache A/B")
     ap.add_argument("--parallel", type=int, default=0, help="also time N concurrent clients")
     ap.add_argument("--url", default=None, help="use a running server (key in SLMJEV_LLM_KEY)")
-    ap.add_argument("--port", type=int, default=8089)
+    ap.add_argument("--port", type=int, default=None, help="default: a free port")
     ap.add_argument("--threads", type=int, default=None)
     ap.add_argument("--out", type=Path, default=None)
     args = ap.parse_args(argv)

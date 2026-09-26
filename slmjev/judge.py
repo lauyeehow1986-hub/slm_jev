@@ -35,20 +35,19 @@ probability or a low-confidence category (and, when enabled, Choice/Noul disagre
 
 from __future__ import annotations
 
+import http.client
 import json
 import math
 import os
 import re
 import statistics
 import time
-import urllib.error
-import urllib.request
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Protocol
 
 from slmjev import calibrate, rules
-from slmjev.netguard import check_loopback_url
+from slmjev.netguard import check_loopback_url, loopback_request
 
 DETECTOR = "slm:jev"
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWX"
@@ -152,6 +151,9 @@ def family_of(match: str) -> str:
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _URL = re.compile(r"https?://\S+", re.IGNORECASE)
 _POSTAL_LEAD = re.compile(r"(?:\bSingapore\s*|\bS\(?)$")
+# The same lead merged into the candidate: the proposer joins ``S276963`` or
+# ``Singapore 482263`` into one span, which the model dropped or called an address (0007).
+_POSTAL_WITH_LEAD = re.compile(r"(?:Singapore\s*|S\(?)\d{6}\)?")
 # The end of a street address: a block, a #floor-unit, or a street-type word, then only
 # address-like tokens (numbers, units, Title-case building words) before the postal code. A
 # lower-case or all-caps word ("Block 4 clinic, platelets 245000", "PLT") breaks the address.
@@ -181,9 +183,10 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     """``(identifier, reason)`` when code alone is sure the span identifies someone, else None.
 
     Only shapes a rule can confirm qualify: a valid NRIC/FIN checksum; a whole email or URL; a
-    6-digit postal code right after ``Singapore``/``S(``, or ending a street address with a valid
-    sector; an ID-shaped token right after an ID keyword (``NRIC``, ``temp IC``, ``MRN``, ...),
-    or an account number right after ``account`` / ``a/c``.
+    6-digit postal code right after ``Singapore``/``S(`` (or with that lead inside the span), or
+    ending a street address with a valid sector; an ID-shaped token right after an ID keyword
+    (``NRIC``, ``temp IC``, ``MRN``, ...), or an account number right after ``account`` /
+    ``a/c``.
     They skip the model; everything else is judged. Accepting is the fail-closed direction, since
     it only ever removes more."""
     m = text[cand.start - 1:cand.end].strip()
@@ -199,6 +202,8 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
             return "postal_code", "postal_keyword"
         if m[:2] in _SG_SECTORS and _ADDRESS_END.search(left):
             return "postal_code", "postal_after_address"
+    if _POSTAL_WITH_LEAD.fullmatch(m):
+        return "postal_code", "postal_keyword"
     if _ID_SHAPE.fullmatch(m):
         for lead, ident in _ID_LEADS:
             if lead.search(left[-24:]):
@@ -291,16 +296,18 @@ class LlamaServer:
                 "chat_template_kwargs": {"enable_thinking": False}}
         if self.model:
             body["model"] = self.model
-        req = urllib.request.Request(self.url + "/v1/chat/completions", method="POST",
-                                     data=json.dumps(body).encode("utf-8"))
-        req.add_header("Content-Type", "application/json")
+        headers = {"Content-Type": "application/json"}
         if self.key:
-            req.add_header("Authorization", f"Bearer {self.key}")
+            headers["Authorization"] = f"Bearer {self.key}"
         t0 = time.perf_counter()
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as r:
-                resp = json.loads(r.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as e:
+            status, data = loopback_request(self.url + "/v1/chat/completions", method="POST",
+                                            body=json.dumps(body).encode("utf-8"),
+                                            headers=headers, timeout=self.timeout)
+            if status != 200:
+                raise JudgeError(f"backend call failed: HTTP {status}")
+            resp = json.loads(data.decode("utf-8"))
+        except (http.client.HTTPException, TimeoutError, json.JSONDecodeError, OSError) as e:
             raise JudgeError(f"backend call failed: {type(e).__name__}: {e}") from e
         secs = time.perf_counter() - t0
         t = resp.get("timings") or {}

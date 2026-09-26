@@ -314,6 +314,10 @@ def test_property_model_question_is_opt_in_and_never_overrides_rules():
     ("see https://example.org/p?id=3 now", "https://example.org/p?id=3", "other_id"),
     ("Blk 5 Bedok North St 1 #02-11, Singapore 460005.", "460005", "postal_code"),
     ("12 Holland Road S(278960)", "278960", "postal_code"),
+    # the lead merged into the candidate (the proposer joins them): labs miss in 0007
+    ("Blk 690 Hougang Avenue 8 #02-029 S276963. x", "S276963", "postal_code"),
+    ("12 Holland Road S(278960)", "S(278960)", "postal_code"),
+    ("Clinic visit, Singapore 482263.", "Singapore 482263", "postal_code"),
     ("Block 395 Clementi Avenue 2, #17-495, 120395. Seen", "120395", "postal_code"),
     ("Stays at 17 Lorong Chuan, 556745.", "556745", "postal_code"),
     ("(temp IC Y5308811O). NOK", "Y5308811O", "national_id"),
@@ -337,6 +341,8 @@ def test_rule_certain_spans_skip_the_model(t, sub, ident):
 @pytest.mark.parametrize(("t", "sub"), [
     ("ref S1234567A on file", "S1234567A"),  # bad checksum, no ID keyword
     ("Hb 460005 x", "460005"),  # six digits, no postal keyword
+    ("ref S2769631 x", "S2769631"),  # seven digits after S: not a postal code
+    ("ref S276963A x", "S276963A"),  # a trailing letter: an ID, not a postal code
     ("Ward 64 Bed 18, 801556", "801556"),  # no street before it
     ("Clementi Avenue 2, 991234", "991234"),  # sector 99 does not exist
     ("Lorong Chuan. Lab 556745", "556745"),  # sentence break after the street
