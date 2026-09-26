@@ -289,6 +289,22 @@ models/             GGUF / adapters / calibration.json (gitignored)
     judge dropped. Fixes must be checked on a new, unseen set.
   - Found an SD bug: `detect_llm._parse_spans` drops long notes when llama-cli truncates the
     prompt echo. The fix is uncommitted on SD branch `claude/slm-jev-backend`.
+- [x] P8–P13: unseen-set rounds until the gate passed (2026-09-26/27; see `docs/results.md`,
+  `docs/decisions/0008`–`0010`, `eval-log.md`). Each round fixes what the seen (dev) sets show,
+  freezes code (`results/*_blind_freeze.sha256`), and runs once on a new set by a separate writer.
+  - P8–P10 (0008): proposer and fast-path shapes. Each failed recall on the next blind set.
+  - P11–P12 (0009): the release configuration is `jev+pf+ner.person`: Privacy Filter spans and
+    Presidio `person` spans join the proposer's candidates; the judge still decides. SD commit
+    551beed (`claude/slm-jev-backend`) feeds them in SD. notes_v5 blind: R 0.983, P 0.927, F1
+    0.954, ECE 0.143 (FAIL on calibration).
+  - P13 (0010): `calibrate.Grouped`, one isotonic map per call (`identifier`, `none`,
+    `shi_lexicon`, `shi_other`), fitted by `eval/fit_bench_calibration.py` on bench `judged`
+    records. `Thresholds.space="raw"` keeps decisions on the P5 thresholds; only `confidence` is
+    recalibrated. Run with `--calibration models/calibration_p13.json` (gitignored).
+  - **notes_v6 blind: every gate passes** (synthetic): R 0.990, P 0.932, ECE 0.024, F1 0.960
+    (sd20 1.000), p95 101 s per 1k chars. Open: Chinese-script names and bare NRIC tails
+    (`412D`) have no proposer; SHI stays weak (R 0.679, P 0.352); latency still blocks bulk use.
+  - notes_v1–v6 and sd20 are all dev sets now. A new change needs a new unseen set.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.
@@ -331,6 +347,9 @@ models/             GGUF / adapters / calibration.json (gitignored)
   (`--hard 60 --seed 41`, `--labs 100 --seed 51`) runs the proposer + judge as the engine does.
 - Benchmark (P7): `python eval/bench.py --set eval/bench/notes_v1.txt --systems ...` (flags in
   its docstring and `docs/results.md`; `--reuse <report>` re-runs only some systems).
+- Bench calibration (P13): `python eval/fit_bench_calibration.py --train <bench reports> --test
+  <reports> --base models/calibration_p5.json --out models/calibration_p13.json` (replays the
+  reports' `judged` records; train only on sets with SHI gold, not sd20).
 - Engine: `echo {"texts": [...]} | python -m slmjev.engine` (`--probe` checks the files).
   structured_deidentification calls it through `run_engine.py jev` with `SLMJEV_ROOT` set.
 - Judge finetune (P5): `python finetune/build_data.py` writes `data/sft/` (gitignored).

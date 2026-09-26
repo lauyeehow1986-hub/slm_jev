@@ -1,4 +1,4 @@
-# Results: slm:jev against structured_deidentification's detectors (P7)
+# Results: slm:jev against structured_deidentification's detectors (P7 to P13)
 
 Date: 2026-09-26. **Synthetic data only.** Every number here comes from invented notes. None of
 them says how any system does on real clinical text (see *Caveats*).
@@ -238,15 +238,161 @@ rows show what SD users get today.
    already accepts) would propose every gap span on these sets except `VIJAY`; the judge would
    still have to accept them. That is the cheapest next step, not a model change.
 
+## After P7: unseen-set rounds (P8 to P13)
+
+Each round fixed the misses on the sets already seen, froze the code (`results/*_freeze.sha256`)
+and ran once on a new set by a separate writer that nobody had read. Decision records:
+`docs/decisions/0008-realistic-notes-fixes.md` (P8 to P10), `0009-ensemble-proposer.md`
+(P11, P12) and `0010-grouped-calibration.md` (P13). Only the blind rows count for the gate.
+
+### The blind series
+
+| round | code | blind set | system | recall | precision | F1 | silent identifier misses |
+|---|---|---|---|---|---|---|---|
+| P8 | proposer and fast-path shapes | notes_v2 | slm:jev | 0.931 | 0.903 | 0.917 | 18 |
+| P9 | more shapes | notes_v3 | slm:jev | 0.959 | 0.959 | 0.959 | 12 |
+| P10 | more shapes | notes_v4 | slm:jev | 0.934 | 0.953 | 0.943 | 24 |
+| P12 | engine spans as candidates | notes_v5 | slm:jev + PF + Presidio persons | **0.983** | **0.927** | **0.954** | 5 |
+| P13 | P12 + a calibration map per kind of call | notes_v6 | slm:jev + PF + Presidio persons | **0.990** | **0.932** | **0.960** | 3 |
+
+The shape-only rounds (P8 to P10) each failed on the next set, because each new writer brought
+shapes nobody had listed. P12 keeps the judge in charge but lets Privacy Filter and Presidio
+`person` spans in as candidates.
+
+### notes_v5 (blind for P12): 32 notes, 24,431 characters
+
+297 identifier spans (353 counting other dates), 24 SHI spans, 5 notes with no PII. Written by a
+separate agent from a brief, in 32 styles: ED triage, pathology, a WhatsApp transcript, an
+ambulance run sheet, coroner and deputyship letters, and others. Invented and marked synthetic.
+
+| system | recall | covered | precision | F1 | FP (on negative notes) | recall incl. other dates | SHI recall | SHI precision | s per 1k chars |
+|---|---|---|---|---|---|---|---|---|---|
+| rules only | 0.391 | 0.276 | 1.000 | 0.562 | 0 (0) | 0.357 | 0.000 | n/a | 0.0 |
+| Presidio + spaCy NER | 0.505 | 0.421 | 0.400 | 0.446 | 231 (46) | 0.496 | 0.000 | n/a | 0.1 |
+| Privacy Filter | 0.845 | 0.781 | 0.951 | 0.895 | 13 (0) | 0.830 | 0.000 | n/a | 0.8 |
+| MediPhi-3.8B | 0.609 | 0.596 | 0.785 | 0.686 | 46 (7) | 0.552 | 0.000 | n/a | 27.5 |
+| Qwen2.5-3B | 0.643 | 0.636 | 0.761 | 0.697 | 72 (0) | 0.592 | 0.000 | n/a | 22.8 |
+| slm:jev | 0.970 | 0.946 | 0.942 | 0.956 | 18 (6) | 0.816 | 0.583 | 0.341 | 44.0 |
+| **slm:jev + PF + Presidio persons** | 0.983 | 0.976 | 0.927 | 0.954 | 23 (7) | 0.847 | 0.583 | 0.300 | 63.4 |
+| rules + NER | 0.818 | 0.653 | 0.566 | 0.669 | 231 (46) | 0.776 | 0.000 | n/a | - |
+| rules + Privacy Filter | 0.899 | 0.822 | 0.969 | 0.932 | 13 (0) | 0.878 | 0.000 | n/a | - |
+| rules + MediPhi | 0.694 | 0.623 | 0.873 | 0.773 | 46 (7) | 0.643 | 0.000 | n/a | - |
+| rules + Qwen2.5-3B | 0.734 | 0.667 | 0.839 | 0.783 | 72 (0) | 0.683 | 0.000 | n/a | - |
+
+Per note, in s per 1k characters: slm:jev p50 50.6, p95 79.0; slm:jev + PF + Presidio persons
+p50 63.9, p95 103.0. The time for the combined system includes the Privacy Filter and Presidio
+runs.
+
+| label | n | Privacy Filter | slm:jev | slm:jev + PF + Presidio persons |
+|---|---|---|---|---|
+| address | 13 | 1.000 | 1.000 | 1.000 |
+| biometric | 2 | 0.500 | 1.000 | 1.000 |
+| case_visit | 7 | 0.571 | 1.000 | 1.000 |
+| date_of_death | 3 | 1.000 | 1.000 | 1.000 |
+| device | 3 | 1.000 | 1.000 | 1.000 |
+| dob | 8 | 1.000 | 1.000 | 1.000 |
+| email | 11 | 0.818 | 1.000 | 1.000 |
+| fax | 3 | 0.667 | 1.000 | 1.000 |
+| mrn | 13 | 0.923 | 1.000 | 1.000 |
+| name | 125 | 0.896 | 0.968 | 0.992 |
+| national_id | 26 | 0.885 | 1.000 | 1.000 |
+| other_id | 36 | 0.667 | 0.861 | 0.889 |
+| phone | 32 | 0.844 | 1.000 | 1.000 |
+| photo | 4 | 0.000 | 1.000 | 1.000 |
+| postal_code | 11 | 0.909 | 1.000 | 1.000 |
+
+**What the combined system still gets wrong on notes_v5.**
+- **5 silent misses.** Four are reference numbers (`other_id`): a prescription number, a
+  year-coded form number, a blood-bag number, and a spaced donation number. One is a single given
+  name. Recall passes with one miss to spare: a sixth miss would make it 0.980.
+- **Two partial covers.** A dormitory address is only partly covered, and a spaced donation
+  number is only partly covered. Recall counts both as found; covered does not.
+- **23 false positives.** Most are upper-case headings, organisation names, a clinician's surname
+  and its possessive (`Dr Seet`, `Seet's`, which the gold does not label), and a one-letter
+  answer (`Y`). 7 fall on the 5 negative notes.
+- **SHI** stays weak: recall 0.583, precision 0.300. The SHI list is provisional and not
+  DAFA-derived, and its gold is interpretive.
+
+### Calibration on notes_v5
+
+The blind run failed the calibration gate: ECE **0.143** against 0.05. It is measured at the
+candidate level, over 389 candidates judged by the model (dropped ones included). A candidate
+counts as right when it overlaps identifier or SHI gold. The judge's scores are saturated, and
+three kinds of call were overconfident:
+- SHI calls on negated, ordered-test or not-about-the-patient mentions came out near 0.99;
+- some headings were called names;
+- "none" calls on fragments of identifiers that another candidate already covered came out
+  near 0.
+
+| kind of call | ECE on notes_v5 (identity map) |
+|---|---|
+| identifier | 0.069 |
+| none | 0.361 |
+| SHI, lexicon-proposed | 0.423 |
+| SHI, proposed by something else | 0.900 |
+| rule fast path | 0.010 |
+
+P13 (`docs/decisions/0010`) refits the reported confidence with one map per kind of call and
+leaves every decision as it was. Fitted on notes_v1 to v4 and tested on notes_v5, ECE falls to
+**0.042**, with recall, precision and every decision unchanged. notes_v5 was then added to the
+fit, so notes_v6 is the blind check (below).
+
+### notes_v6 (blind for P13): 32 notes, 24,568 characters
+
+300 identifier spans, 28 SHI spans and 5 notes with no PII, from a separate writer working from
+a new brief. Invented and marked synthetic. The P13 code and `models/calibration_p13.json` were
+frozen (`results/notes_v6_blind_freeze.sha256`) before the set was first read, and the hashes
+still matched after the run.
+
+| system | recall | covered | precision | F1 | FP (on negative notes) | silent misses | SHI recall | SHI precision |
+|---|---|---|---|---|---|---|---|---|
+| **slm:jev + PF + Presidio persons** | **0.990** | 0.983 | **0.932** | **0.960** | 22 (4) | 3 | 0.679 | 0.352 |
+| slm:jev alone | 0.957 | 0.930 | 0.951 | 0.954 | 15 (4) | 13 | 0.679 | 0.413 |
+| rules + Privacy Filter | 0.920 | 0.837 | 0.967 | 0.943 | 14 (1) | 24 | 0.000 | n/a |
+| Privacy Filter | 0.883 | 0.793 | 0.950 | 0.915 | 14 (1) | 35 | 0.000 | n/a |
+| rules + NER | 0.830 | 0.663 | 0.554 | 0.665 | 250 (40) | 51 | 0.000 | n/a |
+| MediPhi-3.8B | 0.373 | 0.363 | 0.910 | 0.529 | 19 (8) | 188 | 0.000 | n/a |
+| Qwen2.5-3B | 0.343 | 0.333 | 0.802 | 0.481 | 34 (0) | 197 | 0.000 | n/a |
+
+- **Calibration passes: ECE 0.024** over 408 candidates. By kind of call:
+
+  | kind of call | n | ECE |
+  |---|---|---|
+  | identifier | 281 | 0.012 |
+  | none | 43 | 0.051 |
+  | SHI, lexicon-proposed | 25 | 0.067 |
+  | SHI, proposed by something else | 22 | 0.087 |
+  | rule fast path | 37 | 0.010 |
+
+- **Latency:** 61.9 s per 1k chars (mean); per note p50 68.8 s, p95 101.2 s. slm:jev alone: p50
+  45.0 s, p95 62.5 s.
+- **Recall by label** is 1.000 everywhere except `name` 0.992 (131), `other_id` 0.972 (36) and
+  `national_id` 0.960 (25).
+- **3 silent misses:**
+  - a name in Chinese script, which no proposer covers;
+  - a reference number of a new shape;
+  - a bare NRIC tail (`412D`, the last four characters), which no proposer covers.
+- **2 partial covers:** an MRN with a space and a hyphen, and a long condominium address.
+- **22 false positives.** Most are headings and phrases called names (`ADULT INPATIENTS`,
+  `Original Message`), kinship terms (`Ah Ma`, `Papa`) and two protocol numbers called visit
+  numbers.
+- **The release configuration first ran separately.** The frozen run used the benchmark's default
+  system list, which leaves out the release configuration. It ran straight afterwards, on the same
+  frozen code, and was merged in with `--reuse` (`results/bench_notes_v6_blind.frozen.json`). By
+  then only the other systems' aggregate scores had been seen, and nothing was changed.
+
 ## Caveats
 
-- **Synthetic.** Both sets are invented. notes_v1 was written by the author of the P2 generator,
+- **Synthetic.** Every set is invented. notes_v1 was written by the author of the P2 generator,
   so its style is closer to the training data than real notes would be.
 - **Small.** Real text, whether a licensed de-identification corpus or governed local data under
   the data controller's approval, is the user's decision and is out of scope here.
-- **Found on the benchmark.** The errors above were found on these sets. A fix for any of them
-  must be checked on a new, unseen set, or the benchmark becomes a training set. Nothing in
-  slm_jev was changed in response to these results.
+- **Found on the benchmark.** A fix for an error found on a set must be checked on a new, unseen
+  set, or the benchmark becomes a training set. P8 to P12 changed slm_jev in response to sd20 and
+  notes_v1 to notes_v4, so those are dev sets now and their numbers are optimistic. Only each
+  round's blind run counts, and notes_v5 and notes_v6 are dev sets from here on.
+- **One writer per set.** Each blind set had one writer (an agent working from a brief). Six
+  sets of about 30 notes are still a narrow sample of how people write.
 - **Run variation.** The llama.cpp baselines vary by one to three spans from run to run.
 - **Different outputs.** slm:jev also outputs category, sensitivity and a review flag, which these
   metrics do not score. The other systems output a type or nothing.
@@ -258,6 +404,23 @@ python eval/bench.py --set eval/bench/sd20.json --systems rules,ner,pf,mediphi,q
     --ner-python <SD bundle>/bin/python/python.exe --pf-model <pf model dir> \
     --llama-cli <SD bundle>/bin/llama/llama-cli.exe --mediphi <mediphi gguf> --qwen <qwen gguf> \
     --batch 1 --calibration models/calibration_p5.json --out results/bench_sd20.json
+```
+
+The release configuration on notes_v5, reusing the engine spans of the blind run (set the
+`SLMJEV_*` paths and `SE_PYTHON` first, as for `jev`):
+
+```
+python eval/bench.py --set eval/bench/notes_v5.txt --systems jev+pf+ner.person \
+    --calibration models/calibration_p5.json --reuse results/bench_notes_v5_blind.frozen.json \
+    --out results/bench_notes_v5_ece.json
+```
+
+The P13 calibration is fitted from the release configuration's `judged` records. It is a
+replay, so no model runs. The P13 thresholds are compared on the raw score, so the decisions stay
+the same:
+
+```
+python eval/fit_bench_calibration.py --train results/cal_notes_v1.json results/cal_notes_v2.json     results/cal_notes_v3.json results/cal_notes_v4.json results/cal_notes_v5.json     --base models/calibration_p5.json --out models/calibration_p13.json
 ```
 
 - Use `--reuse <earlier report>` to re-run only some systems.
