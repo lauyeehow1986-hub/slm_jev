@@ -23,6 +23,10 @@ from pathlib import Path
 
 EPS = 1e-6
 FORMAT = "slmjev.calibration.v1"
+# Fail closed: never drop, unreviewed, a span the calibrated model gives more than this chance of
+# being an identifier. A well-separated fit (e.g. a finetuned judge) would otherwise push the cut
+# up to where every training positive still clears it, which on shifted text drops real ones.
+MAX_DROP = 0.05
 
 # --- metrics -------------------------------------------------------------------------------
 
@@ -216,12 +220,12 @@ class ThresholdChoice:
 
 def choose_thresholds(probs: Sequence[float], labels: Sequence[bool | int], *,
                       recall_target: float = 0.98, precision_target: float = 0.98,
-                      max_drop: float = 0.5, min_accept: float = 0.5,
+                      max_drop: float = MAX_DROP, min_accept: float = 0.5,
                       min_support: int = 20) -> ThresholdChoice:
     """Thresholds from calibrated scores on a *fitting* split.
 
     - ``drop_below``: the highest cut that still keeps ``recall_target`` of the positives at or
-      above it, capped at ``max_drop``. Scores below it are dropped without review.
+      above it, capped at ``max_drop`` (``MAX_DROP``). Scores below it are dropped without review.
     - ``accept_at``: the lowest cut whose accepted set (``p >= cut``, at least ``min_support``
       items) reaches ``precision_target``, floored at ``min_accept``; 1.0 (accept nothing) if none.
 
@@ -235,6 +239,8 @@ def choose_thresholds(probs: Sequence[float], labels: Sequence[bool | int], *,
     # allowed misses k: the k lowest positives may fall below the cut
     k = math.floor(len(pos) * (1 - recall_target) + 1e-9)
     drop = min(pos[k], max_drop) if k < len(pos) else 0.0
+    if k < len(pos) and pos[k] > max_drop:
+        notes.append(f"drop_below capped at max_drop {max_drop} (recall cut was {pos[k]:.4f})")
     # nudge just below the kept positive so it is not dropped by a tie
     drop = max(0.0, drop - 1e-6)
     recall = sum(p >= drop for p in pos) / len(pos)

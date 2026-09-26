@@ -351,14 +351,30 @@ class Answer:
         return k, self.probs[k]
 
 
+def question(stem: str, options: Mapping[str, str], shown: Sequence[str]) -> str:
+    """The question for one option order: stem, lettered options, answer cue. The finetune data
+    (``slmjev.sft``) is built with this too, so training and inference prompts cannot drift."""
+    lines = "\n".join(f"{LETTERS[j]}) {options[k]}" for j, k in enumerate(shown))
+    return f"{stem}\n{lines}\n{ANSWER_CUE}"
+
+
+def choice_options(family: str) -> dict[str, str]:
+    """The Choice options offered to a span of ``family``, in catalogue order."""
+    return {k: (NONE_TEXT[family] if k == "none" else OPTION_TEXT[k]) for k in FAMILIES[family]}
+
+
+def span_text(match: str) -> str:
+    """The span as quoted inside a question stem."""
+    return match.replace('"', "'").replace("\n", " ")
+
+
 def ask(backend: Backend, prefix: str, stem: str, options: Mapping[str, str],
         orders: Iterable[Sequence[int]], min_mass: float = 0.5) -> Answer:
     keys = list(options)
     per_order, masses = [], []
     for order in orders:
         shown = [keys[i] for i in order]
-        lines = "\n".join(f"{LETTERS[j]}) {options[k]}" for j, k in enumerate(shown))
-        dist = backend.first_token(prefix, f"{stem}\n{lines}\n{ANSWER_CUE}")
+        dist = backend.first_token(prefix, question(stem, options, shown))
         mass = letter_mass(dist, LETTERS[:len(shown)])
         total = sum(mass.values())
         masses.append(total)
@@ -529,11 +545,10 @@ class Judge:
             info.update(fast_path=reason, reasons=[])
             return rec
         prefix = prefix_for(text, cand, self.width, column)
-        span = match.replace('"', "'").replace("\n", " ")
+        span = span_text(match)
         th = self.thresholds
         try:
-            opts = {k: (NONE_TEXT[family] if k == "none" else OPTION_TEXT[k])
-                    for k in FAMILIES[family]}
+            opts = choice_options(family)
             choice = ask(self.backend, prefix, CHOICE_STEM.format(span=span), opts,
                          rotations(len(opts), self.choice_rotations), th.min_mass)
         except JudgeError as e:

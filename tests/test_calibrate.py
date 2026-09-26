@@ -83,7 +83,23 @@ def test_choose_thresholds_caps_drop_and_floors_accept():
     p = [0.1] * 50 + [0.9] * 50
     y = [0] * 50 + [1] * 50
     ch = calibrate.choose_thresholds(p, y)
-    assert ch.drop_below <= 0.5 and ch.accept_at == 0.9 and ch.precision_at_accept == 1.0
+    assert ch.drop_below <= calibrate.MAX_DROP
+    assert ch.accept_at == 0.9 and ch.precision_at_accept == 1.0
+    assert any("max_drop" in n for n in ch.notes)
+
+
+def test_choose_thresholds_never_drops_a_plausible_identifier_on_a_separable_fit():
+    # the P5 failure: every positive scores >= 0.5, so the recall cut alone would sit at the old
+    # 0.5 cap and silently drop a shifted positive at p = 0.3
+    p = [0.001] * 200 + [0.97] * 200
+    y = [0] * 200 + [1] * 200
+    ch = calibrate.choose_thresholds(p, y)
+    assert ch.drop_below <= calibrate.MAX_DROP < 0.3
+    assert calibrate.choose_thresholds(p, y, max_drop=0.5).drop_below > 0.3  # the old behaviour
+    # a fit whose recall cut is already under the cap is unchanged and adds no note
+    low = calibrate.choose_thresholds([0.001] * 50 + [0.02] * 2 + [0.9] * 48,
+                                     [0] * 50 + [1] * 50)
+    assert 0.019 < low.drop_below < 0.02 and not any("max_drop" in n for n in low.notes)
 
 
 def test_choose_thresholds_fails_closed():

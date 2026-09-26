@@ -129,7 +129,7 @@ def prob_metrics(p: list[float], y: list[bool]) -> dict:
 
 def fit(train_rows: list[dict], *, k: int = 5, kinds: tuple[str, ...] = KINDS,
         recall_target: float = 0.98, precision_target: float = 0.98,
-        min_support: int = 20) -> dict:
+        min_support: int = 20, max_drop: float = calibrate.MAX_DROP) -> dict:
     """Calibrator + thresholds from train rows; see the module docstring."""
     rows = model_rows(train_rows)
     p, y = xy(rows)
@@ -139,7 +139,7 @@ def fit(train_rows: list[dict], *, k: int = 5, kinds: tuple[str, ...] = KINDS,
     kind = choose_kind(cv_nll)
     choice = calibrate.choose_thresholds(oof[kind], y, recall_target=recall_target,
                                          precision_target=precision_target,
-                                         min_support=min_support)
+                                         min_support=min_support, max_drop=max_drop)
     return {"kind": kind, "calibrator": calibrate.fit(kind, p, y), "cv_nll": cv_nll,
             "cv": {kk: prob_metrics(v, y) for kk, v in oof.items()}, "choice": choice,
             "n": len(rows), "n_pos": sum(y), "folds": k}
@@ -161,21 +161,23 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--folds", type=int, default=5)
     ap.add_argument("--recall-target", type=float, default=0.98)
     ap.add_argument("--precision-target", type=float, default=0.98)
+    ap.add_argument("--max-drop", type=float, default=calibrate.MAX_DROP,
+                    help="fail-closed cap on drop_below (default %(default)s)")
     args = ap.parse_args(argv)
 
     identifiers = load_labels()["identifiers"]
     tr_meta, tr_rows = load_rows(args.train)
     te_meta, te_rows = load_rows(args.test)
     for m, name in ((tr_meta, "train"), (te_meta, "test")):
-        if m.get("split") != name or not m.get("prod") or m.get("hard"):
+        if m.get("split") != name or not m.get("prod") or m.get("hard") or m.get("labs"):
             raise SystemExit(f"--{name} must be a --prod report on the {name} split "
-                             "(not a --hard one)")
+                             "(not a --hard or --labs one)")
     if tr_meta.get("prompt") is None or tr_meta.get("prompt") != te_meta.get("prompt"):
         raise SystemExit(f"train and test must come from the same prompt version "
                          f"(train {tr_meta.get('prompt')!r}, test {te_meta.get('prompt')!r})")
 
     f = fit(tr_rows, k=args.folds, recall_target=args.recall_target,
-            precision_target=args.precision_target)
+            precision_target=args.precision_target, max_drop=args.max_drop)
     ch = f["choice"]
     th = replace(J.Thresholds(), drop_below=ch.drop_below, accept_at=ch.accept_at)
     base = J.Thresholds()
@@ -184,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
             "train": {k: tr_meta.get(k) for k in ("split", "seed", "notes", "cells", "rotations")},
             "n": f["n"], "n_pos": f["n_pos"], "folds": f["folds"], "cv_nll": f["cv_nll"],
             "recall_target": args.recall_target, "precision_target": args.precision_target,
-            "recall_at_drop_oof": ch.recall_at_drop,
+            "max_drop": args.max_drop, "recall_at_drop_oof": ch.recall_at_drop,
             "precision_at_accept_oof": ch.precision_at_accept, "notes": ch.notes}
     calibrate.save(args.out, f["calibrator"],
                    {"drop_below": ch.drop_below, "accept_at": ch.accept_at}, meta)

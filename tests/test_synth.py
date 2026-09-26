@@ -141,6 +141,27 @@ def test_hard_decoys_never_trip_the_fast_path_and_their_postal_codes_do():
         synth.generate_hard("dev", 20, seed=3))
 
 
+def test_lab_decoys_mix_with_gold_ids_and_test_lead_words_are_unseen():
+    seen = {w.lower() for ws in synth._LAB_LEADS["seen"].values() for w in ws}
+    unseen = {w.lower() for ws in synth._LAB_LEADS["test"].values() for w in ws}
+    assert not seen & unseen
+    for split, allowed in (("train", seen), ("dev", seen), ("test", unseen)):
+        docs = synth.generate_labs(split, 150, seed=4)
+        leads = set()
+        for d in docs:
+            synth.validate_doc(d, LABELS)
+            assert d["template"] == "lab_decoy" and d["decoys"] and d["spans"]
+            for s in d["decoys"]:
+                assert s["type"] == "measurement" and s["attrs"]["kind"] in ("lab", "bill")
+                before = d["text"][:s["start"] - 1].rsplit(". ", 1)[-1]
+                leads.add(before.rstrip(" :=$S").removesuffix(" of").strip().lower())
+        assert leads <= allowed, leads - allowed
+        labels = Counter(s["label"] for d in docs for s in d["spans"])
+        assert {"phone", "mrn", "case_visit", "postal_code"} <= set(labels)
+    assert json.dumps(synth.generate_labs("dev", 20, seed=4)) == json.dumps(
+        synth.generate_labs("dev", 20, seed=4))
+
+
 def test_column_peers_are_clean_dates_for_date_columns_only():
     from slmjev import column
     peers = synth.column_peers("procedure_date", 30, "k1")

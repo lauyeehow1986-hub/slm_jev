@@ -187,12 +187,14 @@ slmjev/policy.py    policy loader/resolver: span -> action (policy JSON lives in
 slmjev/synth.py     synthetic SG notes + cells with gold spans and decoys (seeded, split-hygienic)
 slmjev/judge.py     Choice (+ optional Noul/Score) over one prefix; logprob readout; rotations
 slmjev/column.py    column-level checks: date parsing, date outliers (a DOB in a date column)
+slmjev/sft.py       judge finetune examples: the judge's exact Choice prompts + gold letters
 slmjev/netguard.py  loopback-only socket guard; loopback URL check
 slmjev/server.py    llama-server launcher (loopback, env API key, bounded cache)
 slmjev/calibrate.py temperature / isotonic calibration, thresholds, ECE, Brier, AUROC
 slmjev/engine.py    * JSON stdin → spans stdout; network forbidden
 data/synthetic/     generator code committed; generated data gitignored
 eval/               judge_eval.py harness, fit_calibration.py; gold spans (synthetic only)
+finetune/           build_data.py, train_judge.py (LoRA, CUDA venv), export_gguf.py (P5)
 results/            eval outputs (gitignored)
 tests/              test_<module>.py; fixtures synthetic only
 docs/decisions/     short decision records + eval-log.md
@@ -250,7 +252,19 @@ models/             GGUF / adapters / calibration.json (gitignored)
     after `PLT` / `platelets` / `total bill` (5 of 60). That is the first P5 target.
   - The R profiler flags only shape outliers. P6 must pass whole columns so
     `column.date_outliers` runs.
-- [ ] P5: QLoRA the judge (reusing the finetune_slm training plan), then export to GGUF.
+- [x] P5: finetune the judge and export it to GGUF (2026-09-26; see
+  `docs/decisions/0006-judge-finetune.md`).
+  - LoRA on bf16 Qwen3-1.7B, with loss on the answer letter only. Training data comes from
+    `slmjev.sft`, whose prompts are byte-identical to the judge's, plus `synth.generate_labs`
+    lab/bill decoys. Exported as merged Q4_K_M, the same tier as zero-shot.
+  - Adopted on synthetic data. Direct recall is 1.0 on test, hard and labs (unseen lab words).
+    False accepts drop to 0 (from 5 on hard and 22 on labs) and test review falls from 0.071
+    to 0.021.
+  - `calibrate.MAX_DROP` = 0.05 caps `drop_below` so that separable fits fail closed.
+  - Open: the scores are saturated (ECE 0), so errors on real text would be confident. P7 must
+    check this before the finetune sees real data.
+  - Run it with `SLMJEV_JUDGE_MODEL=models/p5/slmjev-judge-p5-qwen3-1.7b-Q4_K_M.gguf` and
+    `--calibration models/calibration_p5.json`, both gitignored.
 - [ ] P6: integrate as an `slm:jev` backend in structured_deidentification.
 - [ ] P7: benchmark against Privacy Filter, MediPhi and Presidio; write `docs/results.md`.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
@@ -288,5 +302,11 @@ models/             GGUF / adapters / calibration.json (gitignored)
     `models/calibration.json`.
   - `judge_eval.py --prod --calibration models/calibration.json` runs the judge end to end.
   - `judge_eval.py --prod --hard 60 --split test --seed 41` runs hard decoys (fast-path precision).
+  - `judge_eval.py --prod --labs 200 --split test --seed 51` runs lab/bill decoys (unseen words).
   - The calibration records `PROMPT_VERSION` and the model; `Judge.calibrated` refuses a mismatch.
     Bump `PROMPT_VERSION` in `slmjev/judge.py` on any prompt, option or family change, then refit.
+- Judge finetune (P5): `python finetune/build_data.py` writes `data/sft/` (gitignored).
+  - Train and export with the Unsloth Studio venv's Python, which has torch + CUDA:
+    `%USERPROFILE%/.unsloth/studio/unsloth_studio/Scripts/python.exe`, with `PYTHONPATH=.`.
+  - `finetune/train_judge.py --base models/base/Qwen3-1.7B`, then `finetune/export_gguf.py`
+    with `SLMJEV_LLAMA_CPP=%USERPROFILE%/.unsloth/llama.cpp`. Both run offline.

@@ -31,23 +31,15 @@ from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from slmjev import calibrate, column, netguard, server, synth
+from slmjev import calibrate, column, netguard, server, sft, synth
 from slmjev import judge as J
 from slmjev.labels import load_labels
 
 ROLE_GOLD = {"dob": "dob", "death": "date_of_death"}
 
 
-def candidates(doc: dict) -> list[tuple[J.Candidate, dict]]:
-    """(candidate, gold) for every gold span and decoy in ``doc``."""
-    out = []
-    for s in doc["spans"]:
-        gold = {"label": s["label"], "is_pii": True, "type": s["type"], **s.get("attrs", {})}
-        out.append((J.Candidate(s["start"], s["end"]), gold))
-    for s in doc["decoys"]:
-        gold = {"label": "none", "is_pii": False, "type": s["type"], **s.get("attrs", {})}
-        out.append((J.Candidate(s["start"], s["end"]), gold))
-    return out
+# the oracle proposer, shared with the finetune data so the two cannot drift
+candidates = sft.oracle_candidates
 
 
 PEERS = 30  # clean neighbours of a cell in its synthetic table column
@@ -269,6 +261,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cells", type=int, default=0)
     ap.add_argument("--hard", type=int, default=0,
                     help="hard-decoy notes instead (synth.generate_hard): fast-path precision")
+    ap.add_argument("--labs", type=int, default=0,
+                    help="lab/bill decoy notes instead (synth.generate_labs; test: unseen words)")
     ap.add_argument("--seed", type=int, default=11)
     ap.add_argument("--max-cands", type=int, default=None, help="per document")
     ap.add_argument("--rotations", type=int, default=None, help="Choice rotations (default all)")
@@ -286,7 +280,10 @@ def main(argv: list[str] | None = None) -> int:
     labels = load_labels()
     if args.prod:
         args.rotations, args.choice_only = args.rotations or 4, True
+    if args.hard and args.labs:
+        ap.error("--hard and --labs are separate sets; pick one")
     docs = (synth.generate_hard(args.split, args.hard, seed=args.seed) if args.hard else
+            synth.generate_labs(args.split, args.labs, seed=args.seed) if args.labs else
             synth.generate(args.split, n_notes=args.notes, n_cells=args.cells, seed=args.seed))
     stamp = time.strftime("%Y%m%d-%H%M%S")
     out = args.out or Path("results") / f"judge_eval_{stamp}.json"
@@ -319,7 +316,7 @@ def main(argv: list[str] | None = None) -> int:
                   "calibration": str(args.calibration) if args.calibration else None,
                   "seed": args.seed, "notes": args.notes, "cells": args.cells,
                   "rotations": args.rotations or "all", "generator": synth.GENERATOR_VERSION,
-                  "prompt": J.PROMPT_VERSION, "hard": args.hard,
+                  "prompt": J.PROMPT_VERSION, "hard": args.hard, "labs": args.labs,
                   "thresholds": j.thresholds.__dict__, "choice_only": args.choice_only,
                   "summary": summarize(rows, labels["identifiers"])}
         if args.cache_ab:

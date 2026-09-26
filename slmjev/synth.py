@@ -42,7 +42,7 @@ GENERATOR_VERSION = "synth.v1"
 SPLITS = ("train", "dev", "test")
 
 __all__ = ["GENERATOR_VERSION", "SPLITS", "column_peers", "generate", "generate_hard",
-           "load_labels", "validate_doc", "write_jsonl"]
+           "generate_labs", "load_labels", "validate_doc", "write_jsonl"]
 
 _TYPES: dict[str, str] = load_labels()["types"]
 
@@ -705,6 +705,75 @@ def generate_hard(split: str, n: int, seed: int) -> list[dict]:
         _address(rng, P, doc)
         doc.add(".")
         docs.append(_record(f"{split}-hard-{i:05d}", split, "note", "hard_decoy", None, doc, {}))
+    return docs
+
+
+# Lab and bill lead words for generate_labs. ``test`` gets its own words, never seen in train/dev,
+# so a finetune trained on train/dev is measured on unseen lead words.
+_LAB_LEADS = {
+    "seen": {"lab": ("PLT", "platelets", "platelet count", "plt", "WBC", "TW", "TWC",
+                     "WBC count", "neutrophils", "lymphocytes", "retic count", "Hb"),
+             "bill": ("total bill", "bill", "total charges", "balance due", "deposit",
+                      "outstanding", "amount due")},
+    "test": {"lab": ("thrombocytes", "PLT ct", "RBC", "ANC", "abs neutrophil", "monocytes"),
+             "bill": ("amount payable", "hospital charges", "net payable", "invoice total")},
+}
+_LAB_VALUES = (  # value shape -> text; shapes chosen to look like postal codes, phones and MRNs
+    lambda r: r.choice(_SECTORS) + _digits(r, 4),  # 6 digits, a valid postal sector
+    lambda r: r.choice("689") + _digits(r, 7),  # 8 digits, phone-like
+    lambda r: str(r.randint(10000, 99999)),  # 5 digits
+    lambda r: f"{r.randint(100, 999)},{_digits(r, 3)}",  # 245,000
+    lambda r: f"{r.randint(1000, 99999)}.{_digits(r, 2)}",  # 12345.60
+)
+
+
+def _lab_clause(rng: random.Random, doc: _Doc, leads: dict) -> None:
+    kind = rng.choice(("lab", "lab", "bill"))
+    lead, value = rng.choice(leads[kind]), rng.choice(_LAB_VALUES)(rng)
+    sep = rng.choice((" ", ": ", " of ", " = ") if kind == "lab" else (" ", ": ", " S$", " $"))
+    if rng.random() < 0.3:
+        lead = lead[0].upper() + lead[1:]
+    doc.add(lead + sep).decoy(value, "measurement", kind=kind).add(". ")
+
+
+def _id_clause(rng: random.Random, P: _Pools, doc: _Doc) -> None:
+    r = rng.random()
+    if r < 0.35:
+        doc.add(rng.choice(("Called ", "Spoke to ", "Update given to ")))
+        _name(rng, doc, _person(rng, P, "nok"))
+        kind = rng.choice(("mobile", "landline"))
+        doc.add(f" ({rng.choice(_RELATIONS)}) at ").gold(_phone(rng, kind), "phone", kind=kind)
+    elif r < 0.6:
+        doc.add(rng.choice(("MRN ", "Hospital no. ", "Old MRN "))).gold(_mrn(rng), "mrn")
+    elif r < 0.8:
+        doc.add(rng.choice(("Visit no. ", "Case ", "Episode "))).gold(_case(rng), "case")
+    else:
+        doc.add("Lives at ")
+        _address(rng, P, doc)
+    doc.add(". ")
+
+
+def generate_labs(split: str, n: int, seed: int) -> list[dict]:
+    """Short notes that mix lab and bill values (decoys, shaped like postal codes, phones and
+    MRNs) with gold numeric identifiers of the same shapes, some without a keyword: the P5
+    finetune's lab/bill target (docs/decisions/0006). ``test`` uses held-out lead words. Own seed
+    stream, so :func:`generate` and :func:`generate_hard` are unchanged."""
+    if split not in SPLITS:
+        raise ValueError(f"split must be one of {SPLITS}")
+    rng = random.Random(f"{GENERATOR_VERSION}:labs:{seed}:{split}")
+    P = _Pools(split)
+    leads = _LAB_LEADS["test" if split == "test" else "seen"]
+    docs = []
+    for i in range(n):
+        doc = _Doc()
+        n_labs = rng.choice((1, 2, 2, 3))
+        at = rng.randrange(n_labs + 1)  # where the identifier clause goes
+        for k in range(n_labs + 1):
+            if k == at:
+                _id_clause(rng, P, doc)
+            else:
+                _lab_clause(rng, doc, leads)
+        docs.append(_record(f"{split}-labs-{i:05d}", split, "note", "lab_decoy", None, doc, {}))
     return docs
 
 
