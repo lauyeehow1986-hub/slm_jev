@@ -11,10 +11,13 @@ values from the synthetic generator:
   (``SN-518862``, ``85-2466-43``, ``M07699H``) and vehicle plates (``FWL4331H``).
 - ``name``: runs of 2-6 capitalised words (Title case, UPPER case or initials), bridged by the
   connectors of Singapore names (``bin``, ``binte``, ``d/o``, ``s/o``, ``a/l``, ...); a surname
-  particle with one word (``de Souza``); a single word only after an honorific. Stop words
-  (sentence starters, clinical words, acronyms) are trimmed off both ends of a run.
+  particle with one word (``de Souza``); a single word only after an honorific or a role or
+  relation word (``Nurse Lim``, ``SON VIJAY``, ``Caller: Aisyah``, ``Aisyah (daughter)``). Runs
+  never cross a line break. Stop words (sentence starters, clinical words, acronyms) are trimmed
+  off both ends of a run.
 - ``address``: street addresses ending in a street-type word or starting with ``Jalan`` /
-  ``Lorong``, with an optional block, building name and ``#floor-unit``.
+  ``Lorong``, with an optional block, building name and ``#floor-unit``; a numbered street with
+  no block (``Woodlands Ave 6``).
 - ``shi``: a lexicon of sensitive-health terms (general clinical vocabulary for the provisional
   SHI labels, not taken from any policy document), each extended over following head nouns
   (``infection``, ``status``, ``use``, ...).
@@ -30,7 +33,14 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 from slmjev import rules
-from slmjev.judge import _STREET_TYPES, Candidate
+from slmjev.judge import (
+    _STREET_TYPES,
+    HANDLE,
+    MASKED_NRIC,
+    SOCIAL_LEAD,
+    Candidate,
+    rule_certain,
+)
 
 # --- dates ---------------------------------------------------------------------------------
 
@@ -50,25 +60,123 @@ _PHONE_RX = [
     re.compile(r"(?:\+65|\(\+?65\))[ -]?\d{4}[ -]?\d{4}(?!\d)"),
     re.compile(r"(?<![\d-])\d{4}-\d{4}(?![\d-])"),
     re.compile(r"(?<!\d)[3689]\d{3} \d{4}(?!\d)"),
+    # an international number in groups (``+63 917 552 0184``); 8-15 digits, checked in code
+    re.compile(r"(?<![\w+])\+\d{1,3}(?:[ -]?\(?\d{1,4}\)?){2,5}(?![\d-])"),
 ]
+# An extension after a phone number (``6225 1180 ext 312``) is proposed with the number.
+_PHONE_EXT = re.compile(r"[ ,]*(?i:ext|extn|x)\.?[ ]?\d{1,5}(?!\d)")
 # A token of letters, digits and inner hyphens with at least 5 digits in it (checked in code).
 _IDLIKE = re.compile(r"(?<![\w-])[A-Za-z]{0,4}-?\d[\dA-Za-z-]*\d[A-Za-z]{0,2}(?![\w-])")
-# A vehicle plate: 1-3 letters, 1-4 digits, a check letter (``FWL4331H``, ``SBA123A``).
-_PLATE = re.compile(r"\b[A-Z]{1,3}\d{1,4}[A-Z]\b")
+# Segments joined by slashes (``FDW/26/0071834``, ``WIC/2026/0914/55821``); 5+ digits, not a date.
+_SLASH_ID = re.compile(r"(?<![\w/.:-])[A-Za-z0-9-]+(?:/[A-Za-z0-9-]+){2,}(?![\w/-])")
+_SLASH_DATE = re.compile(r"\d{1,4}/\d{1,2}/\d{1,4}")
+# A vehicle plate: 1-3 letters, 1-4 digits, a check letter (``FWL4331H``, ``SBA123A``), maybe
+# written in groups (``FBL 6632 E``).
+_PLATE = re.compile(r"\b[A-Z]{1,3} ?\d{1,4} ?[A-Z]\b")
+# A picture or scan file name (``IMG_20260923_1542.jpg``): it can point to a photograph.
+_IMAGE_FILE = re.compile(r"(?<![\w.-])[\w-]+(?:\.[\w-]+)*\.(?i:jpe?g|png|gif|bmp|tiff?|heic|webp|"
+                         r"dcm|dicom|mp4|mov|avi)(?![\w])")
+# A handle after a messaging or social-media keyword (``WeChat ID linzq_1992sg``).
+_HANDLE = re.compile(rf"{SOCIAL_LEAD}({HANDLE})(?![\w@])")
+# A URL without a scheme, with a path (``social.example.com/hafiz.jamal.1993``).
+_URL_PATH = re.compile(r"(?<![\w@./-])(?:www\.)?[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*"
+                       r"\.[A-Za-z]{2,6}/[\w.%?=&#~+/-]*[\w/]")
+# Any letters-digits token (``TCM-P1033``); proposed only when a rule is sure of it (a reference
+# right after ``Reg. No.``), which covers shorter references than ``_IDLIKE``.
+_TOKEN = re.compile(r"(?<![\w/.:-])[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*(?![\w/-])")
+# A number with a year after a slash and a short prefix (``CC 1187/2026``, ``No. 482/2025``),
+# or with the year first (``CC 2026/1187``).
+_NUM_YEAR = re.compile(r"(?<![\w/])(?:[A-Z]{1,4}\.? ?)?(?:\d{1,6}/(?:19|20)\d{2}|"
+                       r"(?:19|20)\d{2}/\d{3,6})(?![\w/])")
+# Initials signing a record (``Signed: L.W.X.``, ``Sgd K.M.T``).
+_INITIALS = re.compile(r"(?i:\b(?:signed|sgd|initials?|countersigned)\b(?:[ \t]+by)?[ \t]*:?[ \t]*)"
+                       r"((?:[A-Z]\.){1,3}[A-Z]\.?)(?![\w.])")
+# A masked NRIC/FIN (``G****262U``).
+_MASKED_NRIC = re.compile(rf"(?<![\w*#]){MASKED_NRIC}(?![\w*])")
+# The value after an ID field label, which may hold spaces (``MRN: BTC 22 118 406``,
+# ``donation no. W0417 26 118203 X``, ``Policy no.: HS-IP-7739 0021 45``); see ``_field_ids``.
+_ID_FIELD = re.compile(
+    r"(?i:\b(?:MRN|HRN|NRIC|FIN|IC|passport|case|visit|episode|encounter|admission|account|acct|"
+    r"policy|claim|member|employee|staff|donation|accession|specimen|sample|lab|serial|record|"
+    r"file|ref|reference|ID)\b(?:[ \t]*(?:no\b\.?|number\b|num\b|#))?)[ \t]*[:#.]?[ \t]*"
+    r"(?=[A-Za-z0-9])")
+_FIELD_TOKEN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9/\-]*[A-Za-z0-9])?")
+# an @handle that is not part of an e-mail address
+_AT_HANDLE = re.compile(r"(?<![\w.@])@[A-Za-z][A-Za-z0-9._]{1,30}[A-Za-z0-9_]")
 
 # --- names ---------------------------------------------------------------------------------
 
 _HONORIFIC = r"(?:Mr|Mrs|Ms|Mdm|Madam|Miss|Dr|Prof|Mstr|Master)\.?"
-# Title case (``Tan``, ``D'Cruz``, ``Ah-Kow``), upper case (``TAN``, ``D'CRUZ``) or initials
-# (``G.C.``)
-_WORD = (r"(?:[A-Z]'?[A-Z]?[a-z]+(?:['\-][A-Z]?[a-z]+)*|[A-Z]'?[A-Z]+(?:['\-][A-Z]+)*"
-         r"|[A-Z]\.(?:[A-Z]\.)+)")
+# Title case (``Tan``, ``D'Cruz``, ``Ah-Kow``, ``E-Lynn``), upper case (``TAN``, ``D'CRUZ``),
+# initials (``G.C.``) or the ``Md.`` / ``MD.`` short form of Mohammad
+_WORD = (r"(?:[A-Z]'?[A-Z]?[a-z]+(?:['\-][A-Z]?[a-z]+)*|[A-Z]-[A-Z](?:[a-z]+|[A-Z]+)"
+         r"|[A-Z]'?[A-Z]+(?:['\-][A-Z]+)*|[A-Z]\.(?:[A-Z]\.)+|M[Dd]\.)")
 _PARTICLE = r"(?:van|von|de|da|dos|del|la|le)"
 _CONNECTOR = rf"(?i:bin|binti|binte|bte|b\.|d/o|s/o|a/l|a/p|@|{_PARTICLE})"
-_NAME_RUN = re.compile(rf"(?<![\w']){_WORD}(?:(?:\s+{_CONNECTOR})?\s+{_WORD}){{1,5}}(?![\w'])")
+# The words of a name are joined by spaces or tabs, never a line break: a run across lines joins
+# a heading to the next line (``LABORATORY REPORT\nPatient Name``, P7).
+_NAME_RUN = re.compile(rf"(?<![\w']){_WORD}(?:(?:[ \t]+{_CONNECTOR})?[ \t]+{_WORD}){{1,5}}"
+                       rf"(?![\w'])")
 # ``de Souza``: a lower-case surname particle and one capitalised word
-_PARTICLE_NAME = re.compile(rf"(?<![\w']){_PARTICLE}\s+{_WORD}(?![\w'])")
-_AFTER_HONORIFIC = re.compile(rf"\b{_HONORIFIC}\s+({_WORD})(?![\w'])")
+_PARTICLE_NAME = re.compile(rf"(?<![\w']){_PARTICLE}[ \t]+{_WORD}(?![\w'])")
+# Role and relation words that are usually followed (``Nurse Lim``, ``SON VIJAY``,
+# ``Caller: Aisyah``) or tagged (``Aisyah (daughter)``) by one person's name.
+_ROLES = (r"nurse|sn|sons?|daughters?|wife|husband|mother|father|brothers?|sisters?|spouse|"
+          r"partner|children|child|grandchildren|siblings?|parents?|relatives?|"
+          r"caller|carer|caregiver|helper|maid|guardian|nok|informant|friend|neighbou?r|"
+          r"uncle|aunt|aunty|auntie|grandmother|grandfather|grandson|granddaughter|niece|"
+          r"nephew|cousin|colleague|supervisor|physio|physiotherapist|therapist|"
+          r"endoscopist|surgeon|anaesthetist|anesthetist|pharmacist|dietitian|counsell?or|"
+          r"interpreter|translator|witness|visitors?|fdw|girlfriend|boyfriend|fianc[eé]e?|"
+          r"driver|paramedic|proband|named|called|known[ \t]+as|baby[ \t]+of|family[ \t]+of|"
+          r"witnessed(?:[ \t]+by)?")
+# Staff and form-field abbreviations that take a colon or hyphen before one name (``PT:
+# Rajeswari``, ``DSA: Salina``, ``Bed 2 - RAJOO``); case-sensitive, so ``pt`` in prose is no cue.
+_STAFF = r"PT|OT|ST|DSA|RN|SSN|SRN|EN|MO|HO|MSW|SW|APN|NC|CM"
+_FIELD = (rf"(?:\b(?:{_STAFF}|Pt|Patient|Client|Name|Attn|Re)|\bBed[ \t]*\d{{1,3}}[A-Z]?)"
+          r"[ \t]*[:\-]")
+# A single word is proposed only after one of these cues: an honorific, a role word, a field
+# label or a salutation.
+_CUE = rf"(?:\b{_HONORIFIC}|(?i:\b(?:{_ROLES})\b)[:\-]?|{_FIELD}|\bDear)"
+# ``Dr Tan``, and with initials first: ``Dr R. Balakrishnan``, ``Mr K.M. Wong``
+_AFTER_HONORIFIC = re.compile(rf"\b{_HONORIFIC}\s+((?:[A-Z]\.[ ]?){{0,3}}{_WORD})(?![\w'])")
+# ``Nurse Lim``, ``NOK: SON VIJAY``, ``Wife (Rosnah)``, ``PT: Rajeswari``, ``Dear Siti``
+_AFTER_ROLE = re.compile(rf"(?:(?i:\b(?:{_ROLES})\b)(?:[:\-]?[ \t]+|[ \t]*\([ \t]*)"
+                         rf"|{_FIELD}[ \t]*|\bDear[ \t]+)({_WORD})(?![\w'])")
+# ``Aisyah (daughter)``, ``Balan (MSW)``
+_BEFORE_ROLE = re.compile(rf"(?<![\w'])({_WORD})[ \t]*\((?:(?i:{_ROLES})|{_STAFF})\)")
+# a name signing off a letter, e-mail or message (``Thanks, Farhan``, ``Regards,\nMei Ling``)
+_SIGNOFF = re.compile(r"\b(?:Thanks|Thank you|Many thanks|Regards|Best regards|Kind regards|"
+                      r"Warm regards|Best wishes|Cheers|Sincerely|Yours sincerely|"
+                      rf"Yours faithfully)[,.!]?[ \t]*\n?[ \t]*({_WORD})(?![\w'])")
+# ``Siva's wife``: a possessive before a relation word
+_POSSESSIVE = re.compile(rf"(?<![\w'])({_WORD})['’]s[ \t]+(?i:{_ROLES})\b")
+# a name or nickname in quotes (``known as "Ah Boy"``, ``Supachai ("Jay")``)
+_QUOTED = re.compile(rf"(?<!\w)[\"“]({_WORD}(?:[ \t]+{_WORD}){{0,2}})[\"”](?!\w)")
+# initials alone on a line signing a message (``> AP``, ``-- KL``)
+_INITIALS_LINE = re.compile(r"^[ \t]*(?:>+|-{1,2})?[ \t]*([A-Z]{2,3})[ \t]*$", re.MULTILINE)
+# a name in Chinese characters in brackets (``TAN Bee Hwa (陈美华)``) or after a name field
+_HAN_NAME = re.compile(r"(?:(?<=\()|(?<=（)|(?<=[Nn]ame:)[ \t]*|(?<=[Pp]atient:)[ \t]*|"
+                       r"(?<=姓名[:：])[ \t]*)"
+                       r"([一-鿿]{2,4})(?=[)）]|[ \t,;.]|$)", re.MULTILINE)
+# the next names of a list after a cued one (``sons Irfan and Hakim``, ``Irfan, Hakim``)
+_LIST_NEXT = re.compile(rf"(?:[ \t]*[,/&][ \t]*|[ \t]+and[ \t]+)({_WORD})(?![\w'])")
+# ``KOH WEI LIANG, DARREN`` / ``BAUTISTA, Maricel Dizon``: an upper-case surname, a comma, then
+# the given names; after a field label or at the start of a line.
+_INVERTED = re.compile(rf"(?:(?<=:)|(?<=:[ \t])|(?<=:[ \t]{{2}})|^)[ \t]*"
+                       rf"([A-Z][A-Z'\-]+(?: [A-Z][A-Z'\-]+){{0,3}}, {_WORD}(?: {_WORD}){{0,3}})"
+                       rf"(?![\w'])", re.MULTILINE)
+# Words that end an organisation's name (``Tan Tock Seng Hospital``, ``Lionheart Assurance``,
+# ``Ban Lee Huat Construction Pte Ltd``): a run up to one of these is the organisation, not a
+# person; only the words after it can still be a name.
+_ORG = """
+    hospital hospice community clinic clinics polyclinic centre center home homes lab labs
+    laboratory laboratories assurance insurance insurer claims police school college university
+    institute pte ltd llp inc corp company construction services trading enterprise enterprises
+    holdings group grant fund scheme foundation society association ministry board council
+    authority agency bank church mosque temple court station department dept office
+    """
+_ORG_WORDS = set(_ORG.split())
 
 # Capitalised words that start sentences or name things other than people. A run is trimmed of
 # these at both ends; a run made only of them is not proposed. Common surnames that are also
@@ -97,13 +205,24 @@ _STOP_WORDS = """
     covid tb uti copd dm htn hld ckd ihd af chf cva tia
     insurer insurance member policy account bill billing payment amount total balance
     serial device model make sn id no number ref reference visit appt appointment
-    social work worker msw family meeting
+    social work worker msw family meeting station counter desk
+    pte ltd llp inc co corp company construction services trading enterprise
+    dear sir sirs colleague colleagues all my our your re attn subject regarding complaint
+    triage rn en ssn apn clinician executive manager officer senior junior principal chief
+    head assistant associate physiotherapist physio therapist dietitian pharmacist accounts
+    safety operations admin administrator coordinator secretary clerk
+    fdw mom ica cpf moh hdb lta spf scdf wica medisave medishield grant scheme
+    birth cert certificate record records cardiac implant gen med
+    participant participants anonymous
     """
 _STOP = {w.lower() for w in _STOP_WORDS.split()}
+_FUNCTION = {"the", "of", "and", "or", "for", "to", "in", "on", "at", "by", "with", "from", "my",
+             "our", "your", "his", "her", "its", "re"}
 
 
 def _is_stop(word: str) -> bool:
-    return word.lower().strip(".,") in _STOP
+    w = word.lower().strip(".,")
+    return (w[:-2] if w.endswith("'s") else w) in _STOP
 
 
 # --- addresses -----------------------------------------------------------------------------
@@ -113,6 +232,12 @@ _UNIT_RX = r"#\s?\d{1,3}-\d{1,5}[A-Z]?"
 _BUILDING = rf"{_TITLE}(?: {_TITLE}){{0,3}}"
 # a building name after the unit, never the city
 _BUILDING_AFTER = rf"(?: (?!Singapore\b){_TITLE}(?: (?!Singapore\b){_TITLE}){{0,3}})?"
+# street types that Singapore numbers (``Ang Mo Kio Ave 3``, ``Jurong West St 42``)
+_NUMBERED_STREET = r"Avenue|Ave|Street|St|Road|Rd|Drive|Crescent|Cres|Central|Ring|Link|Way"
+# Tampines St 11, Bedok North Avenue 2, Woodlands Ave 6: a numbered street with no block (P7)
+_NUMBERED_STREET_RX = re.compile(rf"(?<![\w-])(?<!\d )(?<!\d[A-Z] )(?:{_TITLE} ){{1,3}}"
+                                 rf"(?:{_NUMBERED_STREET})\.? \d{{1,3}}[A-Z]?"
+                                 rf"(?![\w-])(?:,? {_UNIT_RX}{_BUILDING_AFTER})?")
 _ADDRESS_RX = [
     # [Building, ][Blk ]123[A] Word Word Street-type [12][,] [#01-23 [Building]]
     re.compile(rf"(?:{_BUILDING}, )?(?:(?:Blk|Block) )?\d{{1,4}}[A-Z]? "
@@ -122,9 +247,16 @@ _ADDRESS_RX = [
     re.compile(rf"(?:{_BUILDING}, )?(?:(?:Blk|Block) )?(?:\d{{1,4}}[A-Z]? )?"
                rf"(?:Jalan|Jln|Lorong|Lor)(?: \d{{1,3}})?"
                rf"(?: {_TITLE}){{1,3}}(?:,? {_UNIT_RX}{_BUILDING_AFTER})?"),
+    # [Dormitory, ]Blk B[,] [Rm 07-12, ]12 Sungei Kadut Ave: a lettered block and a room before
+    # the street number (dormitories, hostels)
+    re.compile(rf"(?:{_BUILDING}, )?(?:Blk|Block) [A-Z0-9]{{1,4}},? "
+               rf"(?:(?:Rm|Room|Unit|Lvl|Level|#)\.? ?\d{{1,3}}(?:-\d{{1,5}})?[A-Z]?, )?"
+               rf"\d{{1,4}}[A-Z]? (?:{_TITLE} ){{0,4}}(?:{_STREET_TYPES})\b\.?"
+               rf"(?: \d{{1,3}}[A-Z]?)?"),
     # [Blk ]123[A] Word Word[,] #01-23: street types are an open class, the unit anchors it
     re.compile(rf"(?:(?:Blk|Block) )?\d{{1,4}}[A-Z]?(?: {_TITLE}){{1,4}},? {_UNIT_RX}"
                rf"{_BUILDING_AFTER}"),
+    _NUMBERED_STREET_RX,
 ]
 
 # --- sensitive health information ---------------------------------------------------------
@@ -132,10 +264,10 @@ _ADDRESS_RX = [
 # General clinical vocabulary, grouped by the provisional SHI labels. Matching is case-insensitive
 # on word boundaries; each hit takes leading qualifiers and following head nouns with it.
 _SHI_TERMS = {
-    "hiv_sti": ["hiv", "aids", "human immunodeficiency virus", "syphilis", "gonorrhoea",
-                "gonorrhea", "chlamydia", "genital herpes", "herpes simplex", "genital warts",
-                "trichomonas", "trichomoniasis", "hepatitis b", "hepatitis c", "hpv",
-                "sexually transmitted", "std", "sti", "prep", "antiretroviral"],
+    "hiv_sti": ["hiv-1", "hiv-2", "hiv", "aids", "human immunodeficiency virus", "syphilis",
+                "gonorrhoea", "gonorrhea", "chlamydia", "genital herpes", "herpes simplex",
+                "genital warts", "trichomonas", "trichomoniasis", "hepatitis b", "hepatitis c",
+                "hpv", "sexually transmitted", "std", "sti", "prep", "antiretroviral"],
     "mental_health": ["depression", "depressive", "schizophrenia", "schizoaffective", "bipolar",
                       "psychosis", "psychotic", "anxiety", "panic disorder", "ptsd",
                       "post-traumatic stress", "ocd", "obsessive-compulsive", "suicide",
@@ -146,24 +278,28 @@ _SHI_TERMS = {
                       "cannabis", "marijuana", "heroin", "methamphetamine", "ice use", "cocaine",
                       "opioid", "opiate", "methadone", "buprenorphine", "ketamine",
                       "substance use", "substance abuse", "drug abuse", "drug use", "inhalant",
-                      "benzodiazepine dependence", "iv drug"],
+                      "benzodiazepine dependence", "iv drug", "binge drinking",
+                      "heavy drinking", "cans of beer", "units of alcohol", "alcohol intake"],
     "genetic": ["brca1", "brca2", "brca", "lynch syndrome", "huntington", "cystic fibrosis",
                 "thalassaemia trait", "thalassemia trait", "genetic testing", "gene positive",
                 "hypercholesterolaemia", "hypercholesterolemia", "carrier status",
-                "mutation carrier", "down syndrome", "trisomy", "genetic"],
+                "mutation carrier", "down syndrome", "trisomy", "g6pd deficiency", "genetic"],
     "reproductive_sexual": ["termination of pregnancy", "abortion", "miscarriage", "ivf",
                             "in vitro fertilisation", "in vitro fertilization", "infertility",
                             "erectile dysfunction", "contraception", "gender-affirming",
                             "gender affirming", "gender dysphoria", "transgender",
-                            "sexual orientation", "ectopic pregnancy"],
+                            "sexual orientation", "ectopic pregnancy", "caesarean section",
+                            "cesarean section"],
     "other_sensitive": ["sexual assault", "rape", "domestic violence", "family violence",
                         "elder abuse", "child abuse", "child protection", "abuse", "neglect",
+                        "intimate partner violence", "inflicted by her partner",
+                        "inflicted by his partner",
                         "incarceration", "prison", "criminal record"],
 }
 _SHI_LEADS = (r"previous|past|known|recurrent|chronic|active|suspected|confirmed|"
               r"genetically\s+confirmed|generali[sz]ed|severe|major|familial")
 _SHI_HEADS = (r"infection|status|disorder|disease|use|dependence|abuse|carrier|attempt|"
-              r"syndrome|positive|negative|treatment|therapy|workup|work-up|concerns?|"
+              r"syndrome|positive|negative|reactive|treatment|therapy|workup|work-up|concerns?|"
               r"referral|maintenance|mutation|trait|history|ideation|episode|gene|hormones?|"
               r"hormonal|medication|clinic|counsell?ing")
 _SHI_RX = [
@@ -195,18 +331,28 @@ def _spans(rx: re.Pattern[str], text: str, group: int = 0) -> Iterable[tuple[int
             yield m.start(group) + 1, m.end(group)
 
 
-def _after_honorific(text: str, start: int) -> bool:
-    return bool(re.search(rf"\b{_HONORIFIC}\s+$", text[max(0, start - 1 - 12):start - 1]))
+def _after_cue(text: str, start: int) -> bool:
+    return bool(re.search(rf"{_CUE}[ \t]+$", text[max(0, start - 1 - 24):start - 1]))
 
 
 def _trim_name(text: str, s: int, e: int) -> tuple[int, int] | None:
     """Trim stop words off both ends of the name run ``text[s-1:e]``; None if too little is left
-    (one word is kept only after an honorific)."""
+    (one word is kept only after an honorific or a role word)."""
     words = [(m.start() + s, m.end() + s - 1, m.group(0))
              for m in re.finditer(r"\S+", text[s - 1:e])]
+    # an organisation's name ends at its type word; only what follows can be a person
+    org = [i for i, w in enumerate(words) if w[2].lower().strip(".,") in _ORG_WORDS]
+    if org:
+        words = words[org[-1] + 1:]
+    # an upper-case heading holds a function word inside it (``COMPLAINT REGARDING CARE OF MY``);
+    # an upper-case name does not (``YEO JUN JIE``: a month is no function word)
+    if (len(words) >= 3 and all(w[2].isupper() for w in words)
+            and any(w[2].lower() in _FUNCTION for w in words[1:-1])):
+        return None
 
     def drop(w: str) -> bool:
-        return _is_stop(w) or bool(re.fullmatch(_CONNECTOR, w))
+        # a capitalised connector at an end is a name word (``Jia Le``, ``Tan Bin``)
+        return _is_stop(w) or (bool(re.fullmatch(_CONNECTOR, w)) and not w[:1].isupper())
 
     while words and drop(words[0][2]):
         words.pop(0)
@@ -215,9 +361,24 @@ def _trim_name(text: str, s: int, e: int) -> tuple[int, int] | None:
     capital = [w for w in words if not re.fullmatch(_CONNECTOR, w[2])]
     if not capital or all(_is_stop(w[2]) for w in capital):
         return None
-    if len(capital) < 2 and not _after_honorific(text, words[0][0]):
+    if len(capital) < 2 and not _after_cue(text, words[0][0]):
         return None
     return words[0][0], words[-1][1]
+
+
+def _field_ids(text: str) -> Iterable[tuple[int, int]]:
+    """1-based spans of ID field values: the tokens after the label, joined by single spaces,
+    while each has a digit or is a short upper-case code; at least 3 digits in all."""
+    for m in _ID_FIELD.finditer(text):
+        pos, end = m.end(), None
+        while (t := _FIELD_TOKEN.match(text, pos)) and (
+                any(c.isdigit() for c in t.group()) or re.fullmatch(r"[A-Z]{1,4}", t.group())):
+            end = t.end()
+            if not (text[end:end + 1] == " " and text[end + 1:end + 2].isalnum()):
+                break
+            pos = end + 1
+        if end and sum(c.isdigit() for c in text[m.end():end]) >= 3:
+            yield m.end() + 1, end
 
 
 def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
@@ -251,13 +412,51 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             add(s, e, "shape:date", "date")
     for rx in _PHONE_RX:
         for s, e in _spans(rx, text):
-            add(s, e, "shape:phone", "phone")
+            if 8 <= sum(c.isdigit() for c in text[s - 1:e]) <= 15:
+                add(s, e, "shape:phone", "phone")
+                if x := _PHONE_EXT.match(text, e):
+                    add(s, x.end(), "shape:phone", "phone")
     for s, e in _spans(_IDLIKE, text):
         if sum(c.isdigit() for c in text[s - 1:e]) >= 5:
             add(s, e, "shape:id")
+    for s, e in _spans(_SLASH_ID, text):
+        tok = text[s - 1:e]
+        if sum(c.isdigit() for c in tok) >= 5 and not _SLASH_DATE.fullmatch(tok):
+            add(s, e, "shape:id")
     for s, e in _spans(_PLATE, text):
-        if e - s + 1 >= 5:
+        if len(text[s - 1:e].replace(" ", "")) >= 5:
             add(s, e, "shape:plate")
+    for s, e in _spans(_IMAGE_FILE, text):
+        add(s, e, "shape:file", "photo")
+    for s, e in _spans(_HANDLE, text, group=1):
+        add(s, e, "shape:handle")
+    for s, e in _spans(_URL_PATH, text):
+        add(s, e, "shape:url")
+    for s, e in _spans(_TOKEN, text):
+        tok = text[s - 1:e]
+        digits = sum(c.isdigit() for c in tok)
+        if (s, e) in found or digits < 4:
+            continue
+        # a reference a rule is sure of; or letter and digit segments joined by hyphens
+        # (``OPD-PT-26-33091``, ``BIO-26-00918-A``): the whole code, where ``_IDLIKE`` finds
+        # only its digit tail
+        # (``BIO-26-00918-A``); an upper-case prefix takes shorter codes (``FGS-0142``)
+        if rule_certain(text, Candidate(s, e)) or ("-" in tok and re.search(r"[A-Za-z]", tok) and (
+                digits >= 5 or (digits >= 3 and re.match(r"[A-Z]{2,5}-", tok)))):
+            add(s, e, "shape:id")
+    for s, e in _spans(_NUM_YEAR, text):
+        add(s, e, "shape:id")
+    for s, e in _field_ids(text):
+        add(s, e, "shape:id")
+    for s, e in _spans(_AT_HANDLE, text):
+        add(s, e, "shape:handle")
+    for s, e in _spans(_INITIALS, text, group=1):
+        add(s, e, "shape:name", "name")
+    for s, e in _spans(_INITIALS_LINE, text, group=1):
+        add(s, e, "shape:name", "name")
+    for s, e in _spans(_MASKED_NRIC, text):
+        if e - s + 1 == 9:
+            add(s, e, "shape:id", "national_id")
     for s, e in _spans(_NAME_RUN, text):
         if (t := _trim_name(text, s, e)) is not None:
             add(*t, "shape:name", "name")
@@ -266,13 +465,41 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
     for s, e in _spans(_AFTER_HONORIFIC, text, group=1):
         if not _is_stop(text[s - 1:e]):
             add(s, e, "shape:name", "name")
-    for rx in _ADDRESS_RX:
-        for s, e in _spans(rx, text):
-            add(s, e, "shape:address", "address")
+    for s, e in _spans(_INVERTED, text, group=1):
+        if (t := _trim_name(text, s, e)) is not None:
+            add(*t, "shape:name", "name")
+    runs = [(p.start, p.end) for p in found.values() if "shape:name" in p.sources]
+    for s, e in _spans(_HAN_NAME, text, group=1):
+        add(s, e, "shape:name", "name")
+    for rx in (_AFTER_ROLE, _BEFORE_ROLE, _SIGNOFF, _POSSESSIVE, _QUOTED):
+        for s, e in _spans(rx, text, group=1):
+            if _is_stop(text[s - 1:e]):
+                continue
+            # one word of a longer name already proposed would only cost another judgment
+            if not any(a <= s and e <= b for a, b in runs):
+                add(s, e, "shape:name", "name")
+            if rx is _AFTER_ROLE:  # the rest of a list: ``sons Irfan and Hakim``
+                while (m := _LIST_NEXT.match(text, e)) and not _is_stop(m.group(1)):
+                    s, e = m.start(1) + 1, m.end(1)
+                    if not any(a <= s and e <= b for a, b in runs):
+                        add(s, e, "shape:name", "name")
+    addresses = [(rx, sp) for rx in _ADDRESS_RX for sp in _spans(rx, text)]
+    for rx, (s, e) in addresses:
+        # a numbered street inside a longer address (``Pasir [Ris Drive 3, #07-403]``) is not its
+        # own candidate
+        if rx is _NUMBERED_STREET_RX and any(a <= s and e <= b and (a, b) != (s, e)
+                                             for _, (a, b) in addresses):
+            continue
+        add(s, e, "shape:address", "address")
     for label, rx in _SHI_RX:
         for s, e in _spans(rx, text):
             add(s, e, f"lexicon:{label}", label)
     for c in extra:
+        # an engine's one-word "name" that is a stop word (``Nurse``, ``Ward``, ``ED``) is the
+        # same non-name the name shapes above skip
+        if (c.type or "").lower() in ("name", "person") and _is_stop(text[c.start - 1:c.end]
+                                                                     .strip()):
+            continue
         add(c.start, c.end, c.detector or "extra", c.type)
     return sorted(found.values(), key=lambda p: (p.start, -p.end))
 

@@ -166,10 +166,16 @@ class Isotonic:
             floor: float = 0.005) -> Isotonic:
         if not probs:
             raise ValueError("no data to fit")
-        pts = sorted(zip(probs, (float(y) for y in labels), strict=True))
+        # tied scores are one point: sorted apart, their 0s and 1s would form separate blocks with
+        # the same edge, and a lookup would find only the first
+        tied: dict[float, list[float]] = {}
+        for x, y in zip(probs, labels, strict=True):
+            tied.setdefault(x, [0.0, 0.0])
+            tied[x][0] += float(y)
+            tied[x][1] += 1.0
         blocks: list[list[float]] = []  # [sum_y, n, max_x]
-        for x, y in pts:
-            blocks.append([y, 1.0, x])
+        for x in sorted(tied):
+            blocks.append([*tied[x], x])
             while (len(blocks) > 1
                    and blocks[-2][0] / blocks[-2][1] >= blocks[-1][0] / blocks[-1][1]):
                 s, n, mx = blocks.pop()
@@ -180,7 +186,54 @@ class Isotonic:
                    tuple(round(b[0] / b[1], 6) for b in blocks), floor)
 
 
-Calibrator = Identity | Temperature | Isotonic
+@dataclass(frozen=True)
+class Grouped:
+    """One calibrator per group, e.g. per kind of call the judge made (``group_of``).
+
+    A single map cannot fix scores that are overconfident for one kind of call and not another:
+    the same raw 0.99 means something different when the judge called a span a name than when
+    it called it an HIV mention. A group with no map of its own uses ``default``."""
+
+    maps: tuple[tuple[str, Identity | Temperature | Isotonic], ...]
+    default: Identity | Temperature | Isotonic = Identity()
+    kind = "grouped"
+
+    def __call__(self, p: float, group: str | None = None) -> float:
+        return dict(self.maps).get(group, self.default)(p)
+
+    def to_dict(self) -> dict:
+        return {"kind": self.kind, "default": self.default.to_dict(),
+                "groups": {g: c.to_dict() for g, c in self.maps}}
+
+    @classmethod
+    def fit(cls, probs: Sequence[float], labels: Sequence[bool | int],
+            groups: Sequence[str], kind: str = "isotonic", min_n: int = 20) -> Grouped:
+        """A ``kind`` map per group with at least ``min_n`` examples; smaller groups share one
+        map fitted on all the data."""
+        if not len(probs) == len(labels) == len(groups):
+            raise ValueError("probs, labels and groups differ in length")
+        by: dict[str, tuple[list[float], list[bool | int]]] = {}
+        for p, y, g in zip(probs, labels, groups, strict=True):
+            by.setdefault(g, ([], []))[0].append(p)
+            by[g][1].append(y)
+        maps = tuple((g, fit(kind, *by[g])) for g in sorted(by) if len(by[g][0]) >= min_n)
+        return cls(maps, fit(kind, probs, labels))
+
+
+def group_of(category: str | None, shi: Sequence[str], sources: Sequence[str] = ()) -> str:
+    """The call a judgment made, as ``Grouped`` keys it, split by what proposed the span:
+
+    - ``identifier``;
+    - ``shi_lexicon`` (the SHI lexicon proposed it) or ``shi_other`` (only something else did, a
+      capitalised heading or an engine span). On the dev notes the first kind was right about
+      three times in four, the second about one time in twenty;
+    - ``none``."""
+    if category in shi:
+        return "shi_lexicon" if any(s.startswith("lexicon:") for s in sources) else "shi_other"
+    return "none" if category in (None, "none") else "identifier"
+
+
+Calibrator = Identity | Temperature | Isotonic | Grouped
 _KINDS = {"identity": Identity, "temperature": Temperature, "isotonic": Isotonic}
 
 
@@ -194,6 +247,11 @@ def fit(kind: str, probs: Sequence[float], labels: Sequence[bool | int]) -> Cali
 
 def from_dict(d: dict) -> Calibrator:
     kind = d.get("kind")
+    if kind == "grouped":
+        inner = [from_dict(c) for c in (d["default"], *d["groups"].values())]
+        if any(isinstance(c, Grouped) for c in inner):
+            raise ValueError("grouped calibrators do not nest")
+        return Grouped(tuple(zip(d["groups"], inner[1:], strict=True)), inner[0])
     if kind == "identity":
         return Identity()
     if kind == "temperature":

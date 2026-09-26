@@ -35,11 +35,16 @@ def test_parse_markup_offsets_and_labels():
     for g in a["spans"]:
         assert a["text"][g["start"] - 1:g["end"]] == g["match"]
     assert docs[1]["spans"] == []
+    # a "# " comment inside a note is dropped; a line starting with a unit number is text
+    inner = bench.parse_markup("=== c | k ===\nBlk 1\n#05-432\n# author's note\nend")
+    assert inner[0]["text"] == "Blk 1\n#05-432\nend"
     with pytest.raises(ValueError):
         bench.parse_markup("=== a | k ===\n{{nonsense|x}}")
 
 
-@pytest.mark.parametrize("path", ["eval/bench/sd20.json", "eval/bench/notes_v1.txt"])
+@pytest.mark.parametrize("path", ["eval/bench/sd20.json", "eval/bench/notes_v1.txt",
+                                  "eval/bench/notes_v2.txt", "eval/bench/notes_v3.txt",
+                                  "eval/bench/notes_v4.txt", "eval/bench/notes_v5.txt"])
 def test_shipped_sets_load_with_exact_offsets(path):
     docs = bench.load_set(ROOT / path)
     assert docs and any(not d["spans"] for d in docs)  # negative controls are present
@@ -90,3 +95,25 @@ def test_sd_engine_with_missing_model_fails_loudly(tmp_path):
         bench.run_sd("mediphi", [{"text": "x"}], args)
     with pytest.raises(SystemExit, match="pf: missing"):
         bench.run_sd("pf", [{"text": "x"}], args)
+
+
+def test_calibration_scores_every_judged_candidate():
+    text = "Tan Ah Kow seen on 3 Mar; HIV; Ward 5"
+    docs = [{"id": "d", "text": text, "spans": [
+        {"label": "name", "start": 1, "end": 10, "match": "Tan Ah Kow"},
+        {"label": "date_other", "start": 20, "end": 24, "match": "3 Mar"},
+        {"label": bench.SHI[0], "start": 27, "end": 29, "match": "HIV"}]}]
+
+    def c(s, e, p, cat, sources=()):
+        return {"start": s, "end": e, "confidence": p, "category": cat, "sources": sources}
+    judged = [[c(1, 10, 0.9, "name"),          # right
+               c(20, 24, 0.5, "dob"),          # an other date only: left out
+               c(27, 29, 0.8, bench.SHI[0], ["lexicon:hiv_sti"]),  # SHI is not "none": right
+               c(32, 37, 0.1, "none"),         # no gold: wrong, and correctly low
+               c(32, 37, None, None)]]         # failed judgment: left out
+    cal = bench.calibration(docs, judged)
+    assert cal["n"] == 3 and cal["positives"] == 2
+    assert cal["ece"] == round((0.1 + 0.2 + 0.1) / 3, 4)
+    assert {k: v["n"] for k, v in cal["by_call"].items()} == {"identifier": 1, "none": 1,
+                                                              "shi_lexicon": 1}
+    assert cal["by_call"]["shi_lexicon"]["ece"] == 0.2

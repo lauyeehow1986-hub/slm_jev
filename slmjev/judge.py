@@ -150,6 +150,24 @@ def family_of(match: str) -> str:
 
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _URL = re.compile(r"https?://\S+", re.IGNORECASE)
+# A URL without a scheme but with a path (``social.example.com/hafiz.jamal.1993``): a profile or a
+# document, not just an organisation's domain (notes_v2).
+_URL_NO_SCHEME = re.compile(r"(?:www\.)?[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*"
+                            r"\.(?:com|net|org|sg|io|me|co|info|biz|edu|gov|my|ph|in|cn)"
+                            r"(?:\.[a-z]{2})?/[\w.%?=&#~+/-]*[\w/]")
+# A handle after a messaging or social-media keyword (``WeChat ID linzq_1992sg``).
+# "Line" and "Signal" are common words, so they count only with "ID" ("line immunoassay").
+SOCIAL_LEAD = (r"(?i:\b(?:(?:wechat|whatsapp|telegram|instagram|ig|facebook|fb|tiktok|twitter|"
+               r"skype|snapchat|linkedin)\b(?:\s*(?:id|handle|username|user|account))?"
+               r"|(?:line|signal)\s*(?:id|handle|username)\b)\s*[:@]?\s*)")
+_SOCIAL_LEAD_END = re.compile(SOCIAL_LEAD + "$")
+HANDLE = r"@?[A-Za-z][A-Za-z0-9._]{1,30}[A-Za-z0-9_]"
+# A pathology or radiology accession number: a 1-4 letter prefix with a 2-digit year, a hyphen
+# and a 5-7 digit serial (``HS26-018455``, ``S24-0012345``). The model dropped these (notes_v2).
+_ACCESSION = re.compile(r"[A-Z]{1,4}\d{2}-\d{5,7}")
+# A masked NRIC/FIN (``G****262U``, ``SXXXX567D``): the prefix, 3-7 masked digits, the rest and the
+# check letter, 9 characters in all. The unmasked part still narrows who it is (notes_v3).
+MASKED_NRIC = r"[STFGM][*xX#]{3,7}\d{0,4}[A-Z]"
 _POSTAL_LEAD = re.compile(r"(?:\bSingapore\s*|\bS\(?)$")
 # The same lead merged into the candidate: the proposer joins ``S276963`` or
 # ``Singapore 482263`` into one span, which the model dropped or called an address (0007).
@@ -157,15 +175,15 @@ _POSTAL_WITH_LEAD = re.compile(r"(?:Singapore\s*|S\(?)\d{6}\)?")
 # The end of a street address: a block, a #floor-unit, or a street-type word, then only
 # address-like tokens (numbers, units, Title-case building words) before the postal code. A
 # lower-case or all-caps word ("Block 4 clinic, platelets 245000", "PLT") breaks the address.
-_STREET_TYPES = (r"Blk|Block|Avenue|Ave|Road|Rd|Street|Drive|Crescent|Cres|Lorong|Lor|Jalan|Jln|"
+_STREET_TYPES = (r"Blk|Block|Avenue|Ave|Road|Rd|Street|St|Drive|Crescent|Cres|Lorong|Lor|Jalan|Jln|"
                  r"Lane|Walk|Close|Place|Terrace|Rise|Link|Way|Grove|View|Heights|Green|Gardens?|"
-                 r"Circle|Loop|Boulevard|Quay|Vale|Hill|Park")
+                 r"Circle|Loop|Boulevard|Quay|Vale|Hill|Park|Plain")
 _ADDRESS_TOKEN = r"(?:\d{1,4}[A-Z]?|#\s?\d{1,3}-\d{1,5}|[A-Z][a-z][A-Za-z'&-]*)"
 _ADDRESS_END = re.compile(rf"(?:\b(?i:{_STREET_TYPES})\b\.?|#\s?\d{{1,3}}-\d{{1,5}})"
                           rf"(?:[ ,]+{_ADDRESS_TOKEN}){{0,6}}[ ,]+$")
 _SG_SECTORS = {f"{i:02d}" for i in range(1, 83)}
 # An ID keyword right before the span. Acronyms are case-sensitive ("IC", not "ic").
-_ID_TAIL = r"\s*(?:[Nn]o\.?|[Nn]umber|#)?\s*[:(]?\s*$"
+_ID_TAIL = r"\.?\s*(?:[Nn]o\.?|[Nn]umber|#)?\s*[:(]?\s*$"
 _ID_LEADS = [
     (re.compile(r"(?:\bNRIC|\bFIN|\b[Tt]emp(?:orary)? IC|\bIC|\b[Pp]assport|"
                 rf"\b[Bb]irth [Cc]ert(?:ificate)?){_ID_TAIL}"), "national_id"),
@@ -173,6 +191,18 @@ _ID_LEADS = [
     (re.compile(rf"\bMCR{_ID_TAIL}"), "other_id"),
 ]
 _ID_SHAPE = re.compile(r"[A-Z]{0,2}\d{5,}[A-Z]?")
+# A record reference after a reference keyword ("Lab No", "lab ref", "Accession", "Specimen",
+# "Reg. No.", "claim ref", "policy no."): any letters-digits-hyphens-slashes token with 4+
+# digits. The model dropped these as "none" (P7, notes_v2). "case no." is a case_visit, which
+# the model gets right; a bare "ref" or "policy" is too loose ("ref range", "IPC policy
+# IC-04-017"); both stay with the model.
+_REF_LEAD = re.compile(r"(?i:\blab(?:oratory)?\s*(?:no|number|ref(?:erence)?|id)\b|\baccession"
+                       r"|\bspecimen|\bsample\s*(?:no|number|id)\b"
+                       r"|\b(?:order|request|report|record)\s*(?:no|number|id)\b"
+                       r"|\breg(?:istration)?\.?\s*(?:no|number)\b"
+                       r"|\b(?:claim|policy)\s*(?:ref(?:erence)?|no|number|id|#))"
+                       + _ID_TAIL)
+_REF_SHAPE = re.compile(r"[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*")
 # A bank or billing account number after an account keyword: 8+ digits, optionally grouped by
 # hyphens or spaces (``250-03851-0``). The model called these ``none`` with certainty (0005).
 _ACCOUNT_LEAD = re.compile(rf"(?:\b[Aa]ccount|\b[Aa]/[Cc]|\b[Aa]cct){_ID_TAIL}")
@@ -182,10 +212,14 @@ _ACCOUNT_SHAPE = re.compile(r"\d+(?:[- ]\d+){0,4}")
 def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     """``(identifier, reason)`` when code alone is sure the span identifies someone, else None.
 
-    Only shapes a rule can confirm qualify: a valid NRIC/FIN checksum; a whole email or URL; a
-    6-digit postal code right after ``Singapore``/``S(`` (or with that lead inside the span), or
-    ending a street address with a valid sector; an ID-shaped token right after an ID keyword
-    (``NRIC``, ``temp IC``, ``MRN``, ...), or an account number right after ``account`` /
+    Only shapes a rule can confirm qualify: a valid NRIC/FIN checksum or a masked NRIC/FIN
+    (``G****262U``); a whole email or URL (with
+    a scheme, or without one but with a path); an accession-number shape (``HS26-018455``); a
+    handle with a digit, ``_`` or ``.`` after a messaging keyword (``WeChat ID``); a 6-digit postal
+    code right after ``Singapore``/``S(`` (or with that lead inside the span), or ending a street
+    address with a valid sector; an ID-shaped token right after an ID keyword (``NRIC``,
+    ``temp IC``, ``MRN``, ...), a record reference right after ``Lab No`` / ``Reg. No.`` /
+    ``Accession`` / ``claim ref`` / ``policy``, or an account number right after ``account`` /
     ``a/c``.
     They skip the model; everything else is judged. Accepting is the fail-closed direction, since
     it only ever removes more."""
@@ -193,10 +227,17 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     left = text[max(0, cand.start - 1 - 80):cand.start - 1]
     if rules.nric_valid(m):
         return "national_id", "nric_checksum"
+    if len(m) == 9 and re.fullmatch(MASKED_NRIC, m):
+        return "national_id", "masked_nric"
     if _EMAIL.fullmatch(m):
         return "email", "email_shape"
-    if _URL.fullmatch(m):
+    if _URL.fullmatch(m) or _URL_NO_SCHEME.fullmatch(m):
         return "other_id", "url_shape"
+    if _ACCESSION.fullmatch(m):
+        return "other_id", "accession_shape"
+    if (re.fullmatch(HANDLE, m) and re.search(r"[\d_.]", m)
+            and _SOCIAL_LEAD_END.search(left[-32:])):
+        return "other_id", "handle_keyword"
     if re.fullmatch(r"\d{6}", m):
         if _POSTAL_LEAD.search(left[-12:]):
             return "postal_code", "postal_keyword"
@@ -208,6 +249,9 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
         for lead, ident in _ID_LEADS:
             if lead.search(left[-24:]):
                 return ident, "id_keyword"
+    if (_REF_SHAPE.fullmatch(m) and sum(c.isdigit() for c in m) >= 4
+            and _REF_LEAD.search(left[-24:])):
+        return "other_id", "ref_keyword"
     if (_ACCOUNT_SHAPE.fullmatch(m) and sum(c.isdigit() for c in m) >= 8
             and _ACCOUNT_LEAD.search(left[-24:])):
         return "other_id", "account_keyword"
@@ -420,12 +464,20 @@ class Thresholds:
     # default, since zero-shot Noul on Qwen3-1.7B was near chance, AUROC 0.51-0.69).
     disagree_at: float | None = None
     min_mass: float = 0.50  # letter mass below this: off-format, review
+    # what drop_below / accept_at compare: "calibrated" (the confidence) or "raw" (p_identifier).
+    # "raw" keeps decisions on the thresholds they were validated with while the reported
+    # confidence is recalibrated (docs/decisions/0010)
+    space: str = "calibrated"
+
+    def __post_init__(self):
+        if self.space not in ("calibrated", "raw"):
+            raise ValueError(f"threshold space must be 'calibrated' or 'raw', not {self.space!r}")
 
 
 def decide(conf: float, cat_p: float, th: Thresholds, reasons: list[str]) -> str:
-    """``identifier``, ``not_identifier`` or ``review`` from the *calibrated* probability (the
-    thresholds live in that space). Any prior ``reasons`` force review; review reasons found here
-    are appended to ``reasons``."""
+    """``identifier``, ``not_identifier`` or ``review`` from ``conf``: the calibrated probability,
+    or the raw one when ``th.space`` is ``"raw"``, whichever the thresholds were chosen in. Any
+    prior ``reasons`` force review; review reasons found here are appended to ``reasons``."""
     if conf < th.drop_below and not reasons:
         return "not_identifier"
     if conf >= th.accept_at and cat_p >= th.category_at and not reasons:
@@ -528,7 +580,18 @@ class Judge:
             raise ValueError(f"{path}: fitted for model {meta.get('model')!r}, not {model!r}")
         base = kw.pop("thresholds", Thresholds())
         return cls(backend, calibrator=cal, thresholds=replace(
-            base, drop_below=th["drop_below"], accept_at=th["accept_at"]), **kw)
+            base, drop_below=th["drop_below"], accept_at=th["accept_at"],
+            space=th.get("space", "calibrated")), **kw)
+
+    def _calibrate(self, p_id: float, category: str, cand: Candidate) -> float:
+        """``p_id`` in calibrated space. A ``calibrate.Grouped`` calibrator also gets the call
+        (``calibrate.group_of``), since how overconfident the model is depends on it."""
+        if self.calibrator is None:
+            return p_id
+        if isinstance(self.calibrator, calibrate.Grouped):
+            sources = (cand.detector or "").split("+")
+            return self.calibrator(p_id, calibrate.group_of(category, _SHI, sources))
+        return self.calibrator(p_id)
 
     def judge(self, text: str, cand: Candidate, column: str | None = None,
               column_outlier: bool = False) -> dict:
@@ -566,7 +629,7 @@ class Judge:
         rec.update(category=cat, category_probs=_round(choice.probs), p_identifier=round(p_id, 6),
                    identifier=None if cat == "none" else cat,
                    type=cand.type or (None if cat == "none" else cat))
-        conf = self.calibrator(p_id) if self.calibrator else p_id
+        conf = self._calibrate(p_id, cat, cand)
         rec["confidence"] = round(conf, 4)
         info.update(choice_spread=round(choice.spread, 4), choice_mass=round(choice.min_mass, 4),
                     n_orders=len(choice.per_order))
@@ -620,7 +683,7 @@ class Judge:
                 except JudgeError as e:
                     info["errors"].append(f"property: {e}")
 
-        decision = decide(conf, cat_p, th, reasons)
+        decision = decide(p_id if th.space == "raw" else conf, cat_p, th, reasons)
         # a context-free cell may be accepted, never dropped
         if decision == "not_identifier" and (cell_reason := cell_review(
                 text, cand, family, column, column_outlier)):

@@ -326,6 +326,21 @@ def test_property_model_question_is_opt_in_and_never_overrides_rules():
     ("Seen by Dr Nair (MCR M97984B).", "M97984B", "other_id"),
     ("Refund to bank account 250-03851-0.", "250-03851-0", "other_id"),
     ("Paid from a/c no. 0123 456789.", "0123 456789", "other_id"),
+    # a record reference after a reference keyword: dropped by the model in P7
+    ("Lab No : 24L0339127 received", "24L0339127", "other_id"),
+    ("sent under lab ref GX-7781-24 today", "GX-7781-24", "other_id"),
+    ("Accession RAD-24-0918273.", "RAD-24-0918273", "other_id"),
+    ("Blk 123 Tampines St 11 #05-432, 521123.", "521123", "postal_code"),
+    # notes_v2 misses: "No." with a full stop, a registration number, accession and URL shapes,
+    # a messaging handle
+    ("Blood C/S (Lab No. 26M0914477) - no growth", "26M0914477", "other_id"),
+    ("Physician: Tan (TCM Reg. No. TCM-P1033)", "TCM-P1033", "other_id"),
+    ("policy no. IS-2019-00482715, rider", "IS-2019-00482715", "other_id"),
+    ("Jar A (HF lesion bx) HS26-018455; Jar B", "HS26-018455", "other_id"),
+    ("his page (social.example.com/hafiz.jamal.1993) had", "social.example.com/hafiz.jamal.1993",
+     "other_id"),
+    ("contact via WeChat ID linzq_1992sg.", "linzq_1992sg", "other_id"),
+    ("identified by masked FIN G****262U. Pt", "G****262U", "national_id"),  # notes_v3
 ])
 def test_rule_certain_spans_skip_the_model(t, sub, ident):
     fake = Fake(script({"none": 0.99}))
@@ -356,6 +371,13 @@ def test_rule_certain_spans_skip_the_model(t, sub, ident):
     ("Reviewed at Tower Block, PLT 245000.", "245000"),
     ("Reviewed at #05-12 clinic, WBC count 245000.", "245000"),
     ("Reviewed at Block 7, total bill 245000.", "245000"),
+    ("lab ref range 150000-400000", "150000"),  # a range, not a reference
+    ("Lab No: PH-017", "PH-017"),  # too few digits for a record reference
+    ("ref 24L0339127 x", "24L0339127"),  # a bare "ref" is too loose for the fast path
+    ("ratio S****1A x", "S****1A"),  # a masked NRIC has 9 characters
+    ("Refer to IPC policy IC-04-017, version 5.", "IC-04-017"),  # a document number
+    ("under case no. 6498160533X with", "6498160533X"),  # a case_visit: the model's call
+    ("confirmed on line immunoassay5 today", "immunoassay5"),  # "line" alone is no app
 ])
 def test_uncertain_shapes_still_go_to_the_model(t, sub):
     fake = Fake(script({"none": 0.99}))
@@ -437,6 +459,21 @@ def test_decisions_use_the_calibrated_probability(tmp_path):
     assert r["p_identifier"] == pytest.approx(0.9, abs=1e-3)
     assert r["confidence"] < 0.9 and r["decision"] == "review"  # softened below accept_at
     assert j.thresholds.drop_below == 0.02 and j.thresholds.accept_at == 0.9
+
+
+def test_a_grouped_calibrator_gets_the_call(tmp_path):
+    from slmjev import calibrate
+    cal = calibrate.Grouped((("shi_lexicon", calibrate.Temperature(8.0)),), calibrate.Identity())
+    path = tmp_path / "cal.json"
+    calibrate.save(path, cal, {"drop_below": 0.02, "accept_at": 0.9},
+                   {"prompt": J.PROMPT_VERSION, "model": "q.gguf"})
+    shi = J.Judge.calibrated(Fake(script({"none": 0.02, "hiv_sti": 0.98})), path)
+    t = "Pt is HIV positive, on ART."
+    r = shi.judge(t, J.Candidate(t.index("HIV") + 1, t.index(","), detector="lexicon:hiv_sti"))
+    assert r["category"] == "hiv_sti" and r["confidence"] < 0.7 and r["decision"] == "review"
+    ident = J.Judge.calibrated(Fake(script({"none": 0.02, "mrn": 0.98})), path)
+    r = ident.judge(TEXT, cand("S1234567A"))
+    assert r["confidence"] == pytest.approx(0.98, abs=1e-3) and r["decision"] == "identifier"
 
 
 @pytest.mark.parametrize(("meta", "model", "err"), [

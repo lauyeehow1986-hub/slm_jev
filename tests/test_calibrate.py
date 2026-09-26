@@ -42,6 +42,11 @@ def test_isotonic_is_monotone_floored_and_fits_steps():
     assert iso(0.3) == iso(0.4) == pytest.approx(0.5)  # the pooled violator block
 
 
+def test_isotonic_pools_tied_scores():
+    iso = calibrate.Isotonic.fit([0.2, 0.2, 0.9, 0.9, 0.9, 0.9], [0, 0, 0, 1, 1, 1])
+    assert iso(0.9) == pytest.approx(0.75) and iso(0.2) == 0.005
+
+
 def test_fit_dispatch_and_round_trip(tmp_path):
     p, y = _overconfident(200)
     for kind in ("identity", "temperature", "isotonic"):
@@ -52,6 +57,42 @@ def test_fit_dispatch_and_round_trip(tmp_path):
         calibrate.fit("platt", p, y)
     with pytest.raises(ValueError):
         calibrate.from_dict({"kind": "isotonic", "xs": [0.5, 0.2], "ys": [0.1, 0.9]})
+
+
+def test_grouped_maps_each_group_and_falls_back_to_the_default(tmp_path):
+    rng = random.Random(1)
+    p, y, g = [], [], []
+    for _ in range(300):  # "shi" calls are right a third of the time, "identifier" calls always
+        p.append(0.99)
+        g.append(rng.choice(["shi", "identifier"]))
+        y.append(g[-1] == "identifier" or rng.random() < 1 / 3)
+    p += [0.5] * 5
+    y += [True] * 5
+    g += ["rare"] * 5  # under min_n: shares the pooled map
+    cal = calibrate.Grouped.fit(p, y, g, kind="isotonic", min_n=20)
+    assert [k for k, _ in cal.maps] == ["identifier", "shi"]
+    assert cal(0.99, "identifier") == 0.995
+    assert cal(0.99, "shi") == pytest.approx(1 / 3, abs=0.08)
+    assert cal(0.99, "rare") == cal(0.99, None) == cal.default(0.99)
+    back = calibrate.from_dict(json.loads(json.dumps(cal.to_dict())))
+    assert all(back(0.99, k) == cal(0.99, k) for k in ("identifier", "shi", "rare", None))
+    path = tmp_path / "cal.json"
+    calibrate.save(path, cal, {"drop_below": 0.05, "accept_at": 0.9}, {})
+    assert calibrate.load(path)[0] == back
+    with pytest.raises(ValueError):
+        calibrate.Grouped.fit(p, y, g[:-1])
+    with pytest.raises(ValueError, match="nest"):
+        calibrate.from_dict({"kind": "grouped", "default": {"kind": "identity"},
+                             "groups": {"a": cal.to_dict()}})
+
+
+def test_group_of_names_the_call():
+    shi = ["hiv_sti", "mental_health"]
+    assert calibrate.group_of("hiv_sti", shi, ["pf", "lexicon:hiv_sti"]) == "shi_lexicon"
+    assert calibrate.group_of("hiv_sti", shi, ["shape:name"]) == "shi_other"
+    assert calibrate.group_of("hiv_sti", shi) == "shi_other"
+    assert calibrate.group_of("none", shi) == calibrate.group_of(None, shi) == "none"
+    assert calibrate.group_of("mrn", shi) == "identifier"
 
 
 def test_save_load_validates_thresholds(tmp_path):

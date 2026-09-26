@@ -11,6 +11,11 @@ Systems (``--systems``, comma-separated):
 SD always runs its rules next to an engine, so each SD engine is also scored as
 ``rules+<engine>`` (the union of both span sets).
 
+``jev+<engine>[+<engine>]`` runs slm:jev with those engines' spans as extra candidates: the
+judge decides on them like on its own proposals (P11, ``docs/decisions/0009``). ``<engine>.<type>``
+feeds only that engine's spans of that type (``jev+pf+ner.person``). The engines must be run
+first in the same call or reused with ``--reuse``; their time is added to jev's.
+
 Scoring is by span overlap, type-agnostic, as in SD's LLM A/B (so its "MediPhi F1 0.889" is
 comparable), plus a stricter redaction view:
 
@@ -48,7 +53,7 @@ import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from slmjev import engine, netguard, rules, server
+from slmjev import calibrate, engine, netguard, rules, server
 from slmjev import judge as J
 from slmjev.labels import load_labels
 
@@ -70,7 +75,9 @@ def parse_markup(src: str) -> list[dict]:
     known = set(IDENTIFIERS) | set(SHI) | {DATE_OTHER}
     docs, cur = [], None
     for line in src.splitlines():
-        if line.startswith("#") and cur is None:
+        # comments: any "#" line before the first note; inside a note only "# ..." (a unit
+        # number such as "#05-432" may start a note line)
+        if (line.startswith("#") and cur is None) or line == "#" or line.startswith("# "):
             continue
         if m := re.match(r"=== (\S+) \| (.+) ===$", line):
             cur = {"id": m.group(1), "kind": m.group(2), "lines": []}
@@ -152,21 +159,32 @@ def run_sd(name: str, docs: list[dict], args) -> tuple[list[list[dict]], float]:
     return preds, secs
 
 
-def run_jev(docs: list[dict], args) -> tuple[list[list[dict]], float, list[float]]:
+# what the report keeps of every judged candidate, for the calibration check and for fitting
+_JUDGED = ("start", "end", "match", "p_identifier", "confidence", "category", "category_probs",
+           "decision", "fast_path", "sources")
+
+
+def run_jev(docs: list[dict], args, extra: list[list[dict]] | None = None
+            ) -> tuple[list[list[dict]], float, list[float], list[list[dict]]]:
+    """slm:jev over all notes; ``extra`` holds per-note spans from other systems, which the
+    engine judges as additional candidates (``jev+pf+ner``). Also returns every judged
+    candidate, dropped ones included, for the calibration check."""
     cfg = engine.settings({"calibration": args.calibration})
     srv = server.start(cfg["llama_server"], cfg["model"], threads=cfg["threads"])
     try:
         judge = J.Judge.calibrated(J.LlamaServer(srv.url, srv.key), cfg["calibration"],
                                    model=cfg["model"], **engine.PROD)
-        preds, secs = [], []
+        preds, secs, judged = [], [], []
         for i, d in enumerate(docs, 1):
             t0 = time.perf_counter()
-            recs = engine.scan_text(judge, d["text"])
+            ex = engine._extra(extra[i - 1], d["text"]) if extra else ()
+            recs = engine.scan_text(judge, d["text"], extra=ex, include_dropped=True)
             secs.append(time.perf_counter() - t0)
+            judged.append([{k: r.get(k) for k in _JUDGED} for r in recs])
             preds.append([{**r, "label": r["identifier"]} for r in recs
                           if r.get("decision", "identifier") != "not_identifier"])
             print(f"  jev {i}/{len(docs)} {secs[-1]:.0f}s", file=sys.stderr, flush=True)
-        return preds, sum(secs), secs
+        return preds, sum(secs), secs, judged
     finally:
         srv.stop()
 
@@ -245,6 +263,42 @@ def score_shi(docs: list[dict], preds: list[list[dict]]) -> dict:
             "precision": _r(tp / (tp + fp) if tp + fp else None), "fp": fp}
 
 
+def candidates(docs: list[dict], judged: list[list[dict]]) -> list[dict]:
+    """Every judged candidate that calibration applies to, with ``correct`` (it overlaps an
+    identifier or SHI span) and ``call`` (``calibrate.group_of``, or ``fast_path``). A candidate
+    that overlaps only an other date is left out, and so is a failed judgment (no probability)."""
+    pos = set(IDENTIFIERS) | set(SHI)
+    out = []
+    for d, js in zip(docs, judged, strict=True):
+        for c in js:
+            if c.get("confidence") is None:
+                continue
+            hit = [g for g in d["spans"] if _overlaps(c, g)]
+            if hit and not any(g["label"] in pos for g in hit):
+                continue
+            call = ("fast_path" if c.get("fast_path")
+                    else calibrate.group_of(c.get("category"), SHI, c.get("sources") or ()))
+            out.append({**c, "doc": d["id"], "correct": bool(hit), "call": call})
+    return out
+
+
+def calibration(docs: list[dict], judged: list[list[dict]]) -> dict:
+    """ECE of ``confidence`` (the calibrated probability that the span is not ``none``) over
+    every judged candidate, dropped ones included (see ``candidates``). ``by_call`` splits it by
+    what the judge called the span."""
+    groups: dict[str, tuple[list, list]] = defaultdict(lambda: ([], []))
+    for c in candidates(docs, judged):
+        for g in ("all", c["call"]):
+            groups[g][0].append(min(max(float(c["confidence"]), 0.0), 1.0))
+            groups[g][1].append(c["correct"])
+
+    def one(ps, ys):
+        return {"n": len(ps), "positives": sum(ys), "ece": _r(calibrate.ece(ps, ys))}
+    out = one(*groups.pop("all")) if "all" in groups else {"n": 0, "positives": 0, "ece": None}
+    out["by_call"] = {g: one(*v) for g, v in sorted(groups.items())}
+    return out
+
+
 def _r(x: float | None) -> float | None:
     return round(x, 4) if x is not None else None
 
@@ -284,12 +338,13 @@ def main(argv: list[str] | None = None) -> int:
     systems = [s.strip() for s in args.systems.split(",") if s.strip()]
     preds: dict[str, list[list[dict]]] = {}
     timing: dict[str, dict] = {}
+    judged: dict[str, list[list[dict]]] = {}
     if args.reuse:
         old = json.loads(args.reuse.read_text(encoding="utf-8"))
         if old["docs"] != len(docs) or old["chars"] != chars:
             raise SystemExit(f"--reuse {args.reuse} was run on a different set")
         for name, p in old["predictions"].items():
-            if name in systems or "+" in name:
+            if name in systems or name.startswith("rules+"):
                 continue
             preds[name] = p
             timing.update({k: v for k, v in old["timing"].items()
@@ -298,8 +353,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{name} ...", file=sys.stderr, flush=True)
         if name == "rules":
             p, secs = run_rules(docs)
-        elif name == "jev":
-            p, secs, per_doc = run_jev(docs, args)
+        elif name == "jev" or name.startswith("jev+"):
+            # jev+pf+ner: those systems' spans (run or reused above) become extra candidates;
+            # ``ner.person`` feeds only that system's spans of that type
+            feeds = [(f.split(".")[0], set(f.split(".")[1:])) for f in name.split("+")[1:]]
+            if any(f not in preds for f, _ in feeds):
+                raise SystemExit(f"{name}: run or --reuse {[f for f, _ in feeds]} first")
+            extra = ([[{**s, "detector": f} for f, types in feeds for s in preds[f][i]
+                       if not types or s.get("type") in types]
+                      for i in range(len(docs))] if feeds else None)
+            p, secs, per_doc, judged[name] = run_jev(docs, args, extra)
+            # the feeding systems' time counts too
+            secs += sum(timing[f]["secs"] for f, _ in feeds)
             timing[name + ":per_doc"] = {"p50": _pct(per_doc, docs, 0.5),
                                          "p95": _pct(per_doc, docs, 0.95)}
         elif name in SD_MODES:
@@ -318,10 +383,12 @@ def main(argv: list[str] | None = None) -> int:
               "gold_by_label": dict(Counter(g["label"] for d in docs for g in d["spans"])),
               "llm": {"batch": args.batch, "n_predict": args.n_predict, "ctx": args.ctx},
               "timing": timing,
+              "calibration": {name: calibration(docs, j) for name, j in judged.items()},
               "results": {name: {**{v: score(docs, p, labels) for v, labels in VIEWS.items()},
                                  "shi": score_shi(docs, p)}
                           for name, p in preds.items()},
-              "predictions": {name: p for name, p in preds.items()}}
+              "predictions": {name: p for name, p in preds.items()},
+              "judged": judged}
     stamp = time.strftime("%Y%m%d-%H%M%S")
     out = args.out or Path("results") / f"bench_{args.set.stem}_{stamp}.json"
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -32,6 +32,30 @@ def test_date_lookahead_rejects_longer_numbers():
     ("device SN-518862 implanted", "SN-518862", "shape:id"),
     ("ref 85-2466-43 filed", "85-2466-43", "shape:id"),
     ("drives FWL4331H daily", "FWL4331H", "shape:plate"),
+    ("motorcycle FBL 6632 E thrown", "FBL 6632 E", "shape:plate"),
+    ("via WhatsApp +63 917 552 0184.", "+63 917 552 0184", "shape:phone"),
+    ("office 6225 1180 ext 312, email", "6225 1180 ext 312", "shape:phone"),
+    ("case ref MOM/FDW/2026/33719.", "MOM/FDW/2026/33719", "shape:id"),
+    ("(report no. G/20260923/4471)", "G/20260923/4471", "shape:id"),
+    ("saved as IMG_20260923_1542.jpg.", "IMG_20260923_1542.jpg", "shape:file"),
+    ("WeChat ID linzq_1992sg.", "linzq_1992sg", "shape:handle"),
+    ("page (social.example.com/hafiz.jamal.1993) had", "social.example.com/hafiz.jamal.1993",
+     "shape:url"),
+    ("(TCM Reg. No. TCM-P1033)", "TCM-P1033", "shape:id"),
+    # letter segments joined by hyphens, a number with a year, a masked FIN (notes_v3 misses)
+    ("Our ref XY-RFL-26-118830; seen", "XY-RFL-26-118830", "shape:id"),
+    ("aliquots BIO-26-00918-A to BIO-26-00918-D.", "BIO-26-00918-D", "shape:id"),
+    ("Coroner's case: CC 1187/2026 re", "CC 1187/2026", "shape:id"),
+    ("masked FIN G****262U. Pt", "G****262U", "shape:id"),
+    # notes_v4 misses: the year first, a short code with an upper-case prefix
+    ("Coroner's case: CC 2026/1187 re", "CC 2026/1187", "shape:id"),
+    ("study ID: FGS-0142\nName", "FGS-0142", "shape:id"),
+    ("(template ref FPT-3391-B).", "FPT-3391-B", "shape:id"),
+    # P12: the value of an ID field, spaces and all; an @handle
+    ("MRN: BTC 22 118 406      Episode: E1", "BTC 22 118 406", "shape:id"),
+    ("Unit 1: donation no. W0417 26 118203 X (O neg)", "W0417 26 118203 X", "shape:id"),
+    ("Policy no.: HS-IP-7739 0021 45 / 18 Sep 2026", "HS-IP-7739 0021 45", "shape:id"),
+    ("from handle @darren.s_kx, reported", "@darren.s_kx", "shape:handle"),
 ])
 def test_numbers_ids_and_plates(text, want, source):
     assert want in spans(text, source)
@@ -39,6 +63,12 @@ def test_numbers_ids_and_plates(text, want, source):
 
 def test_short_numbers_are_not_ids():
     assert spans("BP 120/80, HR 72, 3 tabs", "shape:id") == []
+    # an ID field label followed by prose, or by too few digits, gives no field value
+    assert spans("Case: patient is a 45yo man; visit 2", "shape:id") == []
+    assert spans("email a.b@example.com today", "shape:handle") == []
+    # neither a date nor a URL path is a slash-joined ID
+    got = spans("seen 23/09/2026, see https://example.org/r/301451", "shape:id")
+    assert not any("/" in g for g in got)
 
 
 @pytest.mark.parametrize("text, want", [
@@ -53,9 +83,63 @@ def test_short_numbers_are_not_ids():
     ("Ho Jun Jie was seen", "Ho Jun Jie"),
     ("YEO JUN JIE, 40M", "YEO JUN JIE"),
     ("Reviewed by Mdm Tan in clinic", "Tan"),
+    # one word after a role or relation word, or tagged with one (P7 misses)
+    ("Seen by Nurse Lim at 3pm.", "Lim"),
+    ("NOK: SON VIJAY (tel 9123 4567)", "VIJAY"),
+    ("Caller: Aisyah (daughter) called.", "Aisyah"),
+    ("Spoke to Aisyah (daughter) today.", "Aisyah"),
+    # notes_v2 misses: a relation before a bracketed name, lists, field labels, inverted and
+    # hyphenated names, "Md.", a capitalised particle at the end
+    ("Wife (Rosnah) at bedside", "Rosnah"),
+    ("present: wife Norhayati, sons Irfan and Hakim. Not", "Irfan"),
+    ("present: wife Norhayati, sons Irfan and Hakim. Not", "Hakim"),
+    ("Dental officer: Dr Hannah Ng; DSA: Salina", "Salina"),
+    ("PT: Rajeswari (Senior Physio)", "Rajeswari"),
+    ("Bed 2 - RAJOO, 74M, cellulitis", "RAJOO"),
+    ("Name: KOH WEI LIANG, DARREN   NRIC: S1234567D", "KOH WEI LIANG, DARREN"),
+    ("Client: BAUTISTA, Maricel Dizon   FIN: G1234567X", "BAUTISTA, Maricel Dizon"),
+    ("Referring: Dr Lim E-Lynn (ED)", "Lim E-Lynn"),
+    ("Re: MD. SHAHADAT HOSSAIN, FIN", "MD. SHAHADAT HOSSAIN"),
+    ("Pt: Brandon Sim Jia Le, 22M", "Brandon Sim Jia Le"),
+    ("Dear Siti, thank you", "Siti"),
+    # notes_v3 misses: initials after an honorific, a staff tag, visitor/FDW, a sign-off, Han
+    ("Verified: Dr R. Balakrishnan.", "R. Balakrishnan"),
+    ("[23/09/26, 08:15] Balan (MSW): Noted.", "Balan"),
+    ("do NOT give info to visitor Arun.", "Arun"),
+    ("found by FDW Suryati at 0630", "Suryati"),
+    ("the medical details.\nThanks, Farhan | Safety", "Farhan"),
+    ("Regards,\nMeiling\nWard 5", "Meiling"),
+    ("Patient: TAN Bee Hwa (陈美华), 43F", "陈美华"),
+    # notes_v4 misses: initials signing a record, a Han-character name after "Patient:"
+    ("handed over at 04:09.\nSigned: L.W.X.", "L.W.X."),
+    ("病人 Patient: 陈美玲 (TAN MEI LING)", "陈美玲"),
+    # P12: more relation words, lists joined by a slash, possessives, quoted nicknames,
+    # initials alone on a line
+    ("CD count correct, witnessed Aung / Kavitha.", "Kavitha"),
+    ("Break-up with girlfriend Jolene 2 weeks ago", "Jolene"),
+    ("A nurse named Ruby told him", "Ruby"),
+    ("family of SIVA (proband)", "SIVA"),
+    ("driver Balachandran.", "Balachandran"),
+    ("Baby of Santos admitted", "Santos"),
+    ("Also note Siva's wife Meena is", "Siva"),
+    ('Supachai Wongsakul ("Jay"), S Pass', "Jay"),
+    ('known as "Ah Boy". Previous', "Ah Boy"),
+    ("please raise prenatal testing.\n> AP\n", "AP"),
 ])
 def test_names(text, want):
     assert want in spans(text, "shape:name")
+
+
+def test_name_runs_do_not_cross_line_breaks():
+    got = spans("LABORATORY REPORT\nPatient Name: Tan Ah Kow", "shape:name")
+    assert "Tan Ah Kow" in got
+    assert not any("\n" in g for g in got)
+
+
+def test_a_street_inside_a_block_address_is_not_proposed_again():
+    got = spans("Lives at Blk 123 Pasir Ris Drive 3, #07-403 with son.", "shape:address")
+    assert "Blk 123 Pasir Ris Drive 3, #07-403" in got
+    assert "Ris Drive 3, #07-403" not in got
 
 
 def test_name_runs_are_trimmed_of_stop_words():
@@ -69,6 +153,8 @@ def test_name_runs_are_trimmed_of_stop_words():
     "HIV CXR ECG normal",
     "Seen in Emergency Department",
     "Tan was seen",  # one capitalised word without an honorific
+    "the nurse Station was busy",  # a stop word after a role word
+    "Employer: Acme\nPte Ltd",  # company suffixes are stop words
 ])
 def test_non_names_are_not_proposed(text):
     assert spans(text, "shape:name") == []
@@ -82,6 +168,12 @@ def test_non_names_are_not_proposed(text):
     ("stays at 88 Tampines Street 81 #18-991 The Verdana, Singapore",
      "88 Tampines Street 81 #18-991 The Verdana"),
     ("Block 5 Lorong 3 Geylang", "Block 5 Lorong 3 Geylang"),
+    # "St" is a street type; a numbered street needs no block (P7 misses)
+    ("Address: Blk 123 Tampines St 11 #05-432 Singapore", "Blk 123 Tampines St 11 #05-432"),
+    ("Lives at Woodlands Ave 6 with family.", "Woodlands Ave 6"),
+    ("near Bedok North Avenue 2.", "Bedok North Avenue 2"),
+    ("at Sungei Kadut Harmony Dormitory, Blk B Rm 07-12, 12 Sungei Kadut Ave, Singapore",
+     "Sungei Kadut Harmony Dormitory, Blk B Rm 07-12, 12 Sungei Kadut Ave"),
 ])
 def test_addresses(text, want):
     assert want in spans(text, "shape:address")
@@ -96,6 +188,11 @@ def test_addresses(text, want):
     ("on gender-affirming hormone therapy", "gender-affirming hormone therapy",
      "reproductive_sexual"),
     ("methadone maintenance counselling", "methadone maintenance counselling", "substance_use"),
+    # notes_v3 misses
+    ("HIV-1 reactive on rapid test", "HIV-1 reactive", "hiv_sti"),
+    ("known G6PD deficiency, avoid", "known G6PD deficiency", "genetic"),
+    ("Drinks 4-5 cans of beer most nights", "cans of beer", "substance_use"),
+    ("delivered by emergency caesarean section", "caesarean section", "reproductive_sexual"),
 ])
 def test_shi_lexicon(text, want, label):
     assert want in spans(text, f"lexicon:{label}")
@@ -113,6 +210,15 @@ def test_rules_and_extra_are_merged_once_per_interval():
     assert any(p.sources == ["extra"] for p in props)
     assert props == sorted(props, key=lambda p: (p.start, -p.end))
     assert len({(p.start, p.end) for p in props}) == len(props)
+
+
+def test_one_word_engine_names_that_are_stop_words_are_skipped():
+    text = "Daughter at bedside; Nurse Lim"
+    extra = [Candidate(1, 8, type="name", detector="pf"),
+             Candidate(22, 26, type="person", detector="ner"),
+             Candidate(28, 30, type="person", detector="ner")]
+    got = {text[p.start - 1:p.end] for p in propose.propose(text, extra=extra)}
+    assert "Daughter" not in got and "Nurse" not in got and "Lim" in got
 
 
 def test_empty_text_and_trimmed_edges():
