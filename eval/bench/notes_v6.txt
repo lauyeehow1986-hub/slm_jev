@@ -1,0 +1,392 @@
+# notes_v6 — held-out Singapore-style clinical/admin notes with gold spans.
+# SYNTHETIC: NOT REAL PATIENT DATA. Every person, name, NRIC/FIN, MRN, phone number, address, email and health detail below is invented for testing; any match to a real person, number or mailbox is coincidental.
+# Written by an author who did not see the system under test, its rules, its code, or any earlier evaluation sets; written only from general knowledge.
+# FORMAT: each note starts with a header line "=== v6_nNN | <kind> ===". The note text is every line after that header up to the next "===" header line.
+# Gold spans are inline as {{label|text}}; the note text contains only "text". Spans are never nested, never contain "{{", "}}" or "|", and have no leading/trailing spaces.
+# Anything not inside {{...}} is not an identifier.
+# LABELS (identifiers): name, national_id, mrn, case_visit, address, postal_code, phone, fax, email, dob, date_of_death, device, biometric, photo, other_id
+# LABELS (SHI): hiv_sti, mental_health, substance_use, genetic, reproductive_sexual, other_sensitive
+# LABELS (other): date_other = any date of the patient's care/events that is not a DOB or date of death.
+# CONVENTIONS: honorifics/titles (Dr, Mr, Mrs, Ms, Mdm, Hj., SN, SSN, Sgt, Nurse, Prof, A/Prof) are OUTSIDE name spans; every person is named (patients, relatives, carers, staff, clinicians, employers, callers); a name span covers the full name as written.
+# CONVENTIONS: "Singapore" and the postal code are OUTSIDE address spans; the postal code is its own postal_code span and keeps an "S" prefix inside the span when written like "S560123".
+# CONVENTIONS: field labels such as "MRN", "NRIC", "Tel", "FIN" are outside spans. national_id = NRIC/FIN/passport/birth certificate numbers, including partial or masked ones and ones written with spaces or hyphens.
+# CONVENTIONS: mrn = hospital record numbers; case_visit = visit/admission/attendance/episode numbers; device = device serials and vehicle plates; other_id = any other identifying number/code/URL (policy, claim, lab accession, practitioner registration, staff ID, feedback/report refs, court/LPA refs, wristband codes).
+# CONVENTIONS: all phone and fax numbers are marked, including institutional ones; every email address is marked. Emails/URLs use only example.com/.org/.net.
+# CONVENTIONS: decoys left UNMARKED: hospital/clinic/company/law-firm/ministry names (even when they contain surnames), ward/bed/room/pager numbers, lab values, doses, times, codes, device models, protocol/guideline/IRB document numbers, generic document dates.
+# CONVENTIONS: SHI spans cover the short phrase stating the sensitive fact about the person.
+# NOTES n05, n11, n19, n23 and n32 are negative controls with NO identifiers (they contain decoys only).
+# DELIBERATELY INVALID ID: in v6_n18 the NRIC "S7209084A" has a wrong check letter on purpose (valid letter would be E); it is still labelled national_id.
+
+=== v6_n01 | ED triage ===
+ED TRIAGE — Emergency Department, Sengkang General Hospital
+Pt: {{name|LIM KAI XUAN}} ({{name|林凯轩}})   NRIC {{national_id|S8565277Z}}   MRN {{mrn|SKH-2291-0473}}
+Attendance No. {{case_visit|ED26-114387}}   Arrived {{date_other|26/09/2026}} 02:14 by own transport
+DOB {{dob|03.11.1985}} (40 y), M
+CC: fall from ladder at home, R wrist pain, ?LOC.
+Accompanied by wife {{name|Chua Mei Ling}}, HP {{phone|9127 4406}}.
+Triage P2. BP 148/92, HR 104, SpO2 98% RA, GCS 15. Pain 8/10.
+Exam: R wrist swollen, tender over distal radius, dinner-fork deformity, NV intact. 2 cm occipital haematoma. Plan: XR R wrist, CT head, IV morphine 2.5 mg titrated, backslab, ortho referral. CIWA monitoring 4-hourly.
+Hx: T2DM on metformin 850 mg BD. Known {{substance_use|alcohol use disorder}}, last drink ~22:00 per wife.
+Address: {{address|Blk 327C Anchorvale Road #11-218}}, Singapore {{postal_code|543327}}
+Triage RN: {{name|Siti Hajar}} / Reg No {{other_id|RN-118402}}
+
+=== v6_n02 | ward progress note ===
+Ward 64 Bed 12 — Progress note, POD 2
+{{date_other|Tue 22 Sep 2026}}, 0930h
+Pt {{name|MOHAMED IRFAN BIN ZULKIFLI}}, 58M, MRN {{mrn|M1024-5580}}. Adm no. {{case_visit|IP/2026/0918/0442}}.
+S: c/o mild incisional pain. Passing flatus. Slept poorly, keeps thinking about his late son; PHQ-2 = 5. Known {{mental_health|major depressive disorder}} on sertraline 50 mg OM.
+O: T 37.4, HR 88, BP 132/78. Wound clean, drain 40 ml serous.
+Labs: Hb 11.8, WBC 9.2, CRP 64 (down from 112), K 3.6, Cr 82. Diet: step up to soft diet as tolerated.
+A/P: Post lap R hemicolectomy {{date_other|20/9}}. Continue DVT prophylaxis. Psych CL referral discussed with Dr {{name|Wong Pei Shan}}.
+Spoke to daughter {{name|Nurul}} ({{phone|+65 8203 5517}}); she asked that the letter for his insurer quote his IC as {{national_id|S 6880407 H}}.
+Seen by MO {{name|K. Rajendran}}, reviewed by Dr {{name|Goh}}.
+{{name|Tay J.H.}}, HO (MCR {{other_id|M71264B}})
+
+=== v6_n03 | discharge summary ===
+DISCHARGE SUMMARY
+Name: {{name|RAMASAMY, Kavitha}}    NRIC: {{national_id|S7515105E}}
+Hospital No: {{mrn|0023-881-94}}   Episode: {{case_visit|E-26-0071932}}
+Admitted: {{date_other|14-Sep-2026}}   Discharged: {{date_other|19-Sep-2026}}
+Principal diagnosis: Pneumocystis pneumonia on a background of newly diagnosed {{hiv_sti|HIV-1 infection}} (CD4 42 cells/uL).
+Secondary: oral candidiasis; {{hiv_sti|latent syphilis}}, treated.
+Course: IV co-trimoxazole, then PO. Weaned off O2 day 4. ID team (Dr {{name|Lee Wen Jie}}) started dolutegravir + TDF/FTC.
+Discharge medications: co-trimoxazole 960 mg BD for 21 days, then 960 mg OD prophylaxis; dolutegravir 50 mg OD; tenofovir/emtricitabine 300/200 mg OD; fluconazole 100 mg OD for 7 days. Labs at discharge: Hb 10.2 g/dL, Cr 68 umol/L, ALT 41 U/L.
+Disclosure: pt consents to disclosure to husband only ({{name|Suresh s/o Govindasamy}}); do NOT inform mother-in-law.
+F/U: ID clinic {{date_other|3 Oct 2026}} 10:40, Clinic B, Level 2.
+Contact: {{phone|6781 2290}} (home), {{phone|9448 0163}} (mobile).
+Address: {{address|12 Jalan Lembah Kallang}}, Singapore {{postal_code|339562}}
+Discharging doctor: {{name|Farhan Hakim}}, MO
+
+=== v6_n04 | referral letter (GP to specialist) ===
+Harbourfront Family Clinic
+{{address|1 Maritime Square #02-41}}, Singapore {{postal_code|099253}} | Tel {{phone|6273 5501}} | Fax {{fax|6273 5502}}
+
+{{date_other|24 September 2026}}
+
+Dear Colleague (Endocrinology, Changi General Hospital),
+
+Re: Mdm {{name|Fong Siew Lan}} {{name|方秀兰}}, DOB {{dob|1951-07-02}}, NRIC {{national_id|S5168173H}}
+
+Thank you for seeing this 75-year-old lady with a 3-month history of 6 kg weight loss, tremor and a TSH < 0.01 mIU/L (FT4 48 pmol/L). She lives alone at {{address|Blk 45 Telok Blangah Drive #08-1123}} {{postal_code|S100045}}. Her son {{name|Jonathan Fong}} ({{phone|9736 2084}}) accompanies her to appointments. She was previously seen at your clinic under hospital no. {{mrn|CGH 7734102}}.
+I have started carbimazole 10 mg BD and propranolol 10 mg TDS.
+
+Yours sincerely,
+Dr {{name|Kwek Boon Huat}} (MCR {{other_id|M09182H}})
+
+=== v6_n05 | ward protocol ===
+HYPOGLYCAEMIA MANAGEMENT — ADULT INPATIENTS (Nursing Protocol NP-ENDO-014, v3.2, effective 1 July 2025)
+1. If capillary glucose < 4.0 mmol/L and the patient is conscious and able to swallow: give 15 g fast-acting carbohydrate (150 ml juice or 3 glucose tablets).
+2. Recheck CBG in 15 minutes. Repeat step 1 up to 3 times.
+3. If unconscious or NBM: IV dextrose 50% 25 ml (or D10% 150 ml) via a large-bore cannula; call the MO on pager 4412.
+4. Once CBG > 4.0, give long-acting carbohydrate (2 slices of bread) unless the next meal is within 30 min.
+5. Document in the hypoglycaemia chart (form MR-117) and inform the primary team.
+Wards 7B, 8A and ICU use the same algorithm; paediatric wards refer to PP-PAED-009.
+6. For patients on an insulin infusion, stop the infusion for 15 minutes, treat as above, then restart at half the previous rate once CBG > 6.0 mmol/L.
+Reviewed by the Nursing Practice Committee, March 2026.
+
+=== v6_n06 | nursing handover ===
+Night to AM handover, Ward 55, {{date_other|25/09/26}}
+Bed 3: {{name|TAN, Ah Beng}} 82M ({{mrn|HN 55-01928}}) — CAP day 3, IV amox-clav. Confused overnight, pulled out IV x1. Son {{name|Kelvin}} visiting 11am; wants a call before discharge planning: {{phone|8126-3390}}.
+Bed 5: {{name|Wahyuni}} 34F (FIN {{national_id|G4086497R}}) — FDW, admitted after a fall at employer's home. Employer Mrs {{name|Priya Nair}} called twice ({{phone|+65 9012 7743}}). Pt disclosed to SN {{name|Joanna}} that the employer hits her: {{other_sensitive|reported physical abuse by employer}}. MSW referral sent; do NOT share info with employer.
+Bed 8: {{name|Rosalind de Souza}} 67F, MRN {{mrn|HN 55-02207}} — CCF, fluid restriction 1.2 L, daily weight 71.4 kg. For echo today.
+Bed 11: empty, cleaned, ready for admission from ED. Bed 12: 1:1 sitter for falls risk, Morse score 65, bed alarm on.
+Handed over by: {{name|Aung Kyaw Thu}} (SN) to {{name|Lim S.Y.}} (SSN)
+
+=== v6_n07 | histopathology report ===
+DEPARTMENT OF PATHOLOGY — SURGICAL PATHOLOGY REPORT
+Lab No: {{other_id|SP26-0419873}}      Received: {{date_other|17.09.2026}}  Reported: {{date_other|21.09.2026}}
+Patient: {{name|NG CHOON KEAT}}    ID: {{national_id|S6326695G}}    MRN: {{mrn|70029318}}
+Sex/Age: M/61   Clinic: SOC Colorectal 2B
+Requesting clinician: Dr {{name|Hariharan Menon}}
+Specimen: sigmoid colon, anterior resection.
+Macroscopy: segment of colon 210 mm with a 38 mm ulcerated tumour 60 mm from the distal margin. Serosa puckered. Sections A1-A12.
+Microscopy: moderately differentiated adenocarcinoma invading the subserosa (pT3). 0/18 lymph nodes. Margins clear (distal 32 mm).
+Mismatch repair IHC: loss of MLH1 and PMS2; MLH1 promoter methylation not detected. Recommend germline testing for {{genetic|suspected Lynch syndrome}}.
+Pathologist: {{name|Chen Xiaoyun}}, MBBS FRCPA
+Verified electronically {{date_other|21/09/2026}} 16:02. Block {{other_id|SP26-0419873/A4}} retained.
+
+=== v6_n08 | radiology report ===
+CT BRAIN (NON-CONTRAST)   Accession {{other_id|RAD-CT-26-883104}}
+Pt: {{name|KHAIRUL ANUAR BIN OSMAN}} | MRN {{mrn|4402117C}} | DOB {{dob|09/04/1972}} | Visit {{case_visit|V260923-0081}}
+Clinical: fall at worksite, ?SDH. Referring: ED, Dr {{name|Tan Yi Ling}}.
+Findings: 6 mm acute right frontoparietal subdural haematoma, no midline shift. No skull fracture. Old lacunar infarct, L internal capsule.
+Impression: small acute SDH. Neurosurgical review suggested.
+Technique: axial 5 mm with coronal and sagittal reformats. No comparison available. Ventricles and sulci age-appropriate. Posterior fossa unremarkable. Paranasal sinuses clear.
+Critical result phoned to Dr {{name|Tan}} at 03:47 on {{date_other|23/9/2026}}, read-back confirmed.
+Reported by: {{name|Pradeep Kumar Iyer}}, Consultant Radiologist
+Scanner: CT2 (128-slice), protocol HEAD-NC-v4.
+
+=== v6_n09 | pharmacy note ===
+Outpatient Pharmacy — Medication Reconciliation, {{date_other|18 Sept 2026}}
+Patient: {{name|Chandrasekaran Vijay}} (prefers "{{name|VIJAY}}"), Rx No. {{other_id|OP-RX-2609-55137}}, MRN {{mrn|SGH00813372}}
+Meds brought in:
+1. Methadone 60 mg OD — {{substance_use|opioid use disorder}} on maintenance; counsellor Mr {{name|Loh Wei Ming}} tel {{phone|6389 2100 ext 4127}}
+2. Amlodipine 10 mg OM
+3. Salbutamol MDI PRN — sister refills, call {{phone|97263318}} if reorder needed
+4. Paracetamol 1 g QDS PRN
+Allergy: penicillin (rash).
+Issue: admits {{substance_use|daily kratom use}} (bought online); counselled on interactions.
+Counselling: QT risk reviewed (ECG QTc 438 ms on file, no other QT-prolonging drugs). Advised not to drive if drowsy. Weekly blister packs prepared; next collection in 7 days.
+Pharmacist: {{name|Nurul Huda binte Salleh}} (Pharm Reg {{other_id|P09873H}})
+
+=== v6_n10 | physiotherapy note ===
+PHYSIOTHERAPY — INPATIENT REVIEW
+{{date_other|Wed, 23/09/2026}}   Pt: Ms {{name|Maria Cristina Dela Cruz}}, MRN {{mrn|TTSH-0990231}}, FIN {{national_id|F8632293P}}
+Referred by Dr {{name|Ong}} for mobility after L TKR ({{date_other|21 Sep}}).
+Subjective: pain 4/10 at rest. Lives with her employer's family in a terrace house at {{address|27 Jalan Kembangan}}, Singapore {{postal_code|419127}}; 2 flights of stairs to her room.
+Objective: ROM L knee 5-80 deg, quads 3+/5. Ambulated 20 m with walking frame, SBA.
+Education: ice 15 min 3x daily, hourly ankle pumps, no pillow under the knee. Goal: independent on stairs with crutches before discharge. Frequency: BD sessions.
+Plan: stair practice tomorrow. Employer Mr {{name|Desmond Chia}} asked to install a rail; contact {{phone|+65 6348 1920}} (office) / {{email|desmond.chia@corp.example.com}}.
+PT: {{name|Hannah Lee}} / {{name|Muhd Syafiq}} (student)
+
+=== v6_n11 | equipment memo ===
+MEMO — Biomedical Engineering
+To: All ward managers, Tower B
+Subject: Replacement of infusion pumps (Model VP-3000) from 5 October
+From the week of 5 October 2026, the remaining VP-3000 volumetric pumps on Levels 4-9 will be swapped for the VP-5 series. Please return old pumps with their clamps and power cords to the BME store, Basement 1, Room B1-27, between 0800 and 1700. Each ward keeps 2 spare pumps until the swap is complete. Drug libraries (version DL-2026.3) are pre-loaded; do not modify library settings. Training sessions: Seminar Room 3, Tue/Thu 1400-1430. Please raise queries through the BME helpdesk portal.
+
+=== v6_n12 | dietetics consult ===
+DIETETICS — {{date_other|Mon 21.9.26}}
+Hj. {{name|Abdul Rahim bin Yusof}}, 72M, DOB {{dob|12/12/1953}}, MRN {{mrn|NUH/1187/2204}}, bed 12-07
+Dx: ESRF on HD (Mon/Wed/Fri at a community dialysis centre). Wife {{name|Rokiah}} cooks; reachable at {{phone|6566 1837}}.
+Diet hx: 3 cups teh-C daily, roti prata twice weekly, bananas most days.
+Assessment: K 5.9, PO4 2.1, albumin 31. Wt 58.2 kg (EDW 57.5).
+Estimated needs: 30-35 kcal/kg, protein 1.2 g/kg (about 70 g/day). Current intake about 1400 kcal and 45 g protein. Recommend renal oral nutrition supplement 1 pack daily and phosphate binder with meals.
+Plan: low-K fruit list given in Malay. Review in 2/52. Leaflet emailed to son at {{email|faizal.rahim86@mail.example.net}}.
+Remarks: renal supplement to be billed under son's NRIC {{national_id|S-8478932-A}} per family request.
+RD: {{name|Grace Teo}}
+
+=== v6_n13 | dental record ===
+DENTAL CENTRE — Treatment record
+Patient: {{name|YEO Hui Min Rachel}} ({{name|杨慧敏}})  Chart No. {{mrn|D-26-004517}}  DOB {{dob|28-02-2009}} (17)
+Parent/guardian: {{name|Yeo Kok Leong}} (father) {{phone|8457 2019}}
+{{date_other|19/09/2026}}: Ortho review. Upper and lower fixed appliances; bracket UL5 rebonded. OH fair. Class II elastics 1/4" 4.5 oz.
+Clinical notes: gingival inflammation around lower anterior brackets; advised interdental brushes and 1450 ppm fluoride toothpaste. Bitewing radiographs not due.
+Remarks: MC issued for school, cert no. {{other_id|MC-2609-11820}}.
+Next appt {{date_other|17 Oct 2026}}.
+Dentist: Dr {{name|Aravind Pillai}}; DSA {{name|Lwin Lwin Aye}}
+
+=== v6_n14 | TCM clinic record ===
+中医诊所 TCM Consultation — {{date_other|2026年9月15日}}
+Patient: {{name|HUANG Jianguo}} / {{name|黄建国}}, 男 54岁, PRC national, Work Permit holder, FIN {{national_id|G0109467Q}}
+Tel: {{phone|+86 139 1024 7735}} (China), {{phone|8832 6614}} (SG)
+Dorm: {{address|8 Tuas South Street 9, Blk C Room 04-12}}, {{postal_code|S637118}}
+Complaint: lower back pain 2 wks after lifting at a construction site; insomnia, 梦多.
+Tongue: pale, thin white coat. Pulse: 弦细.
+Dx (TCM): 肾虚腰痛, 肝气郁结.
+Tx: acupuncture 肾俞, 大肠俞, 委中; tuina 20 min. Herbal: 独活寄生汤 加减 x 7 packs.
+Pt said he feels there is "no point" since his wife left; advised to see a GP: {{mental_health|possible depression with passive death wish}}.
+Physician: {{name|Sim Poh Choo}} {{name|沈宝珠}} (TCM Reg {{other_id|TCM-A03915}})
+
+=== v6_n15 | psychiatry outpatient review ===
+Psychiatry SOC — Review {{date_other|10/09/2026}}
+Pt: {{name|Deborah Anne PEREIRA}}, 20F, NRIC {{national_id|T0625500G}}, Case {{case_visit|PSY-OP-26-3321}}
+Dx: {{mental_health|bipolar II disorder}}, current episode depressed; {{mental_health|borderline personality traits}}. Hx of {{mental_health|self-harm by cutting}}, last in {{date_other|Aug 2026}}.
+Social: polytechnic student. {{substance_use|Binge drinking}} on weekends; {{substance_use|occasional cannabis}} while on exchange. Had a {{reproductive_sexual|termination of pregnancy}} in {{date_other|March 2026}}, which her parents do not know about.
+MSE: dysphoric, reactive affect, no psychotic features. Passive SI, no plan.
+Sleep 4-5 h, appetite reduced, weight 52 kg (down 3 kg). Attending classes 2 days a week.
+Risk: moderate chronic, low acute. Safety plan updated.
+Mother {{name|Theresa Pereira}} ({{phone|9661 0482}}) may call; pt does NOT consent to disclosure beyond appointment times.
+Meds: lamotrigine 100 mg ON (titrating), quetiapine 25 mg PRN.
+Review 4/52 with Dr {{name|Balakrishnan}}. Psychology: Ms {{name|Chong Li Ting}}.
+
+=== v6_n16 | MSW letter to MOM ===
+Medical Social Work Department
+{{date_other|22 September 2026}}
+
+Ministry of Manpower, Work Pass Division
+
+Dear Sir/Madam,
+
+RE: {{name|MD. RAKIBUL HASAN}} — WORK PERMIT NO. {{other_id|WP 0 1928 4471}} / FIN {{national_id|F5867639W}}
+
+Mr {{name|Rakibul}}, a 29-year-old Bangladeshi national, was admitted on {{date_other|2 Sep 2026}} (admission no. {{case_visit|A2609020117}}) after a crush injury to the left hand at a shipyard. He has had two operations and will need MC until at least {{date_other|31 Oct 2026}}.
+His employer, Mr {{name|Ong Seng Chye}}, has told him that his work permit will be cancelled and that he will be repatriated next week. He stays at {{address|Kranji Bay Dormitory, 51 Kranji Way, Block 3 #02-15}}, Singapore {{postal_code|739481}}, and can be reached at {{phone|+880 1711 482 390}} or {{phone|8045 7713}}. His brother {{name|Md. Sohel Rana}} in Dhaka is his next of kin.
+We seek MOM's help so that he may remain in Singapore for treatment while his claim (WIC ref {{other_id|WIC/26/0934512}}) is processed.
+
+Yours faithfully,
+{{name|Farah Diba binte Ismail}}
+Senior Medical Social Worker
+Tel {{phone|6321 4418}} | {{email|farah.ismail@msw.example.org}}
+
+=== v6_n17 | insurance claim letter ===
+Lion Crest Assurance — Claims Department
+Our ref: {{other_id|CLM-2026-0558172}}   Policy No.: {{other_id|LCA/HS/07731925}}
+{{date_other|16 September 2026}}
+
+Mr {{name|Teo Wee Kiat}}
+{{address|Blk 610 Hougang Avenue 4 #03-77}}
+Singapore {{postal_code|530610}}
+
+Dear Mr {{name|Teo}},
+
+Life assured: {{name|TEO WEE KIAT}}   NRIC: {{national_id|S5901286Z}}
+Hospitalisation: {{date_other|28 Aug 2026}} to {{date_other|01 Sep 2026}}, Bill No. {{other_id|INV-88203114}}
+Our medical underwriter notes {{other_sensitive|chronic hepatitis B}} diagnosed in 2019, which was not declared on your application. Before we assess the claim, please ask Dr {{name|Low Chee Keong}} to complete the enclosed Attending Physician Statement (form APS-3).
+Any payout will be credited to your account no. {{other_id|XXX-XX5-127-3}}.
+Yours sincerely,
+{{name|Janice Koh}}, Claims Executive, tel {{phone|6225 9087}}, fax {{fax|6225 9088}}
+
+=== v6_n18 | police request and hospital reply ===
+POLICE — REQUEST FOR MEDICAL REPORT
+Report No.: {{other_id|B/20260919/0147}}   IO: Sgt {{name|Muhammad Hafiz Rosli}}, tel {{phone|6244 0371}}
+Victim: {{name|LEE Swee Hong}}, M/47, NRIC {{national_id|S7209084A}}
+Incident: {{date_other|19 Sep 2026}}, about 2315 hrs, outside {{address|Blk 88 Bedok North Street 4}}.
+Please furnish a report on injuries sustained (alleged assault by {{name|Ang Chee Wei}}, alias "{{name|Ah Wei}}").
+--- Hospital reply ---
+Our ref {{other_id|MR/26/10482}}. Mr {{name|Lee}} attended the ED on {{date_other|20/09/2026}} at 00:12 (Att. No. {{case_visit|ED26-112096}}). Injuries: 3 cm laceration L eyebrow (sutured), contusion R forearm. BAC 0.11%: {{substance_use|acute alcohol intoxication}}. CT head normal.
+Findings: GCS 15, alert, smelled of alcohol, no neurological deficit. X-ray R forearm: no fracture. Expected full recovery in 2-3 weeks; a scar is likely.
+Report prepared by Dr {{name|Nicole Wee Shu Fen}} (MCR {{other_id|M68417Z}}).
+
+=== v6_n19 | teaching note ===
+Tutorial for Year 4 students — Approach to hyponatraemia
+Step 1: confirm true hypotonic hyponatraemia (serum osmolality < 275 mOsm/kg). Exclude pseudohyponatraemia (lipids, paraproteins) and hyperglycaemia (corrected Na = measured Na + 2.4 x (glucose - 5.5)/5.5).
+Step 2: clinical assessment of volume status is unreliable, so use urine Na and urine osmolality.
+Step 3: urine Na > 30 mmol/L with euvolaemia suggests SIADH, hypothyroidism or glucocorticoid deficiency. Thiazides are a common culprit in the elderly.
+Case vignette: a 78-year-old woman on hydrochlorothiazide 25 mg OM presents with Na 118 mmol/L and confusion. Discuss the safe rate of correction (no more than 8-10 mmol/L in 24 h) and the risk of osmotic demyelination.
+Discussion points: when to use 3% saline (severe symptoms such as seizures), why fluid restriction fails when urine osmolality is high, and how to monitor sodium every 4-6 hours during correction.
+Reference: ward guideline GL-MED-022, updated January 2026.
+
+=== v6_n20 | email thread ===
+From: {{name|Kumaran Selvaraj}} <{{email|k.selvaraj@hospital.example.org}}>
+To: Bed Management <{{email|bedmgmt@hospital.example.org}}>
+Cc: {{name|Joyce Tham}} <{{email|joyce_tham@hospital.example.org}}>
+Sent: Thursday, {{date_other|24 September 2026}} 18:42
+Subject: RE: transfer for {{name|Pang}} (bed 9-22)
+
+Hi Joyce,
+Mdm {{name|Pang Geok Lian}} (MRN {{mrn|5521093}}) is ready for step-down to the community hospital tomorrow. Daughter-in-law {{name|Serene}} wants the transfer after 2pm; her number is {{phone|9020-4418}}. Correct NRIC is {{national_id|S6168025Z}}. NB {{other_sensitive|elder neglect concern}}, APS referral made, please flag to the receiving team.
+Thanks,
+{{name|Kumar}}
+
+-----Original Message-----
+From: {{name|Joyce Tham}}
+Sent: {{date_other|24/09/2026}} 11:05
+Can you confirm pt's NRIC for the CH referral? The form shows {{national_id|S****025Z}} only.
+— {{name|Joyce}}, Bed Management Unit
+
+=== v6_n21 | WhatsApp transcript (home care) ===
+[{{date_other|20/09/26}}, 08:12] Nurse {{name|Ling}} (HomeCare): Morning! Confirm visit for Ah Ma at 10am? Address still {{address|Blk 211 Serangoon Ave 4 #07-356}} {{postal_code|S550211}}?
+[{{date_other|20/09/26}}, 08:15] {{name|Jasmine Koh}}: yes same. my mum IC {{national_id|S5553735F}} if u need for the form
+[{{date_other|20/09/26}}, 08:16] {{name|Jasmine Koh}}: also can check her bedsore? the helper {{name|Ni Made Sri}} say got smell
+[{{date_other|20/09/26}}, 10:47] Nurse {{name|Ling}} (HomeCare): Done. Sacral PI stage 2, dressed with hydrocolloid. BP 138/70. Pls ask Dr to review the wound pic: {{other_id|https://portal.example.com/w/8841-KOH}}
+[{{date_other|20/09/26}}, 10:49] {{name|Jasmine Koh}}: thx. my bro {{name|Alvin}} will pay, his no. {{phone|+65 8113 0925}}
+[{{date_other|21/09/26}}, 19:30] {{name|Jasmine Koh}}: sorry ah she keep crying at night, say {{mental_health|want to die}}, is this normal?
+
+=== v6_n22 | ambulance run sheet ===
+PRIVATE AMBULANCE — PATIENT CARE RECORD
+PCR No. {{other_id|PCR-7730915}}   Unit A12   Crew: {{name|R. Subramaniam}}, {{name|Tan Kok Wah}}
+Call received {{date_other|24.09.2026}} 07:51
+Location: {{address|The Tembusu Residences, 35 Upper Thomson Road, Tower 2 #15-04}}, {{postal_code|S574408}}
+Pt: {{name|Emily Thng}}, ~40F, identified by husband {{name|Marcus Thng}} ({{phone|9876 1123}}). PMH T1DM.
+Found collapsed in bathroom. GCS 9 (E2V2M5). Empty blister packs of zolpidem x20 and a note found: {{mental_health|suspected intentional overdose}}.
+Vitals: BP 96/60, HR 58, SpO2 94% RA, CBG 6.1.
+Interventions: airway positioned, O2 via NRB 15 L/min, IV access 18G L AC, NS 250 ml bolus. Naloxone not given. GCS improved to 11 en route.
+Insulin pump on body, S/N {{device|PMP-55A-019283}}, left in situ. Pt's car {{device|SJK 7461 E}} in basement carpark.
+Conveyed to ED, handed over to SN {{name|Harpreet Kaur}} at 08:29.
+
+=== v6_n23 | kitchen menu change ===
+Food Services Notice — Week 40 menu adjustments
+Due to a supplier delay, the following substitutions apply from Monday to Friday for all wards:
+- Diabetic diet (DM1800): brown rice replaces white rice at lunch; kaya bun at tea replaced with wholemeal crackers.
+- Renal diet: potato replaced by rice vermicelli; orange replaced by apple.
+- Halal kitchen: chicken rendang replaced by ayam masak kicap on Wednesday.
+- Vegetarian (Indian): chapati supply resumes Thursday.
+- Soft and bite-sized (IDDSI level 6): no change.
+Ward pantry staff, please update the menu cards for Beds 1-40 by Sunday 6 pm. Special requests continue via the diet order screen.
+Allergen labels on the tray cards remain unchanged; peanut-free and shellfish-free trays continue to be packed separately at Station 2.
+
+=== v6_n24 | occupational health assessment ===
+PRE-EMPLOYMENT FITNESS REVIEW
+Employee: {{name|NGUYEN THI LAN}} (Vietnamese), Passport {{national_id|C4829175}}, FIN {{national_id|M7031127L}}, DOB {{dob|1998-03-17}}
+Employer: Seaview Precision Engineering; HR contact {{name|Wendy Ho}} ({{email|wendy.ho@seaview.example.com}}); Staff ID {{other_id|SPE-EMP-10427}}
+Exam date: {{date_other|11/09/2026}}.
+Audiometry: 4 kHz notch bilaterally, 35 dB. Spirometry normal.
+Vision 6/6 both eyes, Ishihara 17/17. BP 112/70, BMI 21.4. Chest X-ray: no active TB. Fit for precision assembly work; hearing protection mandatory.
+Blood: HBsAg negative; {{hiv_sti|VDRL reactive, TPHA positive}}. Urine: {{reproductive_sexual|hCG positive, about 8 weeks pregnant}}. Both results told to the employee privately; not disclosed to employer.
+Biometric enrolment: right index fingerprint template {{biometric|FP-RI-7f3a92c1}}. Face photo on file: {{photo|emp10427_face.jpg}}.
+Examining doctor: Dr {{name|Faizal Ahmad}}, clinic tel {{phone|6100 2238}}
+
+=== v6_n25 | school health referral ===
+School Health Service — Referral, {{date_other|07 Sept 2026}}
+Student: {{name|Aiden Tan Jun Hao}}, Primary 3, BC No. {{national_id|T1763618E}}
+Oasis Grove Primary School, class 3 Integrity. Form teacher: Mrs {{name|Karen Lim-Ho}}.
+Findings: BMI 27.1 (severely overweight). VA 6/12 both eyes. Dental caries x4. Immunisations up to date per NIR record {{other_id|NIR-0081773512}}.
+Concern: bruises on both upper arms at different stages of healing; student said "Papa angry": {{other_sensitive|suspected child physical abuse}}. Referred per child protection protocol.
+Recommendations: optometrist referral, dietitian review, school dental service referral. School nurse to follow up in 4 weeks.
+Parents: {{name|Tan Wei Liang}} (father), {{name|Siti Aminah binte Jaafar}} (mother); mother's HP {{phone|8349 6602}}.
+Home: {{address|Blk 612A Punggol Drive #14-551}} {{postal_code|S821612}}
+School nurse: {{name|Rajeswari d/o Muthu}}
+
+=== v6_n26 | certification of death note ===
+CERTIFICATION OF DEATH — Ward 8C
+Deceased: {{name|GOH ENG SOON}} {{name|吴永顺}}   NRIC {{national_id|S5978000Z}}   MRN {{mrn|H0044-8812}}
+DOB: {{dob|4 Feb 1941}}   Date/time of death: {{date_of_death|23 September 2026}}, 04:36
+Pronounced by Dr {{name|Loo Jia Hui}}: no pulse, no heart sounds for 1 min, pupils fixed and dilated.
+Cause of death: I(a) aspiration pneumonia, (b) advanced Parkinson disease. Not a coroner's case.
+Last hours: on comfort care since the previous evening, s/c morphine 2 mg PRN and glycopyrronium for secretions. No implanted devices requiring removal before cremation.
+NOK: daughter {{name|Goh Mei Hwa}} informed by phone ({{phone|6452 8810}}) at 04:50; son {{name|Goh Kian Seng}} overseas ({{phone|+61 4 1234 8870}}).
+Death certificate no. {{other_id|DC-2026-0923-00417}}. Body released to the family's funeral parlour.
+
+=== v6_n27 | transfusion record ===
+BLOOD BANK — TRANSFUSION RECORD
+Recipient: {{name|SANTOS, Jocelyn Reyes}}   FIN {{national_id|G9575496T}}   MRN {{mrn|KK-26-770142}}   Group O RhD neg
+Wristband barcode {{other_id|WB*0770142*26}}
+Obstetric: G3P2 at 36/40, {{reproductive_sexual|placenta praevia with antepartum haemorrhage}}.
+Group & screen sample {{other_id|GS-26-091837}} taken {{date_other|25/09/2026}} 21:40.
+Unit issued: donation no. {{other_id|D2609-26-118472}}, PRBC, 1 unit. Anti-D immunoglobulin given {{date_other|25.09.26}}.
+Transfusion start 22:15. Obs: pre 36.8 C, BP 104/62, HR 112; at 15 min 36.9 C, BP 108/64; at end 37.0 C, no reaction. Crossmatch compatible; Kleihauer test ordered. Checked by SN {{name|Ma. Lourdes Bautista}} and SSN {{name|Kyi Kyi Win}}.
+NOK: husband {{name|Roberto Santos}}, {{phone|+63 917 552 0184}}
+
+=== v6_n28 | research consent and enrolment ===
+STUDY: Genomic predictors of statin response (Protocol GPSR-2025-03, IRB ref 2025/00821)
+Participant study ID: {{other_id|GPSR-SG-0147}}
+Name: {{name|Kamala Devi a/p Arumugam}}   NRIC: {{national_id|S5240565C}}   DOB {{dob|19 June 1966}}
+Tel {{phone|9187-0026}}   Email {{email|kamala.arumugam66@example.net}}   Linked record {{mrn|NHC-0321988}}
+Baseline: known {{genetic|heterozygous familial hypercholesterolaemia (LDLR variant)}}; LDL-C 5.8 mmol/L on rosuvastatin 20 mg.
+Consent items: [x] blood draw 10 ml for DNA; [x] storage for 15 years; [ ] contact for future studies.
+Eligibility: age 40-75, on a statin for at least 3 months, not pregnant, eGFR > 45. No exclusion criteria met. Samples: 2 x EDTA 5 ml, labelled with the study ID only.
+Witness: {{name|Lau Chee Meng}}. Research coordinator: {{name|Priyanka Sharma}}. Consent taken {{date_other|08/09/2026}}.
+
+=== v6_n29 | LPA / legal correspondence ===
+Tan & Rahman LLP, Advocates & Solicitors
+Our Ref: {{other_id|TR/LIT/2026/1187/JK}}   Your Ref: {{other_id|MR-2609-4471}}
+{{date_other|15 September 2026}}
+
+The Medical Records Office
+
+Dear Sirs,
+APPLICATION FOR MEDICAL REPORT — MENTAL CAPACITY
+Patient: Mr {{name|Joseph Anthony Rozario}} (NRIC {{national_id|S4238625A}}), of {{address|No. 14 Cheviot Hill}}, Singapore {{postal_code|459671}}.
+We act for his daughter, Ms {{name|Clara Rozario}}, donee under a Lasting Power of Attorney (LPA ref {{other_id|LPA-2021-0038812}}). Mr {{name|Rozario}} was diagnosed with {{mental_health|moderate Alzheimer dementia}} in {{date_other|2024}}. His son, Mr {{name|Peter Rozario}}, has filed an objection in the Family Justice Courts (case {{other_id|OSF 412/2026}}).
+We would be grateful if the report could address (a) his ability to understand, retain and weigh information about his finances and residence, and (b) whether his capacity is likely to fluctuate. Our clients will bear reasonable fees.
+Kindly send the report to the undersigned at {{email|jkhoo@tanrahman.example.com}}.
+Yours faithfully,
+{{name|Jeremy Khoo}}, Associate
+
+=== v6_n30 | telephone consult ===
+TELECONSULT — {{date_other|26/9/2026}} 14:05-14:17
+Pt {{name|ZHANG Wei}} ({{name|张伟}}), 33M, calling from {{phone|+86-21-6258-3310}} (on a business trip).
+Identity verified with DOB {{dob|5/1/93}} and NRIC ending {{national_id|412D}}.
+3 days of dysuria and urethral discharge after {{reproductive_sexual|unprotected sex with a new partner}}; likely {{hiv_sti|gonococcal urethritis}}. Advised to see a local clinic today, abstain, and notify partner. Asked about HIV PEP: exposure > 72 h, not indicated; HIV/syphilis screen on return.
+No fever, testicular pain or rash. NKDA. Suggested regimen for the local clinic: ceftriaxone IM plus doxycycline 100 mg BD for 7 days.
+Callback on return: {{phone|8671 4490}}. Travel insurance member no. {{other_id|AXB-7712-0093-01}}.
+Clinician: Dr {{name|Rebecca Sim}}. Call recording ref {{other_id|TC-26-0926-0331}}.
+
+=== v6_n31 | patient feedback and reply ===
+Patient feedback form — submitted online {{date_other|12 Sep 2026}}
+Feedback no.: {{other_id|FB-26-00918}}
+Submitted by: {{name|Jaswant Singh s/o Karnail Singh}}   Contact: {{phone|9338 2217}} / {{email|jaswant.s@example.org}}
+Comments: My father (MRN {{mrn|A1277305}}, IC {{national_id|S7453331J}}) waited 7 hours at the ED on {{date_other|10/9}}. The triage nurse, name tag said "{{name|MICHELLE}}", was rude. Dr {{name|Ho}} never explained the scan, and the counter staff Mr {{name|Abdul}} refused to print his old records. There were not enough chairs and the air-con was not working.
+--- Reply (Patient Relations) ---
+Dear Mr {{name|Jaswant Singh}},
+We refer to feedback {{other_id|FB-26-00918}} about your father, Mr {{name|Karnail Singh}}. He was triaged P3 at 14:02 and seen at 19:40; we apologise for the long wait and have shared your comments with the ED nurse manager, Ms {{name|Nora Yusoff}}.
+Yours sincerely,
+{{name|Evelyn Chan}}, Patient Relations Executive
+
+=== v6_n32 | SMS appointment reminder template ===
+SMS TEMPLATE LIBRARY — Outpatient reminders (template ID SMS-OPD-07, version 4)
+Template A (3 days before): "Dear <PATIENT NAME>, this is a reminder of your appointment at <CLINIC> on <DD/MM/YYYY> at <HH:MM>. Please bring your appointment letter and medications. Reply Y to confirm or N to reschedule."
+Template B (fasting): "Dear <PATIENT NAME>, please fast from midnight before your blood test on <DD/MM/YYYY>. You may drink plain water."
+Template C (no-show): "We missed you at <CLINIC> today. Please use the hospital app to rebook."
+Rules: send between 0900 and 2000 only; maximum 160 characters; never include diagnosis, test results or ward/bed details in an SMS.
