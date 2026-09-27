@@ -106,7 +106,7 @@ def test_permutation_averaging_removes_position_bias():
     ("tan@example.com", "code"), ("ahkow.tan@example.org", "code"), ("9123 4567", "numeric"),
     ("Blk 123 Ang Mo Kio Ave 3", "alnum"), ("HIV-1", "alnum"), ("SGH1234567", "alnum"),
     ("Tan Ah Kow", "text"), ("schizophrenia", "text"), ("91234567", "code"),
-    ("3/7", "fraction"), ("120/80", "fraction"), ("12/05/50", "date"),
+    ("3/7", "fraction"), ("120/80", "fraction"), ("12/05/50", "date"), ("1998年11月2日", "date"),
 ])
 def test_family_of_uses_surface_shape(s, fam):
     assert J.family_of(s) == fam

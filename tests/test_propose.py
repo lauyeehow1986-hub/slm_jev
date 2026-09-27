@@ -17,6 +17,7 @@ def spans(text, source=None):
     ("Admitted on 20210804 under case", "20210804"),
     ("on 2024-03-16 at noon", "2024-03-16"),
     ("seen on March 3, 2021 in clinic", "March 3, 2021"),
+    ("FIN M1234567K, DOB 1998年11月2日. Verified", "1998年11月2日"),
 ])
 def test_dates(text, want):
     assert want in spans(text, "shape:date")
@@ -59,6 +60,15 @@ def test_date_lookahead_rejects_longer_numbers():
     # notes_v6 miss: an NRIC tail given on its own
     ("verified with DOB 5/1/93 and NRIC ending 412D.", "412D", "shape:id"),
     ("FIN ends with 088K; ok", "088K", "shape:id"),
+    # notes_v8 misses: a dotted accession no., blood donation nos. in a list, a two-part
+    # prefix before a number with a year, a local number a digit short
+    ("MRI SPINE   Accession: MR.25.1103.00417\nPt:", "MR.25.1103.00417", "shape:id"),
+    ("seen, ref XR.24.0301.11873 filed", "XR.24.0301.11873", "shape:id"),
+    ("donation nos. W0512 25 441203 A and W0512 25 441219 C. Lab", "W0512 25 441219 C",
+     "shape:id"),
+    ("Unit: W0512 25 441203, RBC", "W0512 25 441203", "shape:id"),
+    ("for case no. FC/OSF 2231/2025.\nPlease", "FC/OSF 2231/2025", "shape:id"),
+    ("FAILED (7 digits): 8123 456 for Mdm Lee", "8123 456", "shape:phone"),
 ])
 def test_numbers_ids_and_plates(text, want, source):
     assert want in spans(text, source)
@@ -72,6 +82,11 @@ def test_short_numbers_are_not_ids():
     # neither a date nor a URL path is a slash-joined ID
     got = spans("seen 23/09/2026, see https://example.org/r/301451", "shape:id")
     assert not any("/" in g for g in got)
+    # a dotted code after an ID label needs 5+ digits (ICD-10 codes); nor is a date an ID
+    assert spans("ICD-10 reference: K21.9. Audit", "shape:id") == []
+    assert spans("version v1.2.3 and 12.05.2020 noted", "shape:id") == []
+    # 7 digits in other shapes are no phone numbers
+    assert spans("HRN: 0012-883-1947; lot 4471 203", "shape:phone") == []
 
 
 @pytest.mark.parametrize("text, want", [
@@ -284,6 +299,21 @@ def test_family_terms_of_address_are_not_names():
     assert not got & {"Ah Ma", "Papa"} and "Ma. Lourdes" in got
     got = {text[p.start - 1:p.end] for p in propose.propose(text)}
     assert "Ma" in got  # after an honorific: the surname Ma
+
+
+def test_a_cue_before_an_organisation_cues_no_name():
+    text = ("Yours faithfully,\nMarina Crest Law LLC\n"
+            "Fell at work (Goh & Sons Plumbing Pte Ltd).\nRegards,\nWei Ling")
+    got = spans(text, "shape:name")
+    assert not {"Marina", "Plumbing"} & set(got)
+    assert "Wei Ling" in got  # a sign-off before a person still cues the name
+
+
+def test_engine_names_across_a_line_break_keep_the_first_line():
+    text = "on 2 L.\nSon asked for photos. Seen by Karen Ong\nFamily Physician, today."
+    got = _extra_spans(text, ("L.\nSon", "name"), ("Karen Ong\nFamily", "person"))
+    assert not got & {"L.\nSon", "L.", "Son", "Karen Ong\nFamily", "Family"}
+    assert "Karen Ong" in got
 
 
 def test_empty_text_and_trimmed_edges():

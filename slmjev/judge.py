@@ -125,6 +125,7 @@ _DATE_SHAPES = [
     re.compile(r"^\d{4}[/.\-]\d{1,2}[/.\-]\d{1,2}$"),
     re.compile(rf"^\d{{1,2}}(?:st|nd|rd|th)?[ \-]{_MONTH}[ \-,]*\d{{2,4}}$", re.IGNORECASE),
     re.compile(rf"^{_MONTH}[ \-]\d{{1,2}}(?:st|nd|rd|th)?[ \-,]*\d{{2,4}}$", re.IGNORECASE),
+    re.compile(r"^\d{4}[ \t]?年[ \t]?\d{1,2}[ \t]?月[ \t]?\d{1,2}[ \t]?日$"),
 ]
 
 

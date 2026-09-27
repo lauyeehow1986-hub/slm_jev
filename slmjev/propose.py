@@ -53,6 +53,8 @@ _DATE_RX = [
     re.compile(rf"\b\d{{1,2}}(?:st|nd|rd|th)?[ \-]{_MON}[ \-,]*(?:19|20)\d{{2}}\b", re.IGNORECASE),
     re.compile(rf"\b{_MON}[ \-]\d{{1,2}}(?:st|nd|rd|th)?,?[ \-](?:19|20)\d{{2}}\b", re.IGNORECASE),
     re.compile(r"(?<![\d])(?:19|20)\d{6}(?![\d])"),
+    # Chinese year-month-day (``2004年3月8日``)
+    re.compile(r"(?<!\d)(?:19|20)\d{2}[ \t]?年[ \t]?\d{1,2}[ \t]?月[ \t]?\d{1,2}[ \t]?日"),
 ]
 
 # --- numbers and IDs -----------------------------------------------------------------------
@@ -64,6 +66,8 @@ _PHONE_RX = [
     # an international number in groups (``+63 917 552 0184``); 8-15 digits, checked in code
     re.compile(r"(?<![\w+])\+\d{1,3}(?:[ -]?\(?\d{1,4}\)?){2,5}(?![\d-])"),
 ]
+# A local number a digit short (``9888 012``): 7 digits, proposed with no digit-count check.
+_PHONE_SHORT = re.compile(r"(?<![\w+\-])[3689]\d{3}[ -]\d{3}(?![\d\-])")
 # An extension after a phone number (``6225 1180 ext 312``) is proposed with the number.
 _PHONE_EXT = re.compile(r"[ ,]*(?i:ext|extn|x)\.?[ ]?\d{1,5}(?!\d)")
 # A token of letters, digits and inner hyphens with at least 5 digits in it (checked in code).
@@ -87,8 +91,14 @@ _URL_PATH = re.compile(r"(?<![\w@./-])(?:www\.)?[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)
 _TOKEN = re.compile(r"(?<![\w/.:-])[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*(?![\w/-])")
 # A number with a year after a slash and a short prefix (``CC 1187/2026``, ``No. 482/2025``),
 # or with the year first (``CC 2026/1187``).
-_NUM_YEAR = re.compile(r"(?<![\w/])(?:[A-Z]{1,4}\.? ?)?(?:\d{1,6}/(?:19|20)\d{2}|"
+# The prefix may have two parts (``FC/OSM 1482/2026``).
+_NUM_YEAR = re.compile(r"(?<![\w/])(?:[A-Z]{1,4}(?:/[A-Z]{1,4})?\.? ?)?(?:\d{1,6}/(?:19|20)\d{2}|"
                        r"(?:19|20)\d{2}/\d{3,6})(?![\w/])")
+# Letter-prefixed groups of digits joined by dots (``CT.26.0914.00382``); 5+ digits in code.
+_DOTTED_ID = re.compile(r"(?<![\w.])[A-Za-z]{1,4}\.\d{2,}(?:\.\d{2,})+(?!\w|\.\d)")
+# An ISBT 128 blood donation number: facility letter and 4 digits, year, 6-digit serial, maybe
+# written in groups with a check character (``W0417 26 318857 K``).
+_DONATION_NO = re.compile(r"(?<![\w-])[A-Z]\d{4} ?\d{2} ?\d{6}(?: [A-Z0-9](?![\w-]))?(?![\w-])")
 # Initials signing a record (``Signed: L.W.X.``, ``Sgd K.M.T``).
 _INITIALS = re.compile(r"(?i:\b(?:signed|sgd|initials?|countersigned)\b(?:[ \t]+by)?[ \t]*:?[ \t]*)"
                        r"((?:[A-Z]\.){1,3}[A-Z]\.?)(?![\w.])")
@@ -101,9 +111,12 @@ _NRIC_TAIL = re.compile(NRIC_TAIL)
 _ID_FIELD = re.compile(
     r"(?i:\b(?:MRN|HRN|NRIC|FIN|IC|passport|case|visit|episode|encounter|admission|account|acct|"
     r"policy|claim|member|employee|staff|donation|accession|specimen|sample|lab|serial|record|"
-    r"file|ref|reference|ID)\b(?:[ \t]*(?:no\b\.?|number\b|num\b|#))?)[ \t]*[:#.]?[ \t]*"
+    r"file|ref|reference|ID)\b(?:[ \t]*(?:nos?\b\.?|numbers?\b|num\b|#))?)[ \t]*[:#.]?[ \t]*"
     r"(?=[A-Za-z0-9])")
-_FIELD_TOKEN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9/\-]*[A-Za-z0-9])?")
+# a token of the value; inner dots too (``Accession: CT.26.0914.00382``)
+_FIELD_TOKEN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9/.\-]*[A-Za-z0-9])?")
+# a short upper-case code in a value, maybe in parts (``case no. FC/OSM 1482/2026``)
+_FIELD_CODE = re.compile(r"[A-Z]{1,4}(?:/[A-Z]{1,4})*")
 # an @handle that is not part of an e-mail address
 _AT_HANDLE = re.compile(r"(?<![\w.@])@[A-Za-z][A-Za-z0-9._]{1,30}[A-Za-z0-9_]")
 
@@ -412,6 +425,32 @@ def _trim_engine_name(text: str, s: int, e: int) -> tuple[int, int] | None:
     return (words[0][0], words[-1][1]) if org else (s, e)
 
 
+def _engine_name(text: str, s: int, e: int) -> tuple[int, int] | None:
+    """An engine's name span, trimmed as by :func:`_trim_engine_name`. A name never runs across a
+    line break, and an engine span that does has taken the next line's first word (``Karen
+    Ong\\nFamily``, ``on 2 L.\\nSon asked``): only the first line's piece is kept, and not if it
+    is a fragment or has no letter."""
+    if "\n" not in text[s - 1:e]:
+        return _trim_engine_name(text, s, e)
+    m = re.search(r"[^\n]*\S", text[s - 1:e])
+    ps, pe = s + m.start(), s + m.end() - 1
+    piece = text[ps - 1:pe]
+    if _FRAGMENT.fullmatch(piece) or not re.search(r"[^\W\d_]", piece):
+        return None
+    return _trim_engine_name(text, ps, pe)
+
+
+_NEXT_WORDS = re.compile(rf"(?:[ \t]+(?:{_WORD}|&))+")
+
+
+def _starts_org(text: str, e: int) -> bool:
+    """Whether the word ending at ``e`` starts an organisation's name: capitalised words follow
+    it on the same line up to an organisation or heading word (``Yours faithfully,\\nKallang
+    Bridge Law LLC``)."""
+    m = _NEXT_WORDS.match(text, e)
+    return bool(m) and any(w.lower().strip(".,") in _ORG_WORDS for w in m.group().split())
+
+
 def _kin_only(text: str, p: Proposal) -> bool:
     """Whether ``p`` holds only family terms of address and stop words (``Ah Ma``, ``Papa``,
     ``Ah Ma IC``), with no honorific or role word before it (``Dr Ma``, ``SN Ma``) and no name
@@ -429,12 +468,14 @@ def _field_ids(text: str) -> Iterable[tuple[int, int]]:
     for m in _ID_FIELD.finditer(text):
         pos, end = m.end(), None
         while (t := _FIELD_TOKEN.match(text, pos)) and (
-                any(c.isdigit() for c in t.group()) or re.fullmatch(r"[A-Z]{1,4}", t.group())):
+                any(c.isdigit() for c in t.group()) or _FIELD_CODE.fullmatch(t.group())):
             end = t.end()
             if not (text[end:end + 1] == " " and text[end + 1:end + 2].isalnum()):
                 break
             pos = end + 1
-        if end and sum(c.isdigit() for c in text[m.end():end]) >= 3:
+        # a dotted value needs more digits: codes such as ``E16.2`` (ICD-10) are no identifiers
+        value = text[m.end():end] if end else ""
+        if end and sum(c.isdigit() for c in value) >= (5 if "." in value else 3):
             yield m.end() + 1, end
 
 
@@ -473,6 +514,8 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
                 add(s, e, "shape:phone", "phone")
                 if x := _PHONE_EXT.match(text, e):
                     add(s, x.end(), "shape:phone", "phone")
+    for s, e in _spans(_PHONE_SHORT, text):
+        add(s, e, "shape:phone", "phone")
     for s, e in _spans(_IDLIKE, text):
         if sum(c.isdigit() for c in text[s - 1:e]) >= 5:
             add(s, e, "shape:id")
@@ -502,6 +545,11 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
                 digits >= 5 or (digits >= 3 and re.match(r"[A-Z]{2,5}-", tok)))):
             add(s, e, "shape:id")
     for s, e in _spans(_NUM_YEAR, text):
+        add(s, e, "shape:id")
+    for s, e in _spans(_DOTTED_ID, text):
+        if sum(c.isdigit() for c in text[s - 1:e]) >= 5:
+            add(s, e, "shape:id")
+    for s, e in _spans(_DONATION_NO, text):
         add(s, e, "shape:id")
     for s, e in _field_ids(text):
         add(s, e, "shape:id")
@@ -533,7 +581,9 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             add(s, e, "shape:name", "name")
     for rx in (_AFTER_ROLE, _BEFORE_ROLE, _SIGNOFF, _POSSESSIVE, _QUOTED):
         for s, e in _spans(rx, text, group=1):
-            if _is_stop(text[s - 1:e]):
+            # a cue before an organisation's name cues no person (``Yours faithfully,\nKallang
+            # Bridge Law LLC``: the run itself is no name, see ``_trim_name``)
+            if _is_stop(text[s - 1:e]) or _starts_org(text, e):
                 continue
             # one word of a longer name already proposed would only cost another judgment
             if not any(a <= s and e <= b for a, b in runs):
@@ -567,7 +617,7 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             # an engine's "name" gets the same trimming as the name shapes above: what ends at
             # an organisation or heading word (``Eastshore GH Ward``) and stop words at either
             # end (``Adm``, ``Birth cert / NRIC``, ``Morning Jess``) are no part of a name
-            if (t := _trim_engine_name(text, s, e)) is None:
+            if (t := _engine_name(text, s, e)) is None:
                 continue
             s, e = t
         add(s, e, c.detector or "extra", c.type)
