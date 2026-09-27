@@ -138,14 +138,16 @@ _ROLES = (r"nurse|sn|sons?|daughters?|wife|husband|mother|father|brothers?|siste
 _STAFF = r"PT|OT|ST|DSA|RN|SSN|SRN|EN|MO|HO|MSW|SW|APN|NC|CM"
 _FIELD = (rf"(?:\b(?:{_STAFF}|Pt|Patient|Client|Name|Attn|Re)|\bBed[ \t]*\d{{1,3}}[A-Z]?)"
           r"[ \t]*[:\-]")
+# a salutation or greeting before a name (``Dear Siti``, ``Hi Joyce``, ``Morning Jess``)
+_SALUTE = r"\b(?:Dear|Hi|Hello|Hey|(?:Good[ \t]+)?(?:[Mm]orning|[Aa]fternoon|[Ee]vening))"
 # A single word is proposed only after one of these cues: an honorific, a role word, a field
 # label or a salutation.
-_CUE = rf"(?:\b{_HONORIFIC}|(?i:\b(?:{_ROLES})\b)[:\-]?|{_FIELD}|\bDear)"
+_CUE = rf"(?:\b{_HONORIFIC}|(?i:\b(?:{_ROLES})\b)[:\-]?|{_FIELD}|{_SALUTE})"
 # ``Dr Tan``, and with initials first: ``Dr R. Balakrishnan``, ``Mr K.M. Wong``
 _AFTER_HONORIFIC = re.compile(rf"\b{_HONORIFIC}\s+((?:[A-Z]\.[ ]?){{0,3}}{_WORD})(?![\w'])")
 # ``Nurse Lim``, ``NOK: SON VIJAY``, ``Wife (Rosnah)``, ``PT: Rajeswari``, ``Dear Siti``
 _AFTER_ROLE = re.compile(rf"(?:(?i:\b(?:{_ROLES})\b)(?:[:\-]?[ \t]+|[ \t]*\([ \t]*)"
-                         rf"|{_FIELD}[ \t]*|\bDear[ \t]+)({_WORD})(?![\w'])")
+                         rf"|{_FIELD}[ \t]*|{_SALUTE}[ \t]+)({_WORD})(?![\w'])")
 # ``Aisyah (daughter)``, ``Balan (MSW)``
 _BEFORE_ROLE = re.compile(rf"(?<![\w'])({_WORD})[ \t]*\((?:(?i:{_ROLES})|{_STAFF})\)")
 # a name signing off a letter, e-mail or message (``Thanks, Farhan``, ``Regards,\nMei Ling``)
@@ -189,7 +191,19 @@ _ORG = """
     holdings group grant fund scheme foundation society association ministry board council
     authority agency bank church mosque temple court station department dept office
     """
-_ORG_WORDS = set(_ORG.split())
+# ... and words that end a heading, a service or a document rather than a name (``Work Pass
+# Division``, ``STUDY ENROLMENT``, ``Speech and Language Therapy``, ``Varghese LLC``, P15)
+_HEADING = """
+    division committee courts llc logistics engineering transport ambulance service
+    therapy pathology enrolment enrollment transfer consultation notice guidelines statement
+    message appointments inpatients outpatients outpatient holder shield room day gh sheet scale
+    """
+_ORG_WORDS = set(_ORG.split()) | set(_HEADING.split())
+_FRAGMENT = re.compile(r"[\W_]*(?:\d{1,3}|[A-Za-z])[\W_]*")
+# Family terms of address (``Ah Ma``, ``Papa``): a span made only of these is no one's name.
+# ``Ma`` is also a surname, so a span after an honorific (``Dr Ma``) is kept.
+_KIN_WORDS = {"ah", "ma", "mah", "pa", "mama", "papa", "mum", "mummy", "mom", "dad", "daddy",
+              "gong", "kong", "po", "popo", "grandma", "grandpa", "granny", "nenek", "atuk"}
 
 # Capitalised words that start sentences or name things other than people. A run is trimmed of
 # these at both ends; a run made only of them is not proposed. Common surnames that are also
@@ -227,6 +241,9 @@ _STOP_WORDS = """
     fdw mom ica cpf moh hdb lta spf scdf wica medisave medishield grant scheme
     birth cert certificate record records cardiac implant gen med
     participant participants anonymous
+    coroner victim client carer sitter endoscopist physician scientist geneticist supervisor
+    clinical night mbbs frcpa mrcp frcs mmed phd adm resus recheck cbg care nationality
+    occupation hi hello hey morning afternoon evening good
     """
 _STOP = {w.lower() for w in _STOP_WORDS.split()}
 _FUNCTION = {"the", "of", "and", "or", "for", "to", "in", "on", "at", "by", "with", "from", "my",
@@ -379,6 +396,33 @@ def _trim_name(text: str, s: int, e: int) -> tuple[int, int] | None:
     return words[0][0], words[-1][1]
 
 
+def _trim_engine_name(text: str, s: int, e: int) -> tuple[int, int] | None:
+    """An engine's name span ``text[s-1:e]``, or what follows the organisation or heading in it
+    (less stop words in front); None if only stop words are left. Otherwise the span is kept
+    as the engine gave it, one word too: the engine found it."""
+    words = [(m.start() + s, m.end() + s - 1, m.group(0))
+             for m in re.finditer(r"[^\W_]+(?:['’\-.][^\W_]+)*", text[s - 1:e])]
+    org = [i for i, w in enumerate(words) if w[2].lower() in _ORG_WORDS]
+    if org:
+        words = words[org[-1] + 1:]
+        while words and _is_stop(words[0][2]):
+            words.pop(0)
+    if all(_is_stop(w[2]) for w in words):
+        return None
+    return (words[0][0], words[-1][1]) if org else (s, e)
+
+
+def _kin_only(text: str, p: Proposal) -> bool:
+    """Whether ``p`` holds only family terms of address and stop words (``Ah Ma``, ``Papa``,
+    ``Ah Ma IC``), with no honorific or role word before it (``Dr Ma``, ``SN Ma``) and no name
+    after it (``Ma. Lourdes``)."""
+    words = [w.lower() for w in re.findall(r"[^\W\d_]+", text[p.start - 1:p.end])]
+    return (bool(words) and all(w in _KIN_WORDS or w in _STOP for w in words)
+            and any(w in _KIN_WORDS - {"ah"} for w in words)
+            and not _after_cue(text, p.start)
+            and not (words == ["ma"] and re.match(r"\.[ \t]+[A-Z][a-z]", text[p.end:])))
+
+
 def _field_ids(text: str) -> Iterable[tuple[int, int]]:
     """1-based spans of ID field values: the tokens after the label, joined by single spaces,
     while each has a digit or is a short upper-case code; at least 3 digits in all."""
@@ -510,14 +554,27 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
     for label, rx in _SHI_RX:
         for s, e in _spans(rx, text):
             add(s, e, f"lexicon:{label}", label)
+    extra = list(extra)
     for c in extra:
-        # an engine's one-word "name" that is a stop word (``Nurse``, ``Ward``, ``ED``) is the
-        # same non-name the name shapes above skip
-        if (c.type or "").lower() in ("name", "person") and _is_stop(text[c.start - 1:c.end]
-                                                                     .strip()):
+        s, e = c.start, c.end
+        if ((s, e) not in found and _FRAGMENT.fullmatch(text[s - 1:e])
+                and not any(o is not c and o.start <= e + 2 and s <= o.end + 2 for o in extra)):
+            # an engine's lone fragment that no rule or shape proposed: 1-3 digits or one letter
+            # (``10``, ``041``, ``T``, ``S$``). Short names (``Ros``, ``Ng``) are no fragments,
+            # nor is a piece next to another engine span (``Room [04]-[12, S637118]``)
             continue
-        add(c.start, c.end, c.detector or "extra", c.type)
-    return sorted(found.values(), key=lambda p: (p.start, -p.end))
+        if (c.type or "").lower() in ("name", "person"):
+            # an engine's "name" gets the same trimming as the name shapes above: what ends at
+            # an organisation or heading word (``Eastshore GH Ward``) and stop words at either
+            # end (``Adm``, ``Birth cert / NRIC``, ``Morning Jess``) are no part of a name
+            if (t := _trim_engine_name(text, s, e)) is None:
+                continue
+            s, e = t
+        add(s, e, c.detector or "extra", c.type)
+    # a span made only of family terms of address (``Ah Ma``, ``Papa``) names no one
+    return sorted((p for p in found.values()
+                   if not ((p.type or "").lower() in ("name", "person") and _kin_only(text, p))),
+                  key=lambda p: (p.start, -p.end))
 
 
 def contained(inner: Proposal, outer: Proposal) -> bool:

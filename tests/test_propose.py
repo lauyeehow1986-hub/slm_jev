@@ -234,6 +234,58 @@ def test_one_word_engine_names_that_are_stop_words_are_skipped():
     assert "Daughter" not in got and "Nurse" not in got and "Lim" in got
 
 
+@pytest.mark.parametrize("text", [
+    "To: Work Pass Division, Ministry",
+    "STUDY ENROLMENT\nParticipant ID 12",
+    "Referred to Speech and Language Therapy today",
+    "Solicitors: Lim & Varghese LLC",
+    "PRIVATE AMBULANCE RUN SHEET\nCrew",
+    "Reviewed by the Nursing Practice Committee.",
+    "Validated by Clinical Scientist on duty",
+    "escalated to the Night Supervisor at 20:00",
+    "Carer present. Coroner notified.",
+])
+def test_headings_organisations_and_roles_are_not_names(text):
+    assert spans(text, "shape:name") == []
+
+
+@pytest.mark.parametrize("text, want", [
+    ("Hi Joyce, please see bed 9", "Joyce"),
+    ("[07:02] R: Morning Jess! ok", "Jess"),
+])
+def test_a_greeting_cues_one_name(text, want):
+    assert want in spans(text, "shape:name")
+
+
+def _extra_spans(text, *items):
+    """The proposals for ``text`` given engine spans ``(match, type)`` (first occurrence)."""
+    extra = [Candidate(text.index(m) + 1, text.index(m) + len(m), type=t, detector="pf")
+             for m, t in items]
+    return {text[p.start - 1:p.end] for p in propose.propose(text, extra=extra)}
+
+
+def test_engine_names_that_are_organisations_headings_or_stop_words_are_skipped():
+    text = "Sending: Eastshore GH Ward 5. Adm via ED Resus. Birth cert / NRIC seen. Ros called."
+    got = _extra_spans(text, ("Eastshore GH Ward", "person"), ("Adm", "name"),
+                       ("ED Resus", "name"), ("Birth cert / NRIC", "person"), ("Ros", "name"))
+    assert not got & {"Eastshore GH Ward", "Adm", "ED Resus", "Birth cert / NRIC"}
+    assert "Ros" in got  # a short name is no fragment
+
+
+def test_engine_fragments_are_skipped_unless_a_shape_proposes_them():
+    text = "Pain 7 of 10 at 0200; seen by T. Called 6123 4567."
+    got = _extra_spans(text, ("10", "account"), ("T", "address"), ("6123 4567", "phone"))
+    assert not got & {"10", "T"} and "6123 4567" in got
+
+
+def test_family_terms_of_address_are_not_names():
+    text = "Jasmine: Ah Ma fell again. Don't tell Papa. Seen by Dr Ma and SN Ma. Lourdes Bautista."
+    got = _extra_spans(text, ("Ah Ma", "name"), ("Papa", "person"), ("Ma. Lourdes", "name"))
+    assert not got & {"Ah Ma", "Papa"} and "Ma. Lourdes" in got
+    got = {text[p.start - 1:p.end] for p in propose.propose(text)}
+    assert "Ma" in got  # after an honorific: the surname Ma
+
+
 def test_empty_text_and_trimmed_edges():
     assert propose.propose("") == []
     for p in propose.propose("Pt: (Tan Ah Kow), tel 6123-4567; seen."):
