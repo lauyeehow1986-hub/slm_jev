@@ -340,6 +340,20 @@ models/             GGUF / adapters / calibration.json (gitignored)
   - Open: the judge rejected spaced blood-unit numbers and photo file names on notes_v9 (p ≈ 0);
     SHI stays weak (R 0.514, P 0.375); latency still blocks bulk use.
   - notes_v1–v9 and sd20 are all dev sets now. A new change needs a new unseen set.
+- [x] P17 (0014, 2026-09-28): the notes_v9 misses. `slmjev/propose.py` proposes every other
+  mention of a name it found, names after Malay kinship words (`anak perempuan`, `isteri`, …),
+  quoted names ending in an initial, initials with a staff tag (`PN/HO`) and Chinese-script
+  names after a colon; kin-only spans (`Mak Cik's`) are dropped. The rule fast path in
+  `slmjev/judge.py` accepts image file names (`photo`) and spaced blood-unit numbers
+  (`other_id`).
+  - Dev: 9 of 11 notes_v9 silent misses fixed, plus one id each on v4 and v5. No new misses;
+    FPs 99 → 99.
+  - **notes_v10 blind: FAIL** (synthetic): direct-identifier recall 0.969 (343 of 354). P 0.951,
+    ECE 0.020, F1 0.960 and p95 98.5 s per 1k chars all pass. Name recall 0.975 on 201 names.
+  - The misses are new formats: CSV exports (the judge rejects columns in rows below the
+    first, whose header is out of its context; `SURNAME_GIVEN` user names), dictated numbers
+    (spoken phone numbers, `I C ending 447J`), and shorthand (`Husb (Khairul)`, `/chiew yl`).
+  - notes_v1–v10 and sd20 are all dev sets now. A new change needs a new unseen set.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.
