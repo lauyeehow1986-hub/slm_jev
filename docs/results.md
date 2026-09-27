@@ -254,6 +254,7 @@ and ran once on a new set by a separate writer that nobody had read. Decision re
 | P10 | more shapes | notes_v4 | slm:jev | 0.934 | 0.953 | 0.943 | 24 |
 | P12 | engine spans as candidates | notes_v5 | slm:jev + PF + Presidio persons | **0.983** | **0.927** | **0.954** | 5 |
 | P13 | P12 + a calibration map per kind of call | notes_v6 | slm:jev + PF + Presidio persons | **0.990** | **0.932** | **0.960** | 3 |
+| P14 | P13 + the notes_v6 proposer gaps (0011) | notes_v7 | slm:jev + PF + Presidio persons | **0.993** | 0.897 | 0.943 | 2 |
 
 The shape-only rounds (P8 to P10) each failed on the next set, because each new writer brought
 shapes nobody had listed. P12 keeps the judge in charge but lets Privacy Filter and Presidio
@@ -381,6 +382,54 @@ still matched after the run.
   frozen code, and was merged in with `--reuse` (`results/bench_notes_v6_blind.frozen.json`). By
   then only the other systems' aggregate scores had been seen, and nothing was changed.
 
+### notes_v7 (blind for P14): 32 notes, 24,824 characters
+
+295 identifier spans, 36 SHI spans and 5 notes with no PII, from a separate writer working from
+the notes_v6 brief. Invented and marked synthetic. The P14 code and `models/calibration_p13.json`
+were frozen (`results/notes_v7_blind_freeze.sha256`) before the set was first read, and the hashes
+still matched after the run. This time the release configuration was in the system list.
+
+| system | recall | covered | precision | F1 | FP (on negative notes) | silent misses | SHI recall | SHI precision |
+|---|---|---|---|---|---|---|---|---|
+| **slm:jev + PF + Presidio persons** | **0.993** | 0.986 | 0.897 | 0.943 | 33 (1) | 2 | 0.667 | 0.353 |
+| slm:jev alone | 0.963 | 0.946 | 0.935 | 0.949 | 20 (1) | 11 | 0.667 | 0.407 |
+| rules + Privacy Filter | 0.925 | 0.868 | 0.928 | 0.926 | 31 (1) | 22 | 0.000 | n/a |
+| Privacy Filter | 0.885 | 0.844 | 0.897 | 0.891 | 30 (1) | 34 | 0.000 | n/a |
+| rules + NER | 0.841 | 0.681 | 0.545 | 0.661 | 254 (41) | 47 | 0.000 | n/a |
+| MediPhi-3.8B | 0.366 | 0.359 | 0.734 | 0.489 | 64 (2) | 187 | 0.000 | n/a |
+| Qwen2.5-3B | 0.339 | 0.325 | 0.882 | 0.490 | 33 (0) | 195 | 0.000 | n/a |
+
+- **The P14 rules did not fire on this set.** It has no Chinese-script name after a romanised
+  one, no NRIC tail and no "sample" code, so it tests P13 in effect and says nothing about P14's
+  fixes.
+- **Precision fails the gate: 0.897 against 0.90.** One fewer false positive would not be
+  enough: it takes 32 or fewer.
+- **Direct-identifier recall 1.000** (250 spans). Recall is 1.000 on every label except
+  `other_id`, 0.941 (34).
+- **Calibration passes: ECE 0.042** over 414 candidates. By kind of call: identifier 0.035 (268),
+  none 0.096 (38), SHI lexicon-proposed 0.073 (30), SHI other 0.067 (36), rule fast path 0.010
+  (42).
+- **Latency:** 73.8 s per 1k chars (mean); per note p50 74.8 s, p95 128.3 s, slower than
+  notes_v6 (101.2 s). slm:jev alone: p50 50.7 s, p95 75.9 s.
+- **2 silent misses**, both `other_id`: a short screening number (`SCR-118`) and a blood-unit
+  number with spaces (`W1234 26 012345`, a shape like notes_v5's spaced donation number).
+- **2 partial covers:** two nurses' full names after `SN`, each found only in part.
+- **33 false positives**, against 20 for slm:jev alone. 16 of them are not in slm:jev alone's list:
+  engine candidates bring them in.
+  - 17 are headings, organisation or place names and roles called names: `Pass Division`,
+    `Specialist Appointments`, `Eastshore GH`, `STUDY ENROLMENT`, `Clinical Geneticist`,
+    `Coroner`, `Victim`.
+  - Some are number fragments from the engine spans: `110` from a time, `67` (an age), `02`.
+  - A kinship word `Ma` counts twice, and there are two protocol numbers called visit numbers.
+- **Gold audit, after scoring.** It does not change the gate result. 7 of the 33 false positives
+  are people the writer left unmarked, against the brief's "name every person":
+  - `Joyce`, `Hi Joyce`, `Steph` and `Hi Steph`, in an e-mail thread's greetings and sign-offs;
+  - `Mdm Rahimah` twice, in subject lines;
+  - `LAU AH MOI`, in a forwarded SMS.
+
+  Counted as found, precision would be 296 / 322 = 0.919. That figure is post hoc and is not the
+  gate result. notes_v7 is kept as the writer wrote it.
+
 ## Caveats
 
 - **Synthetic.** Every set is invented. notes_v1 was written by the author of the P2 generator,
@@ -390,8 +439,8 @@ still matched after the run.
 - **Found on the benchmark.** A fix for an error found on a set must be checked on a new, unseen
   set, or the benchmark becomes a training set. P8 to P12 changed slm_jev in response to sd20 and
   notes_v1 to notes_v4, so those are dev sets now and their numbers are optimistic. Only each
-  round's blind run counts, and notes_v5 and notes_v6 are dev sets from here on.
-- **One writer per set.** Each blind set had one writer (an agent working from a brief). Six
+  round's blind run counts, and notes_v5 to notes_v7 are dev sets from here on.
+- **One writer per set.** Each blind set had one writer (an agent working from a brief). Seven
   sets of about 30 notes are still a narrow sample of how people write.
 - **Run variation.** The llama.cpp baselines vary by one to three spans from run to run.
 - **Different outputs.** slm:jev also outputs category, sensitivity and a review flag, which these

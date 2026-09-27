@@ -304,6 +304,14 @@ models/             GGUF / adapters / calibration.json (gitignored)
   - **notes_v6 blind: every gate passes** (synthetic): R 0.990, P 0.932, ECE 0.024, F1 0.960
     (sd20 1.000), p95 101 s per 1k chars. Open: Chinese-script names and bare NRIC tails
     (`412D`) have no proposer; SHI stays weak (R 0.679, P 0.352); latency still blocks bulk use.
+- [ ] P14 (0011, 2026-09-27): the v6 gaps are closed on the dev sets. There is an NRIC-tail
+  proposer with a fast path (`judge.NRIC_TAIL`), a `sample <code>` fast path, and Chinese-script
+  names after a capitalised romanised word when they start with a surname.
+  - **notes_v7 blind: FAIL on precision.** R 0.993 (direct 1.000), P **0.897**, ECE 0.042, F1
+    0.943, p95 128 s per 1k chars. None of the P14 rules fired on v7.
+  - The false positives are headings, organisation names and roles called names, many of them
+    engine-proposed. 7 are people the writer left unmarked (a post-hoc audit, P 0.919 if counted).
+  - notes_v1–v7 and sd20 are all dev sets now.
   - notes_v1–v6 and sd20 are all dev sets now. A new change needs a new unseen set.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
