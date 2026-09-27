@@ -324,7 +324,22 @@ models/             GGUF / adapters / calibration.json (gitignored)
   - Open: unproposed shapes (dotted reference numbers, 7-digit phone numbers, Chinese-format
     dates); a sign-off rule proposes a lone word once an organisation run is filtered
     (`Kallang`); SHI stays weak (R 0.636, P 0.511); latency still blocks bulk use.
-  - notes_v1–v8 and sd20 are all dev sets now. A new change needs a new unseen set.
+  - notes_v1–v8 and sd20 are all dev sets now.
+- [x] P16 (0013, 2026-09-28): the notes_v8 missed formats in `slmjev/propose.py`. New shapes:
+  Chinese-format dates (`2004年3月8日`, date family in the judge), 7-digit phone numbers, dotted
+  reference numbers (≥5 digits), spaced blood-unit numbers, and case numbers with a two-part
+  prefix (`FC/OSM 1482/2026`). A role or sign-off cue before an organisation proposes no name, and
+  engine name spans over a line break keep only their first line.
+  - Dev: all 5 notes_v8 misses fixed, plus one id each on v4, v5 and v7. No new misses; FPs 80 → 77.
+  - **notes_v9 blind: FAIL** (synthetic): direct-identifier recall 0.979 (285 of 291), one span
+    short of 0.98. P 0.936, ECE 0.025, F1 0.951 and p95 121 s per 1k chars all pass.
+  - The P16 shapes fired on notes_v9. The failure is 6 names that no rule and neither engine
+    proposed: a bracketed surname on a ward list, an upper-case quoted name, a name after a Malay
+    kinship phrase (`Anak perempuan`), a Chinese-script name after a bilingual role
+    (`医师 Physician:`), a chat speaker's third mention, sign-off initials (arguable gold).
+  - Open: the judge rejected spaced blood-unit numbers and photo file names on notes_v9 (p ≈ 0);
+    SHI stays weak (R 0.514, P 0.375); latency still blocks bulk use.
+  - notes_v1–v9 and sd20 are all dev sets now. A new change needs a new unseen set.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.

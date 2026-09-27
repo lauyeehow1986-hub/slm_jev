@@ -1,4 +1,4 @@
-# Results: slm:jev against structured_deidentification's detectors (P7 to P15)
+# Results: slm:jev against structured_deidentification's detectors (P7 to P16)
 
 Date: 2026-09-26. **Synthetic data only.** Every number here comes from invented notes. None of
 them says how any system does on real clinical text (see *Caveats*).
@@ -238,13 +238,13 @@ rows show what SD users get today.
    already accepts) would propose every gap span on these sets except `VIJAY`; the judge would
    still have to accept them. That is the cheapest next step, not a model change.
 
-## After P7: unseen-set rounds (P8 to P15)
+## After P7: unseen-set rounds (P8 to P16)
 
 Each round fixed the misses on the sets already seen, froze the code (`results/*_freeze.sha256`)
 and ran once on a new set by a separate writer that nobody had read. Decision records:
 `docs/decisions/0008-realistic-notes-fixes.md` (P8 to P10), `0009-ensemble-proposer.md`
-(P11, P12), `0010-grouped-calibration.md` (P13), `0011-proposer-gaps-v6.md` (P14) and
-`0012-precision-filters.md` (P15). Only the blind rows count for the gate.
+(P11, P12), `0010-grouped-calibration.md` (P13), `0011-proposer-gaps-v6.md` (P14),
+`0012-precision-filters.md` (P15) and `0013-missed-formats.md` (P16). Only the blind rows count for the gate.
 
 ### The blind series
 
@@ -257,10 +257,15 @@ and ran once on a new set by a separate writer that nobody had read. Decision re
 | P13 | P12 + a calibration map per kind of call | notes_v6 | slm:jev + PF + Presidio persons | **0.990** | **0.932** | **0.960** | 3 |
 | P14 | P13 + the notes_v6 proposer gaps (0011) | notes_v7 | slm:jev + PF + Presidio persons | **0.993** | 0.897 | 0.943 | 2 |
 | P15 | P14 + precision filters on name candidates (0012) | notes_v8 | slm:jev + PF + Presidio persons | **0.990** | **0.954** | **0.972** | 3 |
+| P16 | P15 + the notes_v8 missed formats (0013) | notes_v9 | slm:jev + PF + Presidio persons | 0.967 (direct 0.979) | **0.936** | **0.951** | 11 |
 
 The shape-only rounds (P8 to P10) each failed on the next set, because each new writer brought
 shapes nobody had listed. P12 keeps the judge in charge but lets Privacy Filter and Presidio
 `person` spans in as candidates.
+
+P16 is the first round since P12 to fail on recall. Its new shapes worked on notes_v9, but that
+set's writer put names where no rule looks and neither engine found them. Recall on names is
+limited by what gets proposed, and each new writer still finds a new place to put a name.
 
 ### notes_v5 (blind for P12): 32 notes, 24,431 characters
 
@@ -483,6 +488,52 @@ before the set was first read, and the hashes still matched after the run.
     with `Kallang Bridge Law LLC` no longer proposed as a name, it proposes `Kallang` alone. The
     judge sends it to review.
 
+### notes_v9 (blind for P16): 32 notes, 25,069 characters
+
+329 identifier spans, 35 SHI spans, 63 other dates and 5 notes with no PII, from a separate writer
+working from the notes_v8 brief. Invented and marked synthetic; one NRIC is invalid on purpose, and
+the header says so. The P16 code and `models/calibration_p13.json` were frozen
+(`results/notes_v9_blind_freeze.sha256`) before the set was first read, and the hashes still
+matched after the run.
+
+| system | recall | covered | precision | F1 | FP (on negative notes) | silent misses | SHI recall | SHI precision |
+|---|---|---|---|---|---|---|---|---|
+| **slm:jev + PF + Presidio persons** | 0.967 | 0.951 | **0.936** | **0.951** | 22 (8) | 11 | 0.514 | 0.375 |
+| slm:jev alone | 0.900 | 0.872 | 0.955 | 0.927 | 14 (6) | 33 | 0.486 | 0.425 |
+| rules + Privacy Filter | 0.860 | 0.799 | 0.944 | 0.900 | 25 (1) | 46 | 0.000 | n/a |
+| Privacy Filter | 0.802 | 0.754 | 0.923 | 0.858 | 23 (1) | 65 | 0.000 | n/a |
+| rules + NER | 0.815 | 0.666 | 0.563 | 0.666 | 258 (67) | 61 | 0.000 | n/a |
+| MediPhi-3.8B | 0.243 | 0.234 | 0.911 | 0.384 | 11 (0) | 249 | 0.000 | n/a |
+| Qwen2.5-3B | 0.337 | 0.334 | 0.912 | 0.493 | 24 (15) | 218 | 0.000 | n/a |
+
+- **The gate fails on direct-identifier recall: 0.979** (285 of 291) against 0.98, short by one
+  span. Every direct label is at 1.000 except `name`, 0.961 (153). Precision, ECE and F1 pass.
+- **6 names were never proposed**, by the rules or by either engine:
+  - a surname alone in brackets on a ward list (`(Sannasi, ?UGIB)`);
+  - a name in upper case inside quotes (`name "ARUMUGAM V"`);
+  - a name after a Malay kinship phrase (`Anak perempuan Salmah`);
+  - a Chinese-script name after a bilingual role label (`医师 Physician: 梁国栋`);
+  - the third mention of a chat speaker whose first two mentions were found;
+  - initials in a sign-off (`PN/HO`), which is arguable gold.
+- **The P16 shapes fired.** `FC/OSM 312/2026` and a 7-digit phone number were found, and a
+  Chinese-format visit date was judged `none`. Two blood-unit numbers (`W0412 26 118730 A`) were
+  proposed but judged `none` with p ≈ 0, although the judge accepted the same shape on the dev sets.
+- **The other silent misses:** 2 photo file names (`IMG_4410.JPG`), proposed but judged `none`,
+  and a vehicle plate (`FBQ 8812 H`), proposed but called SHI.
+- **Calibration passes: ECE 0.025** over 427 candidates. By kind of call: identifier 0.020 (290),
+  none 0.016 (38), SHI lexicon-proposed 0.046 (23), SHI other 0.119 (23), rule fast path 0.010
+  (53).
+- **Latency:** 61.8 s per 1k chars (mean); per note p50 60.8 s, p95 121.2 s.
+- **22 false positives**: 8 go to review and 14 are marked as identifiers; 8 are on the negative
+  notes.
+  - Headings, roles and phrases called names: `Managers`, `Wards`, `Investigation Branch`,
+    `Life Assured`, `CALL ROSTER AMENDMENT`, `MO CPT`, `PR`, `Rgds`, `Tamil`, `Anak perempuan`.
+  - Eponyms called names (`Charcot`, `Reynolds`), both from Presidio.
+  - Document and model numbers called IDs: a field-notice number, two device model numbers, a
+    company registration number (UEN), and `2024-118`.
+  - An organisation (`HR Tanjong Freight`), `10 yrs ago`, and three name spans with extra words
+    (`Child B.`, `nee Rozario`, `- Mak Cik's`).
+
 ## Caveats
 
 - **Synthetic.** Every set is invented. notes_v1 was written by the author of the P2 generator,
@@ -492,8 +543,8 @@ before the set was first read, and the hashes still matched after the run.
 - **Found on the benchmark.** A fix for an error found on a set must be checked on a new, unseen
   set, or the benchmark becomes a training set. P8 to P12 changed slm_jev in response to sd20 and
   notes_v1 to notes_v4, so those are dev sets now and their numbers are optimistic. Only each
-  round's blind run counts, and notes_v5 to notes_v8 are dev sets from here on.
-- **One writer per set.** Each blind set had one writer (an agent working from a brief). Eight
+  round's blind run counts, and notes_v5 to notes_v9 are dev sets from here on.
+- **One writer per set.** Each blind set had one writer (an agent working from a brief). Nine
   sets of about 30 notes are still a narrow sample of how people write.
 - **Run variation.** The llama.cpp baselines vary by one to three spans from run to run.
 - **Different outputs.** slm:jev also outputs category, sensitivity and a review flag, which these
