@@ -312,7 +312,19 @@ models/             GGUF / adapters / calibration.json (gitignored)
   - The false positives are headings, organisation names and roles called names, many of them
     engine-proposed. 7 are people the writer left unmarked (a post-hoc audit, P 0.919 if counted).
   - notes_v1–v7 and sd20 are all dev sets now.
-  - notes_v1–v6 and sd20 are all dev sets now. A new change needs a new unseen set.
+- [x] P15 (0012, 2026-09-27): precision filters on name candidates in `slmjev/propose.py`.
+  Heading, organisation, role and qualification words are not names; greetings (`Hi`, `Morning`)
+  cue one name; engine `name`/`person` spans are trimmed after an organisation or heading word or
+  dropped if only stop words remain; engine fragments (1–3 digits or one letter) are dropped
+  unless a shape proposes them or another engine span is within 2 chars; kinship terms (`Ah Ma`,
+  `Papa`) are not names unless a title or cue comes first.
+  - Dev: FPs 150 → 65 across v1–v7 and sd20, with no recall change.
+  - **notes_v8 blind: every gate passes** (synthetic): R 0.990 (direct 0.993), P 0.954, ECE
+    0.031, F1 0.972, p95 119 s per 1k chars. The filters removed 20 candidates, none gold.
+  - Open: unproposed shapes (dotted reference numbers, 7-digit phone numbers, Chinese-format
+    dates); a sign-off rule proposes a lone word once an organisation run is filtered
+    (`Kallang`); SHI stays weak (R 0.636, P 0.511); latency still blocks bulk use.
+  - notes_v1–v8 and sd20 are all dev sets now. A new change needs a new unseen set.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.
