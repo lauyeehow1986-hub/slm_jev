@@ -427,8 +427,14 @@ still matched after the run. This time the release configuration was in the syst
   - `Mdm Rahimah` twice, in subject lines;
   - `LAU AH MOI`, in a forwarded SMS.
 
-  Counted as found, precision would be 296 / 322 = 0.919. That figure is post hoc and is not the
-  gate result. notes_v7 is kept as the writer wrote it.
+  These 7 names were then added to notes_v7's gold, with an errata line in its header. Re-scored
+  on the corrected gold, with the same stored predictions and no model run:
+  - the release configuration: R 0.993, P **0.919**, F1 0.955 (26 FPs);
+  - slm:jev alone: P 0.958;
+  - Privacy Filter: P 0.921.
+
+  The blind gate result is the uncorrected one, FAIL. The corrected gold is for dev use from
+  here on.
 
 ## Caveats
 

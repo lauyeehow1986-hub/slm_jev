@@ -17,6 +17,7 @@
 # DELIBERATELY INVALID ID: S8812345B in note v7_n30 has a wrong check letter on purpose (still labelled national_id). All other full NRIC/FIN spans have valid checksums.
 # Masked IDs (e.g. SXXXX332D) are labelled national_id and are not checksum-tested.
 # Negative controls (no identifiers): v7_n07, v7_n14, v7_n21, v7_n27, v7_n31.
+# GOLD ERRATA (2026-09-27, after the one blind scoring run): 7 person-name spans the writer left unmarked were added — Rahimah (2 subject lines), Joyce (2), Steph (2) in v7_n15 and LAU AH MOI in v7_n16. The blind result was scored on the uncorrected gold.
 
 === v7_n01 | ED triage ===
 EMERGENCY DEPARTMENT TRIAGE — Eastshore General Hospital
@@ -212,18 +213,18 @@ Queries to the BME helpdesk, Level B1. Thank you for your cooperation.
 From: {{name|Stephanie Wee}} <{{email|stephanie.wee@clinic.example.com}}>
 To: Specialist Appointments (Breast Centre)
 Sent: Mon, {{date_other|12 Jan 2026}} 09:14
-Subject: urgent slot for Mdm Rahimah?
-Hi Joyce,
+Subject: urgent slot for Mdm {{name|Rahimah}}?
+Hi {{name|Joyce}},
 Could you squeeze in Mdm {{name|Rahimah bte Said}}, 67 ({{national_id|SXXXX332D}}), this week? New breast lump 3 cm with skin tethering. Mammogram done at our clinic on {{date_other|9/1}}. Her son {{name|Zul}} will bring her; his number is {{phone|8455 0371}}.
 Thanks!
-Steph
+{{name|Steph}}
 -----
 From: {{name|Joyce Lam}} <{{email|joyce.lam@specialist.example.org}}>
 Sent: Mon, {{date_other|12 Jan 2026}} 11:02
-Subject: RE: urgent slot for Mdm Rahimah?
-Hi Steph, slot on {{date_other|Thu 15/1}} 2.30pm with Dr {{name|Iyer}} (Breast Surgery). Please fax the referral to {{fax|6479 2213}} and ask her to bring the CD. Appointment no. {{case_visit|BRS-260115-044}}.
+Subject: RE: urgent slot for Mdm {{name|Rahimah}}?
+Hi {{name|Steph}}, slot on {{date_other|Thu 15/1}} 2.30pm with Dr {{name|Iyer}} (Breast Surgery). Please fax the referral to {{fax|6479 2213}} and ask her to bring the CD. Appointment no. {{case_visit|BRS-260115-044}}.
 Regards,
-Joyce
+{{name|Joyce}}
 
 === v7_n16 | WhatsApp transcript ===
 Family chat "Ma's care" (exported)
@@ -233,7 +234,7 @@ Family chat "Ma's care" (exported)
 [{{date_other|03/09/2026}}, 21:09] {{name|Kelvin Lau}}: {{national_id|s3814754d}}
 [{{date_other|03/09/2026}}, 21:15] {{phone|+65 9812 7730}}: This is {{name|Yuli}}, helper. Ma already sleep. Bruise on the knee only.
 [{{date_other|03/09/2026}}, 21:20] {{name|Mei Fong}}: ok tmr morning we go polyclinic. Don't tell Ma about {{name|Kelvin}}'s {{substance_use|drug case}} ok, she will worry.
-[{{date_other|04/09/2026}}, 07:45] {{name|Kelvin Lau}}: forwarded SMS: "Appt for LAU AH MOI on {{date_other|10-Sep-26}} 9:40am, Clinic 2C. Ref {{case_visit|A8830129}}. Reply Y to confirm." also my new tele is {{other_id|@kelvinlau_88}}
+[{{date_other|04/09/2026}}, 07:45] {{name|Kelvin Lau}}: forwarded SMS: "Appt for {{name|LAU AH MOI}} on {{date_other|10-Sep-26}} 9:40am, Clinic 2C. Ref {{case_visit|A8830129}}. Reply Y to confirm." also my new tele is {{other_id|@kelvinlau_88}}
 
 === v7_n17 | ambulance run sheet ===
 AMBULANCE RUN SHEET — MediRide Private Ambulance
