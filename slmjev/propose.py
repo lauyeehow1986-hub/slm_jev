@@ -35,7 +35,9 @@ from dataclasses import dataclass, field
 from slmjev import rules
 from slmjev.judge import (
     _STREET_TYPES,
+    DONATION_NO,
     HANDLE,
+    IMAGE_FILE,
     MASKED_NRIC,
     NRIC_TAIL,
     SOCIAL_LEAD,
@@ -79,8 +81,7 @@ _SLASH_DATE = re.compile(r"\d{1,4}/\d{1,2}/\d{1,4}")
 # written in groups (``FBL 6632 E``).
 _PLATE = re.compile(r"\b[A-Z]{1,3} ?\d{1,4} ?[A-Z]\b")
 # A picture or scan file name (``IMG_20260923_1542.jpg``): it can point to a photograph.
-_IMAGE_FILE = re.compile(r"(?<![\w.-])[\w-]+(?:\.[\w-]+)*\.(?i:jpe?g|png|gif|bmp|tiff?|heic|webp|"
-                         r"dcm|dicom|mp4|mov|avi)(?![\w])")
+_IMAGE_FILE = re.compile(rf"(?<![\w.-]){IMAGE_FILE}(?![\w])")
 # A handle after a messaging or social-media keyword (``WeChat ID linzq_1992sg``).
 _HANDLE = re.compile(rf"{SOCIAL_LEAD}({HANDLE})(?![\w@])")
 # A URL without a scheme, with a path (``social.example.com/hafiz.jamal.1993``).
@@ -96,9 +97,8 @@ _NUM_YEAR = re.compile(r"(?<![\w/])(?:[A-Z]{1,4}(?:/[A-Z]{1,4})?\.? ?)?(?:\d{1,6
                        r"(?:19|20)\d{2}/\d{3,6})(?![\w/])")
 # Letter-prefixed groups of digits joined by dots (``CT.26.0914.00382``); 5+ digits in code.
 _DOTTED_ID = re.compile(r"(?<![\w.])[A-Za-z]{1,4}\.\d{2,}(?:\.\d{2,})+(?!\w|\.\d)")
-# An ISBT 128 blood donation number: facility letter and 4 digits, year, 6-digit serial, maybe
-# written in groups with a check character (``W0417 26 318857 K``).
-_DONATION_NO = re.compile(r"(?<![\w-])[A-Z]\d{4} ?\d{2} ?\d{6}(?: [A-Z0-9](?![\w-]))?(?![\w-])")
+# An ISBT 128 blood donation number (``W0417 26 318857 K``)
+_DONATION_NO = re.compile(rf"(?<![\w-]){DONATION_NO}(?![\w-])")
 # Initials signing a record (``Signed: L.W.X.``, ``Sgd K.M.T``).
 _INITIALS = re.compile(r"(?i:\b(?:signed|sgd|initials?|countersigned)\b(?:[ \t]+by)?[ \t]*:?[ \t]*)"
                        r"((?:[A-Z]\.){1,3}[A-Z]\.?)(?![\w.])")
@@ -145,7 +145,10 @@ _ROLES = (r"nurse|sn|sons?|daughters?|wife|husband|mother|father|brothers?|siste
           r"endoscopist|surgeon|anaesthetist|anesthetist|pharmacist|dietitian|counsell?or|"
           r"interpreter|translator|witness|visitors?|fdw|girlfriend|boyfriend|fianc[eé]e?|"
           r"driver|paramedic|proband|named|called|known[ \t]+as|baby[ \t]+of|family[ \t]+of|"
-          r"witnessed(?:[ \t]+by)?")
+          r"witnessed(?:[ \t]+by)?|"
+          # Malay and Indonesian relations (``anak perempuan Salmah``, ``cucu Irfan``, notes_v9)
+          r"anak(?:[ \t]+(?:perempuan|lelaki|laki-laki))?|cucu|isteri|istri|suami|ibu|bapa|"
+          r"ayah|abang|kakak|adik|menantu|sepupu")
 # Staff and form-field abbreviations that take a colon or hyphen before one name (``PT:
 # Rajeswari``, ``DSA: Salina``, ``Bed 2 - RAJOO``); case-sensitive, so ``pt`` in prose is no cue.
 _STAFF = r"PT|OT|ST|DSA|RN|SSN|SRN|EN|MO|HO|MSW|SW|APN|NC|CM"
@@ -169,10 +172,14 @@ _SIGNOFF = re.compile(r"\b(?:Thanks|Thank you|Many thanks|Regards|Best regards|K
                       rf"Yours faithfully)[,.!]?[ \t]*\n?[ \t]*({_WORD})(?![\w'])")
 # ``Siva's wife``: a possessive before a relation word
 _POSSESSIVE = re.compile(rf"(?<![\w'])({_WORD})['’]s[ \t]+(?i:{_ROLES})\b")
-# a name or nickname in quotes (``known as "Ah Boy"``, ``Supachai ("Jay")``)
-_QUOTED = re.compile(rf"(?<!\w)[\"“]({_WORD}(?:[ \t]+{_WORD}){{0,2}})[\"”](?!\w)")
-# initials alone on a line signing a message (``> AP``, ``-- KL``)
-_INITIALS_LINE = re.compile(r"^[ \t]*(?:>+|-{1,2})?[ \t]*([A-Z]{2,3})[ \t]*$", re.MULTILINE)
+# a name or nickname in quotes (``known as "Ah Boy"``, ``Supachai ("Jay")``), maybe ending in an
+# initial (``name "ARUMUGAM V"``)
+_QUOTED = re.compile(rf"(?<!\w)[\"“]({_WORD}(?:[ \t]+{_WORD}){{0,2}}(?:[ \t]+[A-Z]\.?)?)[\"”]"
+                     r"(?!\w)")
+# initials alone on a line signing a message (``> AP``, ``-- KL``), maybe with a staff role
+# (``-- PN/HO``)
+_INITIALS_LINE = re.compile(rf"^[ \t]*(?:>+|-{{1,2}})?[ \t]*([A-Z]{{2,3}})(?:/(?:{_STAFF}))?"
+                            r"[ \t]*$", re.MULTILINE)
 # a name in Chinese characters in brackets (``TAN Bee Hwa (陈美华)``) or after a name field
 _HAN_NAME = re.compile(r"(?:(?<=\()|(?<=（)|(?<=[Nn]ame:)[ \t]*|(?<=[Pp]atient:)[ \t]*|"
                        r"(?<=姓名[:：])[ \t]*)"
@@ -186,6 +193,10 @@ _HAN_SURNAMES = ("陈陳林黄黃李张張王吴吳刘劉蔡杨楊郑鄭许許�
 # ... or straight after a capitalised romanised word (``Mdm Fong Siew Lan 方秀兰``) when it starts
 # with a surname: herbs and clinic words follow lower-case words or have no surname first
 _HAN_AFTER_ROMAN = re.compile(rf"\b[A-Z][A-Za-z'\-]*[ \t]+([{_HAN_SURNAMES}][一-鿿]{{1,3}})"
+                              r"(?=[)）]|[ \t,;.]|$)", re.MULTILINE)
+# ... or after any field label's colon (``医师 Physician: 梁国栋``, notes_v9), again only when it
+# starts with a surname: TCM diagnoses and formulas follow colons too (``证: 肝郁脾虚``)
+_HAN_AFTER_COLON = re.compile(rf"[:：][ \t]*([{_HAN_SURNAMES}][一-鿿]{{1,3}})"
                               r"(?=[)）]|[ \t,;.]|$)", re.MULTILINE)
 # the next names of a list after a cued one (``sons Irfan and Hakim``, ``Irfan, Hakim``)
 _LIST_NEXT = re.compile(rf"(?:[ \t]*[,/&][ \t]*|[ \t]+and[ \t]+)({_WORD})(?![\w'])")
@@ -216,7 +227,8 @@ _FRAGMENT = re.compile(r"[\W_]*(?:\d{1,3}|[A-Za-z])[\W_]*")
 # Family terms of address (``Ah Ma``, ``Papa``): a span made only of these is no one's name.
 # ``Ma`` is also a surname, so a span after an honorific (``Dr Ma``) is kept.
 _KIN_WORDS = {"ah", "ma", "mah", "pa", "mama", "papa", "mum", "mummy", "mom", "dad", "daddy",
-              "gong", "kong", "po", "popo", "grandma", "grandpa", "granny", "nenek", "atuk"}
+              "gong", "kong", "po", "popo", "grandma", "grandpa", "granny", "nenek", "atuk",
+              "mak", "cik", "pak", "makcik", "pakcik"}
 
 # Capitalised words that start sentences or name things other than people. A run is trimmed of
 # these at both ends; a run made only of them is not proposed. Common surnames that are also
@@ -257,6 +269,7 @@ _STOP_WORDS = """
     coroner victim client carer sitter endoscopist physician scientist geneticist supervisor
     clinical night mbbs frcpa mrcp frcs mmed phd adm resus recheck cbg care nationality
     occupation hi hello hey morning afternoon evening good
+    anak perempuan lelaki cucu isteri istri suami ibu bapa ayah abang kakak adik menantu sepupu
     """
 _STOP = {w.lower() for w in _STOP_WORDS.split()}
 _FUNCTION = {"the", "of", "and", "or", "for", "to", "in", "on", "at", "by", "with", "from", "my",
@@ -455,7 +468,8 @@ def _kin_only(text: str, p: Proposal) -> bool:
     """Whether ``p`` holds only family terms of address and stop words (``Ah Ma``, ``Papa``,
     ``Ah Ma IC``), with no honorific or role word before it (``Dr Ma``, ``SN Ma``) and no name
     after it (``Ma. Lourdes``)."""
-    words = [w.lower() for w in re.findall(r"[^\W\d_]+", text[p.start - 1:p.end])]
+    span = re.sub(r"['’]s\b", "", text[p.start - 1:p.end])  # ``Mak Cik's``
+    words = [w.lower() for w in re.findall(r"[^\W\d_]+", span)]
     return (bool(words) and all(w in _KIN_WORDS or w in _STOP for w in words)
             and any(w in _KIN_WORDS - {"ah"} for w in words)
             and not _after_cue(text, p.start)
@@ -576,7 +590,7 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
         if (t := _trim_name(text, s, e)) is not None:
             add(*t, "shape:name", "name")
     runs = [(p.start, p.end) for p in found.values() if "shape:name" in p.sources]
-    for rx in (_HAN_NAME, _HAN_AFTER_ROMAN):
+    for rx in (_HAN_NAME, _HAN_AFTER_ROMAN, _HAN_AFTER_COLON):
         for s, e in _spans(rx, text, group=1):
             add(s, e, "shape:name", "name")
     for rx in (_AFTER_ROLE, _BEFORE_ROLE, _SIGNOFF, _POSSESSIVE, _QUOTED):
@@ -622,8 +636,24 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             s, e = t
         add(s, e, c.detector or "extra", c.type)
     # a span made only of family terms of address (``Ah Ma``, ``Papa``) names no one
-    return sorted((p for p in found.values()
-                   if not ((p.type or "").lower() in ("name", "person") and _kin_only(text, p))),
+    names = [p for p in found.values()
+             if (p.type or "").lower() in ("name", "person") and not _kin_only(text, p)]
+    kin = {(p.start, p.end) for p in found.values()
+           if (p.type or "").lower() in ("name", "person") and p not in names}
+    # A name proposed once is proposed wherever else it is written the same way: the cue or the
+    # engine that found it may not be there the next time (a chat speaker's third message,
+    # notes_v9). Not inside another name, and each mention is still judged on its own context.
+    # Only words written like a name: not all lower case (``po ako``, ``thiazide``) and not a
+    # lone term of address (``Ah``).
+    for word in {text[p.start - 1:p.end] for p in names}:
+        if (_FRAGMENT.fullmatch(word) or all(_is_stop(w) for w in word.split())
+                or word == word.lower() != word.upper() or word.lower() in _KIN_WORDS):
+            continue
+        for m in re.finditer(rf"(?<![\w'’]){re.escape(word)}(?![\w'’])", text):
+            s, e = m.start() + 1, m.end()
+            if not any(p.start <= s and e <= p.end for p in names):
+                add(s, e, "shape:repeat", "name")
+    return sorted((p for p in found.values() if (p.start, p.end) not in kin),
                   key=lambda p: (p.start, -p.end))
 
 

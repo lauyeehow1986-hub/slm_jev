@@ -144,6 +144,14 @@ def test_short_numbers_are_not_ids():
     ('known as "Ah Boy". Previous', "Ah Boy"),
     ("Re: Mdm Fong Siew Lan 方秀兰, DOB 1951", "方秀兰"),  # notes_v6: after the romanised name
     ("please raise prenatal testing.\n> AP\n", "AP"),
+    # notes_v9 misses: a Malay kinship cue, a quoted name with an initial, initials with a
+    # staff tag, a Han-character name after a bilingual role label
+    ("Anak perempuan Salmah datang", "Salmah"),
+    ("isteri Rosnah di sisi katil", "Rosnah"),
+    ('name "ARUMUGAM V" on the tag', "ARUMUGAM V"),
+    ("for review in AM.\nPN/HO\n", "PN"),
+    ("医师 Physician: 梁国栋\n", "梁国栋"),
+    ("主诊医生: 林志强 (Dr Lim)", "林志强"),
 ])
 def test_names(text, want):
     assert want in spans(text, "shape:name")
@@ -299,6 +307,35 @@ def test_family_terms_of_address_are_not_names():
     assert not got & {"Ah Ma", "Papa"} and "Ma. Lourdes" in got
     got = {text[p.start - 1:p.end] for p in propose.propose(text)}
     assert "Ma" in got  # after an honorific: the surname Ma
+
+
+def test_kinship_phrases_alone_are_not_names():
+    text = "Anak perempuan Salmah called. - Mak Cik's son will come."
+    got = _extra_spans(text, ("Anak perempuan", "person"), ("Mak Cik", "name"))
+    assert not got & {"Anak perempuan", "Mak Cik", "Mak Cik's"} and "Salmah" in got
+
+
+def test_a_han_term_after_a_colon_is_not_a_name():
+    assert "肝郁脾虚" not in spans("证: 肝郁脾虚, 舌淡", "shape:name")
+
+
+def test_a_name_found_once_is_proposed_at_every_mention():
+    text = "[3/10, 09:01] Marivic: ok po\n[3/10, 09:05] Marivic: masakit\nsaid Marivic again"
+    s = text.index("Marivic") + 1
+    props = propose.propose(text, extra=[Candidate(s, s + 6, type="person", detector="pf")])
+    got = [p for p in props if text[p.start - 1:p.end] == "Marivic"]
+    assert len(got) == 3
+    assert sum("shape:repeat" in p.sources for p in got) == 2
+
+
+def test_only_name_like_words_are_repeated():
+    text = "buntis po ako. Ah Boy ok. may bleeding po ako; Ah said so"
+    got = _extra_spans(text, ("po ako", "person"), ("Ah", "name"))
+    assert got & {"po ako"} and text.count("po ako") == 2
+    props = propose.propose(text, extra=[
+        Candidate(text.index("po ako") + 1, text.index("po ako") + 6, type="person",
+                  detector="pf")])
+    assert not any("shape:repeat" in p.sources for p in props)
 
 
 def test_a_cue_before_an_organisation_cues_no_name():

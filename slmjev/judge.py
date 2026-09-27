@@ -169,6 +169,13 @@ _ACCESSION = re.compile(r"[A-Z]{1,4}\d{2}-\d{5,7}")
 # A masked NRIC/FIN (``G****262U``, ``SXXXX567D``): the prefix, 3-7 masked digits, the rest and the
 # check letter, 9 characters in all. The unmasked part still narrows who it is (notes_v3).
 MASKED_NRIC = r"[STFGM][*xX#]{3,7}\d{0,4}[A-Z]"
+# A picture or scan file name (``IMG_20260923_1542.jpg``): it points to a photograph. Every one on
+# the benchmark sets was a patient's photo; the model called ``IMG_4410.JPG`` ``none`` (notes_v9).
+IMAGE_FILE = r"[\w-]+(?:\.[\w-]+)*\.(?i:jpe?g|png|gif|bmp|tiff?|heic|webp|dcm|dicom|mp4|mov|avi)"
+# An ISBT 128 blood donation number: facility letter and 4 digits, year, 6-digit serial, maybe
+# written in groups with a check character (``W0417 26 318857 K``). The model accepted these on
+# notes_v4-v8 and called them ``none`` on notes_v9.
+DONATION_NO = r"[A-Z]\d{4} ?\d{2} ?\d{6}(?: [A-Z0-9](?![\w-]))?"
 # The tail of an NRIC/FIN given on its own (``NRIC ending 412D``, ``IC last 4: 567A``): the
 # lead, then the tail as group 1. Shared with the proposer. The acronyms are case-sensitive;
 # the gap before "ending" holds no digits or clause breaks (a full NRIC, "; bed").
@@ -224,7 +231,8 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     """``(identifier, reason)`` when code alone is sure the span identifies someone, else None.
 
     Only shapes a rule can confirm qualify: a valid NRIC/FIN checksum or a masked NRIC/FIN
-    (``G****262U``); a whole email or URL (with
+    (``G****262U``); a blood donation number (``W0417 26 318857 K``); a picture file name
+    (``IMG_4410.JPG``); a whole email or URL (with
     a scheme, or without one but with a path); an accession-number shape (``HS26-018455``); a
     handle with a digit, ``_`` or ``.`` after a messaging keyword (``WeChat ID``); a 6-digit postal
     code right after ``Singapore``/``S(`` (or with that lead inside the span), or ending a street
@@ -273,6 +281,10 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     if (_ACCOUNT_SHAPE.fullmatch(m) and sum(c.isdigit() for c in m) >= 8
             and _ACCOUNT_LEAD.search(left[-24:])):
         return "other_id", "account_keyword"
+    if re.fullmatch(DONATION_NO, m):
+        return "other_id", "donation_shape"
+    if re.fullmatch(IMAGE_FILE, m):
+        return "photo", "image_file"
     return None
 
 
