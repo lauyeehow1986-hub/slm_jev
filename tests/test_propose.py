@@ -56,6 +56,9 @@ def test_date_lookahead_rejects_longer_numbers():
     ("Unit 1: donation no. W0417 26 118203 X (O neg)", "W0417 26 118203 X", "shape:id"),
     ("Policy no.: HS-IP-7739 0021 45 / 18 Sep 2026", "HS-IP-7739 0021 45", "shape:id"),
     ("from handle @darren.s_kx, reported", "@darren.s_kx", "shape:handle"),
+    # notes_v6 miss: an NRIC tail given on its own
+    ("verified with DOB 5/1/93 and NRIC ending 412D.", "412D", "shape:id"),
+    ("FIN ends with 088K; ok", "088K", "shape:id"),
 ])
 def test_numbers_ids_and_plates(text, want, source):
     assert want in spans(text, source)
@@ -124,10 +127,20 @@ def test_short_numbers_are_not_ids():
     ("Also note Siva's wife Meena is", "Siva"),
     ('Supachai Wongsakul ("Jay"), S Pass', "Jay"),
     ('known as "Ah Boy". Previous', "Ah Boy"),
+    ("Re: Mdm Fong Siew Lan 方秀兰, DOB 1951", "方秀兰"),  # notes_v6: after the romanised name
     ("please raise prenatal testing.\n> AP\n", "AP"),
 ])
 def test_names(text, want):
     assert want in spans(text, "shape:name")
+
+
+@pytest.mark.parametrize("text", [
+    "Herbs: decoction plus 当归 10 g, 甘草 6 g",  # after a lower-case word
+    "Sunrise Wellness Clinic 中医馆\nhours 9-5",  # no surname first
+    "Seen by Dr Ong Li Ting 医生 today",
+])
+def test_chinese_terms_after_romanised_words_are_not_names(text):
+    assert not set(spans(text, "shape:name")) & {"当归", "甘草", "中医馆", "医生"}
 
 
 def test_name_runs_do_not_cross_line_breaks():

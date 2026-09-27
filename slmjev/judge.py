@@ -168,6 +168,13 @@ _ACCESSION = re.compile(r"[A-Z]{1,4}\d{2}-\d{5,7}")
 # A masked NRIC/FIN (``G****262U``, ``SXXXX567D``): the prefix, 3-7 masked digits, the rest and the
 # check letter, 9 characters in all. The unmasked part still narrows who it is (notes_v3).
 MASKED_NRIC = r"[STFGM][*xX#]{3,7}\d{0,4}[A-Z]"
+# The tail of an NRIC/FIN given on its own (``NRIC ending 412D``, ``IC last 4: 567A``): the
+# lead, then the tail as group 1. Shared with the proposer. The acronyms are case-sensitive;
+# the gap before "ending" holds no digits or clause breaks (a full NRIC, "; bed").
+NRIC_TAIL = (r"\b(?:NRIC|IC|FIN)\b[^\n\d;,]{0,24}?\b(?i:ending(?:[ \t]+(?:in|with))?|"
+             r"ends?[ \t]+(?:in|with)|last[ \t]+(?:4|four|3|three)(?:[ \t]+(?:digits?|"
+             r"char(?:acter)?s?))?)(?i:[ \t]+of)?[ \t]*[:\-]?[ \t]*([A-Z]?\d{3,4}[A-Z])(?!\w)")
+_NRIC_TAIL_RX = re.compile(NRIC_TAIL)
 _POSTAL_LEAD = re.compile(r"(?:\bSingapore\s*|\bS\(?)$")
 # The same lead merged into the candidate: the proposer joins ``S276963`` or
 # ``Singapore 482263`` into one span, which the model dropped or called an address (0007).
@@ -203,6 +210,9 @@ _REF_LEAD = re.compile(r"(?i:\blab(?:oratory)?\s*(?:no|number|ref(?:erence)?|id)
                        r"|\b(?:claim|policy)\s*(?:ref(?:erence)?|no|number|id|#))"
                        + _ID_TAIL)
 _REF_SHAPE = re.compile(r"[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*")
+# A bare "sample" before a code (``Group & screen sample GS-26-091837``). It also comes before
+# dates and counts, so the code must hold a letter as well as 4+ digits.
+_SAMPLE_LEAD = re.compile(rf"\b[Ss]ample{_ID_TAIL}")
 # A bank or billing account number after an account keyword: 8+ digits, optionally grouped by
 # hyphens or spaces (``250-03851-0``). The model called these ``none`` with certainty (0005).
 _ACCOUNT_LEAD = re.compile(rf"(?:\b[Aa]ccount|\b[Aa]/[Cc]|\b[Aa]cct){_ID_TAIL}")
@@ -219,8 +229,9 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     code right after ``Singapore``/``S(`` (or with that lead inside the span), or ending a street
     address with a valid sector; an ID-shaped token right after an ID keyword (``NRIC``,
     ``temp IC``, ``MRN``, ...), a record reference right after ``Lab No`` / ``Reg. No.`` /
-    ``Accession`` / ``claim ref`` / ``policy``, or an account number right after ``account`` /
-    ``a/c``.
+    ``Accession`` / ``claim ref`` / ``policy`` (or a code with a letter after a bare ``sample``),
+    an account number right after ``account`` / ``a/c``, or an NRIC/FIN tail after ``NRIC
+    ending`` / ``IC last 4``.
     They skip the model; everything else is judged. Accepting is the fail-closed direction, since
     it only ever removes more."""
     m = text[cand.start - 1:cand.end].strip()
@@ -252,6 +263,12 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     if (_REF_SHAPE.fullmatch(m) and sum(c.isdigit() for c in m) >= 4
             and _REF_LEAD.search(left[-24:])):
         return "other_id", "ref_keyword"
+    if (_REF_SHAPE.fullmatch(m) and sum(c.isdigit() for c in m) >= 4
+            and re.search(r"[A-Za-z]", m) and _SAMPLE_LEAD.search(left[-24:])):
+        return "other_id", "ref_keyword"
+    tail = _NRIC_TAIL_RX.search(text, max(0, cand.start - 1 - 48), cand.end + 1)
+    if tail and (tail.start(1), tail.end(1)) == (cand.start - 1, cand.end):
+        return "national_id", "nric_tail"
     if (_ACCOUNT_SHAPE.fullmatch(m) and sum(c.isdigit() for c in m) >= 8
             and _ACCOUNT_LEAD.search(left[-24:])):
         return "other_id", "account_keyword"

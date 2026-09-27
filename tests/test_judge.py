@@ -341,6 +341,10 @@ def test_property_model_question_is_opt_in_and_never_overrides_rules():
      "other_id"),
     ("contact via WeChat ID linzq_1992sg.", "linzq_1992sg", "other_id"),
     ("identified by masked FIN G****262U. Pt", "G****262U", "national_id"),  # notes_v3
+    # notes_v6 misses: an NRIC tail given on its own, a sample code after a bare "sample"
+    ("Identity verified with DOB and NRIC ending 412D. Pt", "412D", "national_id"),
+    ("IC last 4 digits: 567A, confirmed", "567A", "national_id"),
+    ("Group & screen sample GS-26-091837 taken", "GS-26-091837", "other_id"),
 ])
 def test_rule_certain_spans_skip_the_model(t, sub, ident):
     fake = Fake(script({"none": 0.99}))
@@ -378,6 +382,10 @@ def test_rule_certain_spans_skip_the_model(t, sub, ident):
     ("Refer to IPC policy IC-04-017, version 5.", "IC-04-017"),  # a document number
     ("under case no. 6498160533X with", "6498160533X"),  # a case_visit: the model's call
     ("confirmed on line immunoassay5 today", "immunoassay5"),  # "line" alone is no app
+    ("sample 25/09/2026 sent", "25/09/2026"),  # a date after "sample": no letter
+    ("sample 1234 mL", "1234"),
+    ("the clinic ending 412D", "412D"),  # "ic" inside a word is no NRIC lead
+    ("NRIC S1234567D; bed ending 412D", "412D"),  # the tail is not right after the lead
 ])
 def test_uncertain_shapes_still_go_to_the_model(t, sub):
     fake = Fake(script({"none": 0.99}))

@@ -37,6 +37,7 @@ from slmjev.judge import (
     _STREET_TYPES,
     HANDLE,
     MASKED_NRIC,
+    NRIC_TAIL,
     SOCIAL_LEAD,
     Candidate,
     rule_certain,
@@ -93,6 +94,8 @@ _INITIALS = re.compile(r"(?i:\b(?:signed|sgd|initials?|countersigned)\b(?:[ \t]+
                        r"((?:[A-Z]\.){1,3}[A-Z]\.?)(?![\w.])")
 # A masked NRIC/FIN (``G****262U``).
 _MASKED_NRIC = re.compile(rf"(?<![\w*#]){MASKED_NRIC}(?![\w*])")
+# An NRIC/FIN tail given on its own (``NRIC ending 412D``), group 1.
+_NRIC_TAIL = re.compile(NRIC_TAIL)
 # The value after an ID field label, which may hold spaces (``MRN: BTC 22 118 406``,
 # ``donation no. W0417 26 118203 X``, ``Policy no.: HS-IP-7739 0021 45``); see ``_field_ids``.
 _ID_FIELD = re.compile(
@@ -159,6 +162,16 @@ _INITIALS_LINE = re.compile(r"^[ \t]*(?:>+|-{1,2})?[ \t]*([A-Z]{2,3})[ \t]*$", r
 _HAN_NAME = re.compile(r"(?:(?<=\()|(?<=（)|(?<=[Nn]ame:)[ \t]*|(?<=[Pp]atient:)[ \t]*|"
                        r"(?<=姓名[:：])[ \t]*)"
                        r"([一-鿿]{2,4})(?=[)）]|[ \t,;.]|$)", re.MULTILINE)
+# common Chinese surnames, simplified and traditional (the compound ones start with 欧/歐/司/上)
+_HAN_SURNAMES = ("陈陳林黄黃李张張王吴吳刘劉蔡杨楊郑鄭许許谢謝郭洪曾邱罗羅周何梁叶葉方苏蘇胡高"
+                 "萧蕭庄莊潘江余赖賴卢盧彭朱徐钟鍾韩韓孙孫马馬邓鄧杜魏傅沈姚程汤湯温溫宋严嚴"
+                 "柯施董石丁薛詹纪紀范戴游袁姜麦麥伍黎欧歐章符翁冯馮邝鄺卓尤龚龔骆駱连連文田"
+                 "包孔易甘侯白凌关關邢曹蒋蔣谭譚贺賀金秦崔顾顧龙龍万萬钱錢吕呂任夏陆陸毛邹鄒"
+                 "熊唐赵趙郝殷雷阮聂聶史汪岑巫容区區司上")
+# ... or straight after a capitalised romanised word (``Mdm Fong Siew Lan 方秀兰``) when it starts
+# with a surname: herbs and clinic words follow lower-case words or have no surname first
+_HAN_AFTER_ROMAN = re.compile(rf"\b[A-Z][A-Za-z'\-]*[ \t]+([{_HAN_SURNAMES}][一-鿿]{{1,3}})"
+                              r"(?=[)）]|[ \t,;.]|$)", re.MULTILINE)
 # the next names of a list after a cued one (``sons Irfan and Hakim``, ``Irfan, Hakim``)
 _LIST_NEXT = re.compile(rf"(?:[ \t]*[,/&][ \t]*|[ \t]+and[ \t]+)({_WORD})(?![\w'])")
 # ``KOH WEI LIANG, DARREN`` / ``BAUTISTA, Maricel Dizon``: an upper-case surname, a comma, then
@@ -457,6 +470,8 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
     for s, e in _spans(_MASKED_NRIC, text):
         if e - s + 1 == 9:
             add(s, e, "shape:id", "national_id")
+    for s, e in _spans(_NRIC_TAIL, text, group=1):
+        add(s, e, "shape:id", "national_id")
     for s, e in _spans(_NAME_RUN, text):
         if (t := _trim_name(text, s, e)) is not None:
             add(*t, "shape:name", "name")
@@ -469,8 +484,9 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
         if (t := _trim_name(text, s, e)) is not None:
             add(*t, "shape:name", "name")
     runs = [(p.start, p.end) for p in found.values() if "shape:name" in p.sources]
-    for s, e in _spans(_HAN_NAME, text, group=1):
-        add(s, e, "shape:name", "name")
+    for rx in (_HAN_NAME, _HAN_AFTER_ROMAN):
+        for s, e in _spans(rx, text, group=1):
+            add(s, e, "shape:name", "name")
     for rx in (_AFTER_ROLE, _BEFORE_ROLE, _SIGNOFF, _POSSESSIVE, _QUOTED):
         for s, e in _spans(rx, text, group=1):
             if _is_stop(text[s - 1:e]):
