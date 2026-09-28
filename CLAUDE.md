@@ -382,6 +382,22 @@ models/             GGUF / adapters / calibration.json (gitignored)
     lower-case voice-to-text names, lone given names, Tamil script. The FPs: ordinary words of
     Tagalog/Malay/Indonesian notes and kin terms called names.
   - notes_v1–v12 and sd20 are all dev sets now. A new change needs a new unseen set.
+- [x] P20 (0017, 2026-09-28): the notes_v12 misses. `slmjev/propose.py` proposes initials tied
+  to a name by a bracketed legend (and their other uses), initials after sign/check words, speaker
+  initials, `Sign`/`Initials` columns, names in Tamil/Devanagari/Bengali/Thai/Myanmar script
+  (glossed, or after a relation word), accented Latin names, lower-case names after a lower-case
+  honorific, dictated slash references (`SPOKEN_REF` in `judge.py`) and key=value names and
+  logins. Tagalog/Malay/Indonesian function words, form labels, obituary words and kin terms are
+  kept out of names.
+  - Dev: notes_v12 direct 0.907 → 0.964, precision 0.884 → 0.937, FPs 48 → 26; no new misses on
+    v9–v11. Tried and dropped: 3-digit prefixed codes (25 decoys for 6), lower-case names after
+    relation words (29 for 1), asking initials only "name or none" (v12 direct 0.964 → 0.953).
+  - **notes_v13 blind: PASS** (synthetic), the first since P15: direct-identifier recall 0.985
+    (261 of 265; 260 needed), precision 0.917, ECE 0.047, F1 0.949; p95 108 s per note (68.6 s
+    per 1k chars mean). Thin margins. 5 silent misses: initials `LTS`/`KH`, lower-case `jun` and
+    `fatimah`, one code. slm:jev alone 0.922, PF 0.799, MediPhi 0.286 recall.
+  - notes_v1–v13 and sd20 are all dev sets now. Repeat the pass on another unseen set before
+    relying on it.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.

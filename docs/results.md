@@ -1,4 +1,4 @@
-# Results: slm:jev against structured_deidentification's detectors (P7 to P19)
+# Results: slm:jev against structured_deidentification's detectors (P7 to P20)
 
 Date: 2026-09-26. **Synthetic data only.** Every number here comes from invented notes. None of
 them says how any system does on real clinical text (see *Caveats*).
@@ -238,15 +238,16 @@ rows show what SD users get today.
    already accepts) would propose every gap span on these sets except `VIJAY`; the judge would
    still have to accept them. That is the cheapest next step, not a model change.
 
-## After P7: unseen-set rounds (P8 to P19)
+## After P7: unseen-set rounds (P8 to P20)
 
 Each round fixed the misses on the sets already seen, froze the code (`results/*_freeze.sha256`)
 and ran once on a new set by a separate writer that nobody had read. Decision records:
 `docs/decisions/0008-realistic-notes-fixes.md` (P8 to P10), `0009-ensemble-proposer.md`
 (P11, P12), `0010-grouped-calibration.md` (P13), `0011-proposer-gaps-v6.md` (P14),
 `0012-precision-filters.md` (P15), `0013-missed-formats.md` (P16) and
-`0014-name-mentions-and-fast-paths.md` (P17), `0015-tables-and-dictated-numbers.md` (P18) and
-`0016-hl7-ocr-dates-and-dob-columns.md` (P19).
+`0014-name-mentions-and-fast-paths.md` (P17), `0015-tables-and-dictated-numbers.md` (P18),
+`0016-hl7-ocr-dates-and-dob-columns.md` (P19) and
+`0017-initials-other-scripts-and-multilingual-notes.md` (P20).
 Only the blind rows count for the gate.
 
 ### The blind series
@@ -264,6 +265,7 @@ Only the blind rows count for the gate.
 | P17 | P16 + name mentions, kinship and bilingual cues, two fast paths (0014) | notes_v10 | slm:jev + PF + Presidio persons | 0.970 (direct 0.969) | **0.951** | **0.960** | 12 |
 | P18 | P17 + table columns, name columns, dictated numbers (0015) | notes_v11 | slm:jev + PF + Presidio persons | 0.973 (direct 0.972) | **0.938** | **0.955** | 10 |
 | P19 | P18 + HL7 person fields, OCR dates, DOB columns (0016) | notes_v12 | slm:jev + PF + Presidio persons | 0.899 (direct 0.907) | 0.884 | **0.891** | 42 |
+| P20 | P19 + initials, other scripts, dictation, multilingual filters (0017) | notes_v13 | slm:jev + PF + Presidio persons | **0.983** (direct **0.985**) | **0.917** | **0.949** | 5 |
 
 The shape-only rounds (P8 to P10) each failed on the next set, because each new writer brought
 shapes nobody had listed. P12 keeps the judge in charge but lets Privacy Filter and Presidio
@@ -290,6 +292,12 @@ on notes_v12, on recall and precision. That set's writer labelled initials as na
 Indonesia, whose ordinary words were called names. Every system fell on it, Privacy Filter
 alone from 0.851 to 0.767 recall. The structured identifiers (NRIC, MRN, phone, e-mail, DOB)
 still reached 1.000; names and multilingual text are where the misses and FPs are.
+
+P20 fixed those on notes_v12 (direct 0.964 on the dev re-run, still under the gate) and passed
+every gate check on notes_v13, the first blind pass since P15: direct recall 0.985 (261 of 265),
+precision 0.917, ECE 0.047. The margins are thin: one more direct miss would still pass, two
+would fail, and ECE is 0.004 under its gate. Its 5 silent misses are two sets of initials, two
+lower-case given names and one code.
 
 ### notes_v5 (blind for P12): 32 notes, 24,431 characters
 
@@ -710,6 +718,58 @@ matched after the run.
   - Times read as phone numbers; equipment and memo numbers on a negative note; a generic
     departmental mailbox.
 
+### notes_v13 (blind for P20): 32 notes, 24,740 characters
+
+- **Gold:** 294 identifier spans (128 of them names, 265 direct), 34 SHI spans, 51 other dates,
+  and 5 notes with no PII.
+- **Writer:** a separate writer, whose brief asked for theatre lists and anaesthesia records,
+  dialysis run sheets, antenatal cards, immunisation records, bed-board transcriptions, SBAR
+  handovers, incident reports, contact-tracing lists, e-forms with checkboxes, JSON/XML payloads,
+  CSV lists, SMS broadcast logs, telehealth chat, quick phone notes in lower case and Singlish,
+  calendar invites, address labels, and phrases in Hokkien, Cantonese, Hindi, Bengali, Burmese,
+  Thai and Vietnamese. Its header labels initials used for a person as names.
+- **Synthetic:** everything is invented and marked synthetic. Only the header was read before the
+  run.
+- **Frozen:** the P20 code and `models/calibration_p13.json` were frozen
+  (`results/notes_v13_blind_freeze.sha256`) before the run. The hashes matched before and after
+  it.
+
+| system | recall | covered | precision | F1 | FP (on negative notes) | silent misses | SHI recall | SHI precision |
+|---|---|---|---|---|---|---|---|---|
+| **slm:jev + PF + Presidio persons** | **0.983** | 0.949 | **0.917** | **0.949** | 26 (4) | 5 | 0.529 | 0.345 |
+| slm:jev alone | 0.922 | 0.884 | 0.955 | 0.938 | 13 (4) | 23 | 0.500 | 0.409 |
+| rules + Privacy Filter | 0.864 | 0.772 | 0.903 | 0.883 | 42 (5) | 40 | 0.000 | n/a |
+| Privacy Filter | 0.799 | 0.708 | 0.857 | 0.827 | 41 (4) | 59 | 0.000 | n/a |
+| rules + NER | 0.796 | 0.653 | 0.559 | 0.657 | 239 (46) | 60 | 0.000 | n/a |
+| MediPhi-3.8B | 0.286 | 0.262 | 0.699 | 0.406 | 46 (0) | 210 | 0.000 | n/a |
+| Qwen2.5-3B | 0.537 | 0.500 | 0.788 | 0.639 | 55 (15) | 136 | 0.000 | n/a |
+
+- **The gate passes.**
+  - Direct-identifier recall 0.985 (261 of 265; 260 needed).
+  - Precision 0.917.
+  - ECE 0.047.
+  - F1 0.949 (sd20, dev: 1.000).
+  - `national_id`, `mrn`, `case_visit`, `phone`, `fax`, `email`, `dob`, `date_of_death`,
+    `postal_code`, `address`, `device` and `photo` reach 1.000; names 0.969 on 128; `other_id`
+    0.952 on 21.
+- **5 silent misses:** the initials `LTS` and `KH`, the lower-case given names `jun` and
+  `fatimah`, and the code `L26-093-004871`.
+- **Covered only in part:** inverted `SURNAME, Given` names, lower-case names (`koh chin huat`,
+  `ah huat`), a Thai name and two addresses.
+- **Calibration: ECE 0.047** over 403 candidates. By kind of call:
+  - rule fast path 0.010 (36);
+  - identifier 0.019 (272);
+  - none 0.186 (50);
+  - SHI lexicon-proposed 0.201 (19);
+  - SHI other 0.033 (26).
+- **Latency:** 68.6 s per 1k chars (mean); per note p50 63.7 s, p95 108.0 s.
+- **26 false positives**; 4 are on the negative notes.
+  - Headings and phrases called names: `MAIN OT`, `ATTENDEE`, `Speaks Cantonese`, a Thai
+    province, a Burmese phrase, a Hokkien phrase.
+  - Equipment, policy and ethics numbers called IDs (`VP-3200`, `BME-POL-011`,
+    `DSRB 2026/00418`), and a UUID called a case number.
+  - Unit numbers and stray digits called postal codes or phones.
+
 ## Caveats
 
 - **Synthetic.** Every set is invented. notes_v1 was written by the author of the P2 generator,
@@ -719,8 +779,8 @@ matched after the run.
 - **Found on the benchmark.** A fix for an error found on a set must be checked on a new, unseen
   set, or the benchmark becomes a training set. P8 to P12 changed slm_jev in response to sd20 and
   notes_v1 to notes_v4, so those are dev sets now and their numbers are optimistic. Only each
-  round's blind run counts, and notes_v5 to notes_v12 are dev sets from here on.
-- **One writer per set.** Each blind set had one writer (an agent working from a brief). Twelve
+  round's blind run counts, and notes_v5 to notes_v13 are dev sets from here on.
+- **One writer per set.** Each blind set had one writer (an agent working from a brief). Thirteen
   sets of about 30 notes are still a narrow sample of how people write.
 - **Run variation.** The llama.cpp baselines vary by one to three spans from run to run.
 - **Different outputs.** slm:jev also outputs category, sensitivity and a review flag, which these
