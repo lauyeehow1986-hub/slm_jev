@@ -354,6 +354,20 @@ models/             GGUF / adapters / calibration.json (gitignored)
     first, whose header is out of its context; `SURNAME_GIVEN` user names), dictated numbers
     (spoken phone numbers, `I C ending 447J`), and shorthand (`Husb (Khairul)`, `/chiew yl`).
   - notes_v1–v10 and sd20 are all dev sets now. A new change needs a new unseen set.
+- [x] P18 (0015, 2026-09-28): the notes_v10 misses. `slmjev/judge.py` finds the column header of
+  a table pasted into text (`table_cell`) and puts it in the prefix; the header alone did not
+  change the judge, so an ID-shaped whole table cell goes to review, never dropped. Spoken digit
+  words are read as numbers (a Singapore-phone-shaped one on the fast path), and `I C` leads an
+  NRIC tail. `slmjev/propose.py` proposes name-column cells (`ONG_JIAHUI`, `"KOH, SOOK LING"`),
+  spoken numbers, and names after `husb`/`bro`/`sis`/`dtr`.
+  - Dev: 10 of 11 notes_v10 direct misses fixed (direct 0.969 → 0.997). No new misses; FPs same.
+  - **notes_v11 blind: FAIL** (synthetic): direct-identifier recall 0.972 (316 of 325), 3 spans
+    short. P 0.938, ECE 0.031, F1 0.955 pass; p95 126 s per 1k chars. mrn, phone and national_id
+    (incl. OCR-corrupted, spaced, masked) 1.000.
+  - The misses are new formats: HL7 `^`-split surnames (`TAN^MEI LING`), an OCR-corrupted DOB
+    (`l4.O2.l95l`), a DOB cell under a `DOB` column judged `none`, a first-name possessive, a
+    repeated nickname called SHI, a Chinese-script name after a role word and a space.
+  - notes_v1–v11 and sd20 are all dev sets now. A new change needs a new unseen set.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.

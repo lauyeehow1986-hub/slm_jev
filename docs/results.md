@@ -1,4 +1,4 @@
-# Results: slm:jev against structured_deidentification's detectors (P7 to P17)
+# Results: slm:jev against structured_deidentification's detectors (P7 to P18)
 
 Date: 2026-09-26. **Synthetic data only.** Every number here comes from invented notes. None of
 them says how any system does on real clinical text (see *Caveats*).
@@ -238,14 +238,15 @@ rows show what SD users get today.
    already accepts) would propose every gap span on these sets except `VIJAY`; the judge would
    still have to accept them. That is the cheapest next step, not a model change.
 
-## After P7: unseen-set rounds (P8 to P17)
+## After P7: unseen-set rounds (P8 to P18)
 
 Each round fixed the misses on the sets already seen, froze the code (`results/*_freeze.sha256`)
 and ran once on a new set by a separate writer that nobody had read. Decision records:
 `docs/decisions/0008-realistic-notes-fixes.md` (P8 to P10), `0009-ensemble-proposer.md`
 (P11, P12), `0010-grouped-calibration.md` (P13), `0011-proposer-gaps-v6.md` (P14),
 `0012-precision-filters.md` (P15), `0013-missed-formats.md` (P16) and
-`0014-name-mentions-and-fast-paths.md` (P17). Only the blind rows count for the gate.
+`0014-name-mentions-and-fast-paths.md` (P17) and `0015-tables-and-dictated-numbers.md` (P18).
+Only the blind rows count for the gate.
 
 ### The blind series
 
@@ -260,6 +261,7 @@ and ran once on a new set by a separate writer that nobody had read. Decision re
 | P15 | P14 + precision filters on name candidates (0012) | notes_v8 | slm:jev + PF + Presidio persons | **0.990** | **0.954** | **0.972** | 3 |
 | P16 | P15 + the notes_v8 missed formats (0013) | notes_v9 | slm:jev + PF + Presidio persons | 0.967 (direct 0.979) | **0.936** | **0.951** | 11 |
 | P17 | P16 + name mentions, kinship and bilingual cues, two fast paths (0014) | notes_v10 | slm:jev + PF + Presidio persons | 0.970 (direct 0.969) | **0.951** | **0.960** | 12 |
+| P18 | P17 + table columns, name columns, dictated numbers (0015) | notes_v11 | slm:jev + PF + Presidio persons | 0.973 (direct 0.972) | **0.938** | **0.955** | 10 |
 
 The shape-only rounds (P8 to P10) each failed on the next set, because each new writer brought
 shapes nobody had listed. P12 keeps the judge in charge but lets Privacy Filter and Presidio
@@ -273,6 +275,12 @@ P17 fixed those names and reached 0.975 on the 201 names of notes_v10, but faile
 formats that set brought instead: CSV exports and dictated numbers. In a CSV export the
 judge accepted row 1 and rejected the same columns further down, where the header is out
 of its context window.
+
+P18 read pasted tables by column and sent ID-shaped table cells to review in code, since the
+header alone did not change the judge's answer. On notes_v11, MRNs, phones and NRICs (including
+OCR-corrupted, spaced and masked ones) all reached 1.000. It failed by 3 direct spans on formats
+that set brought instead: surnames in HL7 `^`-split name fields, an OCR-corrupted DOB, and a DOB
+in a DOB column that the judge dropped.
 
 ### notes_v5 (blind for P12): 32 notes, 24,431 characters
 
@@ -595,6 +603,54 @@ matched after the run.
     school name, and one Chinese character.
   - Model, document and case numbers called IDs.
 
+### notes_v11 (blind for P18): 32 notes, 26,035 characters
+
+- **Gold:** 370 identifier spans (177 of them names), 28 SHI spans, 63 other dates, and 5 notes
+  with no PII.
+- **Writer:** a separate writer, whose brief asked for forms, pasted HL7/JSON/XML and
+  fixed-width reports, OCR'd letters, e-mail chains, SMS reminders, long tables and people
+  mentioned in many forms.
+- **Synthetic:** everything is invented and marked synthetic. The header lists the OCR-corrupted,
+  invalid, spaced and masked NRICs; only the header was read before the run.
+- **Frozen:** the P18 code and `models/calibration_p13.json` were frozen
+  (`results/notes_v11_blind_freeze.sha256`) before the run. The hashes still matched after it.
+
+| system | recall | covered | precision | F1 | FP (on negative notes) | silent misses | SHI recall | SHI precision |
+|---|---|---|---|---|---|---|---|---|
+| **slm:jev + PF + Presidio persons** | 0.973 | 0.965 | **0.938** | **0.955** | 24 (5) | 10 | 0.714 | 0.318 |
+| slm:jev alone | 0.911 | 0.889 | 0.947 | 0.928 | 19 (5) | 33 | 0.714 | 0.412 |
+| rules + Privacy Filter | 0.881 | 0.849 | 0.947 | 0.913 | 27 (3) | 44 | 0.000 | n/a |
+| Privacy Filter | 0.851 | 0.811 | 0.928 | 0.888 | 25 (3) | 55 | 0.000 | n/a |
+| rules + NER | 0.792 | 0.686 | 0.641 | 0.709 | 197 (34) | 77 | 0.000 | n/a |
+| MediPhi-3.8B | 0.351 | 0.341 | 0.828 | 0.493 | 43 (0) | 240 | 0.000 | n/a |
+| Qwen2.5-3B | 0.384 | 0.381 | 0.782 | 0.515 | 56 (16) | 228 | 0.000 | n/a |
+
+- **The gate fails on direct-identifier recall: 0.972** (316 of 325) against 0.98.
+  - `mrn`, `phone`, `national_id`, `email`, `postal_code` and `case_visit` reach 1.000; names
+    0.961 on 177; `dob` 0.846 on 13.
+  - Precision, ECE and F1 pass.
+- **HL7 messages.** In `PID`, `NK1` and `PV1` segments the surname before a `^` (`TAN^MEI LING`)
+  was never proposed, though the given names were found. A doctor code before the name in the
+  same field was also missed.
+- **OCR text.** A DOB written `l4.O2.l95l` was never proposed. The OCR-corrupted NRIC, name,
+  phone and postal code in the same letter were found.
+- **A DOB column.** In a tab-separated table, a DOB cell was judged `none` (p ≈ 1e-6) with
+  `Column: DOB` in the prefix.
+- **Names.** A first name alone with a possessive, a repeated nickname called SHI, and a
+  Chinese-script name after a role word and a space.
+- **Calibration passes: ECE 0.031** over 475 candidates. By kind of call:
+  - rule fast path 0.010 (55);
+  - identifier 0.029 (319);
+  - none 0.051 (43);
+  - SHI lexicon-proposed 0.089 (23);
+  - SHI other 0.025 (35).
+- **Latency:** 64.6 s per 1k chars (mean); per note p50 65.6 s, p95 126.2 s.
+- **24 false positives**; 5 are on the negative notes.
+  - Headings, organisations and places called names: `Harbour Mutual`, `INVESTIGATION BRANCH`,
+    `Medtronic`, `Life Insured`, `Belongings`, `Ward`, `Yours`, `MO Psych`; `Lift Lobby` called an
+    address.
+  - Message, batch, IRB and equipment numbers called IDs; a batch number called a postal code.
+
 ## Caveats
 
 - **Synthetic.** Every set is invented. notes_v1 was written by the author of the P2 generator,
@@ -604,8 +660,8 @@ matched after the run.
 - **Found on the benchmark.** A fix for an error found on a set must be checked on a new, unseen
   set, or the benchmark becomes a training set. P8 to P12 changed slm_jev in response to sd20 and
   notes_v1 to notes_v4, so those are dev sets now and their numbers are optimistic. Only each
-  round's blind run counts, and notes_v5 to notes_v10 are dev sets from here on.
-- **One writer per set.** Each blind set had one writer (an agent working from a brief). Ten
+  round's blind run counts, and notes_v5 to notes_v11 are dev sets from here on.
+- **One writer per set.** Each blind set had one writer (an agent working from a brief). Eleven
   sets of about 30 notes are still a narrow sample of how people write.
 - **Run variation.** The llama.cpp baselines vary by one to three spans from run to run.
 - **Different outputs.** slm:jev also outputs category, sensitivity and a review flag, which these
