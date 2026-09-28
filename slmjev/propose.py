@@ -41,16 +41,22 @@ from slmjev.judge import (
     IMAGE_FILE,
     MASKED_NRIC,
     NRIC_TAIL,
+    OCR_DATE,
     SOCIAL_LEAD,
     SPOKEN_DIGITS,
     Candidate,
     _cells,
+    hl7_people,
+    ocr_date,
     rule_certain,
     spoken_digits,
     table_column,
 )
 
 # --- dates ---------------------------------------------------------------------------------
+
+# a date with OCR look-alike letters for digits (``l4.O2.l95l``); ``ocr_date`` validates it
+_OCR_DATE = re.compile(rf"(?<![\w./-]){OCR_DATE}(?![\w./-])")
 
 _MON = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]{0,6}\.?"
 _NUM_END = r"(?![\d/\-]|\.\d)"  # a sentence's full stop may follow; another digit group may not
@@ -206,6 +212,11 @@ _HAN_AFTER_ROMAN = re.compile(rf"\b[A-Z][A-Za-z'\-]*[ \t]+([{_HAN_SURNAMES}][一
 # starts with a surname: TCM diagnoses and formulas follow colons too (``证: 肝郁脾虚``)
 _HAN_AFTER_COLON = re.compile(rf"[:：][ \t]*([{_HAN_SURNAMES}][一-鿿]{{1,3}})"
                               r"(?=[)）]|[ \t,;.]|$)", re.MULTILINE)
+# ... or after a role word and a space (``医师 李建国``, notes_v11), again from a surname
+_HAN_ROLES = ("主治医生|主治医师|医师|醫師|医生|醫生|护士|護士|主任|患者|病人|家属|家屬|联系人|"
+              "聯絡人|签名|簽名|经手人|药剂师|藥劑師|治疗师|治療師|姓名")
+_HAN_AFTER_ROLE = re.compile(rf"(?:{_HAN_ROLES})[ \t]*[:：]?[ \t]*([{_HAN_SURNAMES}][一-鿿]{{1,3}})"
+                             r"(?=[)）(（]|[ \t,;.，。]|$)", re.MULTILINE)
 # the next names of a list after a cued one (``sons Irfan and Hakim``, ``Irfan, Hakim``)
 _LIST_NEXT = re.compile(rf"(?:[ \t]*[,/&][ \t]*|[ \t]+and[ \t]+)({_WORD})(?![\w'])")
 # ``KOH WEI LIANG, DARREN`` / ``BAUTISTA, Maricel Dizon``: an upper-case surname, a comma, then
@@ -585,6 +596,9 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             add(s, e, "shape:plate")
     for s, e in _spans(_IMAGE_FILE, text):
         add(s, e, "shape:file", "photo")
+    for s, e in _spans(_OCR_DATE, text):
+        if ocr_date(text[s - 1:e]):
+            add(s, e, "shape:ocr_date", "date")
     for s, e in _spans(_SPOKEN_DIGITS, text):  # dictated numbers (``nine one seven ...``)
         if len(spoken_digits(text[s - 1:e]).lstrip("+")) >= 7:
             add(s, e, "shape:spoken_number", "phone")
@@ -636,7 +650,7 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
         if (t := _trim_name(text, s, e)) is not None:
             add(*t, "shape:name", "name")
     runs = [(p.start, p.end) for p in found.values() if "shape:name" in p.sources]
-    for rx in (_HAN_NAME, _HAN_AFTER_ROMAN, _HAN_AFTER_COLON):
+    for rx in (_HAN_NAME, _HAN_AFTER_ROMAN, _HAN_AFTER_COLON, _HAN_AFTER_ROLE):
         for s, e in _spans(rx, text, group=1):
             add(s, e, "shape:name", "name")
     for rx in (_AFTER_ROLE, _BEFORE_ROLE, _SIGNOFF, _POSSESSIVE, _QUOTED):
@@ -663,6 +677,8 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
         add(s, e, "shape:address", "address")
     for s, e in _name_cells(text):
         add(s, e, "shape:name_column", "name")
+    for s, e, ident in hl7_people(text):  # ``PID|...|TAN^MEI LING``: by HL7 field position
+        add(s, e, "shape:hl7", ident)
     for label, rx in _SHI_RX:
         for s, e in _spans(rx, text):
             add(s, e, f"lexicon:{label}", label)
@@ -692,7 +708,8 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
     # engine that found it may not be there the next time (a chat speaker's third message,
     # notes_v9). Not inside another name, and each mention is still judged on its own context.
     # Only words written like a name: not all lower case (``po ako``, ``thiazide``) and not a
-    # lone term of address (``Ah``).
+    # lone term of address (``Ah``). Single parts of a longer name are not repeated: on
+    # notes_v1-v11 that added 36 non-identifiers for 1 name.
     for word in {text[p.start - 1:p.end] for p in names}:
         if (_FRAGMENT.fullmatch(word) or all(_is_stop(w) for w in word.split())
                 or word == word.lower() != word.upper() or word.lower() in _KIN_WORDS):

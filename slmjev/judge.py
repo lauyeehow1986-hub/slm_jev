@@ -132,7 +132,7 @@ _DATE_SHAPES = [
 def family_of(match: str) -> str:
     """The option family for a span, from its surface shape only (never from a gold label)."""
     s = match.strip()
-    if any(p.match(s) for p in _DATE_SHAPES):
+    if any(p.match(s) for p in _DATE_SHAPES) or ocr_date(s):
         return "date"
     if re.fullmatch(r"\d{1,3}/\d{1,3}", s):
         return "fraction"
@@ -190,6 +190,71 @@ _DIGIT_WORD = {"zero": "0", "oh": "0", "one": "1", "two": "2", "three": "3", "fo
 _DW = r"(?:zero|oh|one|two|three|four|five|six|seven|eight|nine)"
 SPOKEN_DIGITS = (rf"(?i:(?:plus[ \t]+)?(?:(?:double|triple)[ \t]+)?{_DW}"
                  rf"(?:[ \t,-]+(?:(?:double|triple)[ \t]+)?{_DW}){{4,}})")
+
+
+# HL7 v2 fields that hold a person (notes_v11: surnames before ``^`` were never proposed). XPN:
+# family^given^middle^...; XCN: id^family^given^middle^... Keyed by (segment, field number).
+_HL7_XPN = {("PID", 5), ("PID", 6), ("PID", 9), ("NK1", 2), ("NK1", 30), ("GT1", 3),
+            ("IN1", 16), ("PRD", 2)}
+_HL7_XCN = {("PV1", 7), ("PV1", 8), ("PV1", 9), ("PV1", 17), ("PV1", 52), ("ORC", 10),
+            ("ORC", 11), ("ORC", 12), ("OBR", 16), ("OBR", 28), ("EVN", 5), ("PD1", 4),
+            ("TXA", 5), ("TXA", 9), ("TXA", 10), ("TXA", 11), ("TXA", 22), ("ROL", 4)}
+_HL7_SEGMENT = re.compile(r"(?m)^([A-Z][A-Z0-9]{2})\|")
+_HL7_NAME = re.compile(r"[A-Za-z][A-Za-z '’.-]*[A-Za-z.]|[A-Za-z]")
+_HL7_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9./-]*")
+
+
+def hl7_people(text: str) -> Iterable[tuple[int, int, str]]:
+    """``(start, end, identifier)`` (1-based, inclusive) for each person component of an HL7 v2
+    segment pasted into text: the family, given and middle names of a name field (``name``), and
+    the ID before them in a clinician field (``other_id``, when it has a digit)."""
+    for seg in _HL7_SEGMENT.finditer(text):
+        name, s0 = seg.group(1), seg.start()
+        e0 = text.find("\n", s0)
+        line = text[s0:len(text) if e0 < 0 else e0].rstrip("\r")
+        if name == "MSH":
+            continue
+        pos = 0
+        for num, fld in enumerate(line.split("|")):
+            kind = "xpn" if (name, num) in _HL7_XPN else "xcn" if (name, num) in _HL7_XCN else None
+            if kind:
+                rpos = pos
+                for rep in fld.split("~"):
+                    cpos = rpos
+                    for k, comp in enumerate(rep.split("^")):
+                        s, e = s0 + cpos, s0 + cpos + len(comp)
+                        if kind == "xcn" and k == 0:
+                            if _HL7_ID.fullmatch(comp) and re.search(r"\d", comp):
+                                yield s + 1, e, "other_id"
+                        elif (k < 3 if kind == "xpn" else 1 <= k <= 3) and \
+                                _HL7_NAME.fullmatch(comp):
+                            yield s + 1, e, "name"
+                        cpos += len(comp) + 1
+                    rpos += len(rep) + 1
+            pos += len(fld) + 1
+
+
+def hl7_component(text: str, start: int, end: int) -> str | None:
+    """The identifier of the HL7 person component the span is exactly, else None."""
+    if "|" not in text:
+        return None
+    return next((ident for s, e, ident in hl7_people(text) if (s, e) == (start, end)), None)
+
+
+# OCR look-alikes in a date (``l4.O2.l95l``, notes_v11): l/I for 1 and O/o for 0
+_OCR = str.maketrans("lIOo", "1100")
+OCR_DATE = r"[0-9lIOo]{1,2}[./-][0-9lIOo]{1,2}[./-](?:[0-9lIOo]{4}|[0-9lIOo]{2})"
+
+
+def ocr_date(s: str) -> str | None:
+    """``s`` with look-alike letters read as digits, when it is a date with at least one
+    look-alike and three real digits; else None."""
+    if not re.fullmatch(OCR_DATE, s) or not re.search(r"[lIOo]", s) or \
+            sum(c.isdigit() for c in s) < 3:
+        return None
+    d = s.translate(_OCR)
+    parts = [int(x) for x in re.split(r"[./-]", d)]
+    return d if 1 <= parts[0] <= 31 and 1 <= parts[1] <= 12 else None
 
 
 def spoken_digits(s: str) -> str:
@@ -258,7 +323,8 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     handle with a digit, ``_`` or ``.`` after a messaging keyword (``WeChat ID``); a 6-digit postal
     code right after ``Singapore``/``S(`` (or with that lead inside the span), or ending a street
     address with a valid sector; an ID-shaped token right after an ID keyword (``NRIC``,
-    ``temp IC``, ``MRN``, ...), a record reference right after ``Lab No`` / ``Reg. No.`` /
+    ``temp IC``, ``MRN``, ...), a person component of an HL7 name or clinician field (``TAN`` in
+    ``PID|...|TAN^MEI LING``), a record reference right after ``Lab No`` / ``Reg. No.`` /
     ``Accession`` / ``claim ref`` / ``policy`` (or a code with a letter after a bare ``sample``),
     an account number right after ``account`` / ``a/c``, or an NRIC/FIN tail after ``NRIC
     ending`` / ``IC last 4``.
@@ -266,6 +332,8 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     it only ever removes more."""
     m = text[cand.start - 1:cand.end].strip()
     left = text[max(0, cand.start - 1 - 80):cand.start - 1]
+    if hl7 := hl7_component(text, cand.start, cand.end):
+        return hl7, "hl7_person"
     if rules.nric_valid(m):
         return "national_id", "nric_checksum"
     if len(m) == 9 and re.fullmatch(MASKED_NRIC, m):
@@ -633,6 +701,18 @@ def prefix_for(text: str, cand: Candidate, width: int = 160, column: str | None 
 
 # A structured-cell column whose values are dates; a whole-cell date elsewhere is misplaced.
 _DATE_COLUMN = re.compile(r"date|dob|birth|death|died|_dt$|^dt_|time", re.IGNORECASE)
+# A column of birth or death dates: a date cell in it is that identifier (notes_v11: the judge
+# answered ``none``, p 1e-6, for a DOB cell with ``Column: DOB`` in its prefix).
+_DOB_COLUMN = re.compile(r"(?:^|[^a-z])(?:dob|d\.o\.b|birth|born)(?:[^a-z]|$)", re.IGNORECASE)
+_DOD_COLUMN = re.compile(r"(?:^|[^a-z])(?:dod|death|died|deceased)(?:[^a-z]|$)", re.IGNORECASE)
+
+
+def date_column_identifier(column: str) -> str | None:
+    """``dob`` or ``date_of_death`` for a column of birth or death dates, else None."""
+    col = re.sub(r"([a-z])([A-Z])", r"\1 \2", column)  # DateOfBirth
+    if _DOD_COLUMN.search(col):
+        return "date_of_death"
+    return "dob" if _DOB_COLUMN.search(col) else None
 # A word that introduces a date, right before the span ("Admitted on", "DOB:", "dated").
 _DATE_LEAD = re.compile(r"(?:\b(?:on|dated?|since|until|till|DOB|born|birth|death|died)|"
                         r"\bD\.O\.B\.?)\s*:?\s*$", re.IGNORECASE)
@@ -733,7 +813,14 @@ class Judge:
                      "sensitivity": None, "needs_review": True, "decision": "review",
                      "context": {}, "judge": {"family": family, "errors": []}}
         info = rec["judge"]
-        if self.fast_path and (sure := rule_certain(text, cand)):
+        # a table pasted into free text: the span's column header, and whether it is a whole cell
+        tcol, twhole = (None, False) if column else table_cell(text, cand.start, cand.end)
+        col, whole = (column, match.strip() == text.strip()) if column else (tcol, twhole)
+        sure = rule_certain(text, cand) if self.fast_path else None
+        if (self.fast_path and not sure and col and whole and family == "date"
+                and (ident := date_column_identifier(col))):
+            sure = ident, "date_column"
+        if sure:
             ident, reason = sure
             rec.update(identifier=ident, category=ident, category_probs={ident: 1.0},
                        type=cand.type or ident, p_identifier=RULE_CONFIDENCE,
@@ -743,8 +830,7 @@ class Judge:
             info.update(fast_path=reason, reasons=[])
             return rec
         # a span in a table pasted into free text is asked with its column header, as a cell is
-        tcol, twhole = (None, False) if column else table_cell(text, cand.start, cand.end)
-        prefix = prefix_for(text, cand, self.width, column or tcol)
+        prefix = prefix_for(text, cand, self.width, col)
         span = span_text(match)
         th = self.thresholds
         try:

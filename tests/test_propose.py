@@ -389,3 +389,23 @@ def test_contained():
     a, b = propose.Proposal(3, 10), propose.Proposal(5, 8)
     assert propose.contained(b, a) and not propose.contained(a, b)
     assert not propose.contained(a, propose.Proposal(3, 10))
+
+
+def test_hl7_person_components_are_proposed():
+    text = ("PID|1||KR1234567^^^KRGH^MR||LOW^HUI MIN^^^MS||19790301|F\n"
+            "PV1|1|I|W12^08^03^KRGH||||M55555A^NAIR^ARJUN^^^DR|||SUR\n")
+    got = spans(text, "shape:hl7")
+    assert got == ["LOW", "HUI MIN", "M55555A", "NAIR", "ARJUN"]
+    assert not {"KRGH", "MS", "DR", "SUR"} & set(got)
+
+
+def test_ocr_dates_are_proposed():
+    text = "DOB: l4.O2.l95l (scan). Ref v1.0.2 and lOO.2.l are no dates."
+    assert spans(text, "shape:ocr_date") == ["l4.O2.l95l"]
+
+
+def test_han_names_after_a_role_word_are_proposed():
+    text = "医师 李建国 (Li Jianguo)，护士：陈美华。证 肝郁脾虚"
+    got = spans(text, "shape:name")
+    assert {"李建国", "陈美华"} <= set(got)
+    assert "肝郁脾虚" not in got

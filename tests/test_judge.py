@@ -471,7 +471,9 @@ def test_an_id_shaped_table_cell_is_never_dropped():
 
 def test_cell_column_joins_the_prefix():
     fake = Fake(script({"dob": 0.9, "none": 0.05}))
-    r = J.Judge(fake).judge("2 Feb 1940", J.Candidate(1, 10), column="date_of\nbirth")
+    # (fast_path=False: a date in a birth-date column is otherwise accepted without the model)
+    r = J.Judge(fake, fast_path=False).judge("2 Feb 1940", J.Candidate(1, 10),
+                                             column="date_of\nbirth")
     assert {p for p, _ in fake.calls} == {"Column: date_of birth\nText:\n[[2 Feb 1940]]\n\n"}
     assert r["decision"] == "identifier"
     J.Judge(fake).judge("2 Feb 1940", J.Candidate(1, 10))
@@ -635,3 +637,70 @@ def test_llamaserver_unreachable_is_a_judge_error():
     b = J.LlamaServer("http://127.0.0.1:9", timeout=2)
     with pytest.raises(J.JudgeError):
         b.first_token("", "Q")
+
+
+# synthetic HL7 v2 segments pasted into a note
+HL7 = ("Interface dump:\nMSH|^~&|ADT|KRGH|||202609261015||ADT^A01|MSG0001|P|2.5\n"
+       "PID|1||KR1234567^^^KRGH^MR||LOW^HUI MIN^^^MS||19790301|F\n"
+       "NK1|1|CHUA^WEI JIE|SPO|||+6590000000\n"
+       "PV1|1|I|W12^08^03^KRGH||||M55555A^NAIR^ARJUN^^^DR|||SUR\n")
+
+
+def test_hl7_people_are_found_by_field_position():
+    got = [(HL7[s - 1:e], ident) for s, e, ident in J.hl7_people(HL7)]
+    assert got == [("LOW", "name"), ("HUI MIN", "name"), ("CHUA", "name"), ("WEI JIE", "name"),
+                   ("M55555A", "other_id"), ("NAIR", "name"), ("ARJUN", "name")]
+    i = HL7.index("LOW")
+    assert J.hl7_component(HL7, i + 1, i + 3) == "name"
+    i = HL7.index("KRGH")  # an assigning authority is no person component
+    assert J.hl7_component(HL7, i + 1, i + 4) is None
+    assert list(J.hl7_people("BP 120|80 noted\nPID is a term here")) == []
+
+
+def test_an_hl7_name_component_is_on_the_fast_path():
+    fake = Fake(script({"none": 0.99}))
+    i = HL7.index("CHUA")
+    r = J.Judge(fake).judge(HL7, J.Candidate(i + 1, i + 4))
+    assert r["decision"] == "identifier" and r["identifier"] == "name"
+    assert r["judge"]["fast_path"] == "hl7_person" and not fake.calls
+
+
+@pytest.mark.parametrize(("value", "want"), [
+    ("l4.O2.l95l", "14.02.1951"),
+    ("3l/12/2O2O", "31/12/2020"),
+    ("14.02.1951", None),  # no look-alike: an ordinary date
+    ("lO.lO.lO", None),  # too few real digits
+    ("4O.13.l999", None),  # no such day or month
+])
+def test_ocr_look_alikes_are_read_as_digits_in_a_date(value, want):
+    assert J.ocr_date(value) == want
+    if want:
+        assert J.family_of(value) == "date"
+
+
+@pytest.mark.parametrize(("column", "want"), [
+    ("DOB", "dob"), ("D.O.B.", "dob"), ("DateOfBirth", "dob"), ("date_of_birth", "dob"),
+    ("Date of death", "date_of_death"), ("DOD", "date_of_death"), ("died_on", "date_of_death"),
+    ("ApptDate", None), ("Date", None), ("doboz", None),
+])
+def test_date_column_identifier(column, want):
+    assert J.date_column_identifier(column) == want
+
+
+def test_a_date_in_a_dob_column_is_on_the_fast_path():
+    fake = Fake(script({"none": 0.99}))
+    r = J.Judge(fake).judge("2 Feb 1940", J.Candidate(1, 10), column="DOB")
+    assert r["decision"] == "identifier" and r["identifier"] == "dob"
+    assert r["judge"]["fast_path"] == "date_column" and not fake.calls
+    tsv = "Name\tDOB\tWard\nLOW HUI MIN\t27/11/2015\t12\n"
+    i = tsv.index("27/11")
+    r = J.Judge(fake).judge(tsv, J.Candidate(i + 1, i + 10))
+    assert r["identifier"] == "dob" and r["judge"]["fast_path"] == "date_column"
+    # an appointment date is still judged, and part of a cell is not a whole cell
+    assert J.Judge(fake).judge("2 Feb 1940", J.Candidate(1, 10),
+                               column="ApptDate")["decision"] == "not_identifier"
+    t = "seen 2 Feb 1940 today"
+    assert J.Judge(fake).judge(t, J.Candidate(6, 15), column="DOB")["decision"] != "identifier"
+    # fast_path=False asks the model
+    J.Judge(fake, fast_path=False).judge("2 Feb 1940", J.Candidate(1, 10), column="DOB")
+    assert fake.calls
