@@ -329,11 +329,11 @@ def test_a_name_found_once_is_proposed_at_every_mention():
 
 
 def test_only_name_like_words_are_repeated():
-    text = "buntis po ako. Ah Boy ok. may bleeding po ako; Ah said so"
-    got = _extra_spans(text, ("po ako", "person"), ("Ah", "name"))
-    assert got & {"po ako"} and text.count("po ako") == 2
+    text = "sakit ulo daw. Ah Boy ok. may bleeding, sakit ulo; Ah said so"
+    got = _extra_spans(text, ("sakit ulo", "person"), ("Ah", "name"))
+    assert got & {"sakit ulo"} and text.count("sakit ulo") == 2
     props = propose.propose(text, extra=[
-        Candidate(text.index("po ako") + 1, text.index("po ako") + 6, type="person",
+        Candidate(text.index("sakit ulo") + 1, text.index("sakit ulo") + 9, type="person",
                   detector="pf")])
     assert not any("shape:repeat" in p.sources for p in props)
 
@@ -409,3 +409,79 @@ def test_han_names_after_a_role_word_are_proposed():
     got = spans(text, "shape:name")
     assert {"李建国", "陈美华"} <= set(got)
     assert "肝郁脾虚" not in got
+
+
+# --- P20 (notes_v12): initials, other scripts, dictation, multilingual notes ------------------
+
+def _at(text, what):
+    """How many proposals are exactly ``what``."""
+    return sum(1 for p in propose.propose(text) if text[p.start - 1:p.end] == what)
+
+
+def test_initials_given_after_a_name_are_proposed_wherever_they_stand():
+    text = ("Present:\n - Dr Mona Teo Li-Ann (consultant) [MT]\n - wife Kamala [K]\n"
+            " - Ravi Kumar (M), bed 4\n"
+            "MT: explained the scan.\nK: asked about pain.\nMinutes taken by MT.\n"
+            "Vitamin K given.")
+    assert _at(text, "MT") == 3
+    assert _at(text, "K") == 2  # the legend and the speaker label, not ``Vitamin K``
+    assert _at(text, "M") == 0  # ``(M)`` is a sex, not initials
+
+
+def test_undotted_initials_after_a_check_word_are_proposed():
+    got = spans("Counselled 2/10. Checked: QLX/RTY. Verified: OK. Checked BP.", "shape:initials")
+    assert got == ["QLX", "RTY"]
+
+
+def test_initials_that_open_two_lines_are_speakers():
+    text = "JW: family agrees.\nHR: 88 bpm\nJW: will call back.\nPMH: asthma."
+    got = spans(text, "shape:initials")
+    assert got == ["JW", "JW"]
+
+
+def test_a_sign_column_holds_names():
+    text = ("| Time | HR | Sign |\n|---|---|---|\n| 08:00 | 90 | QLK |\n"
+            "| 10:00 | 92 | Aisha |\n")
+    got = spans(text, "shape:name_column")
+    assert got == ["QLK", "Aisha"]
+
+
+def test_foreign_function_words_and_kin_terms_are_no_engine_names():
+    text = ("Lola po ay nahulog sa banyo. Tumawag na po ako sa ambulansya. Amma and Appa came. "
+            "Jururawat: Siti. Minta nomor telefon. Mr ng said ok.")
+    got = _extra_spans(text, ("Lola", "name"), ("sa banyo", "name"),
+                       ("Tumawag na po ako sa", "name"), ("Amma", "name"), ("Appa", "name"),
+                       ("Jururawat", "name"), ("Minta nomor", "name"), ("ng", "name"))
+    assert not {"Lola", "sa banyo", "Tumawag na po ako sa", "Amma", "Appa", "Jururawat",
+                "Minta nomor"} & got
+    assert "Siti" in got  # after a Malay role word
+    assert "ng" in got  # after ``Mr``: a surname
+
+
+def test_names_in_other_scripts_are_proposed():
+    text = "நோயாளி: லட்சுமி (LAKSHMI D/O RAMAN), 70.\nமகள் ரேவதி (Revathi) உடன் வந்தார்."
+    got = set(spans(text, "shape:name"))
+    assert {"லட்சுமி", "ரேவதி", "Revathi"} <= got
+
+
+def test_accented_names_are_proposed():
+    got = spans("Bệnh nhân Nguyễn Thị Hoa; seen with Dr José Peña.", "shape:name")
+    assert {"Nguyễn Thị Hoa", "José Peña"} <= set(got)
+
+
+def test_a_reference_dictated_with_a_slash_is_proposed():
+    text = "ED case two six slash four four one two nine zero patient"
+    assert spans(text, "shape:spoken_number") == ["two six slash four four one two nine zero"]
+
+
+def test_lower_case_names_after_a_lower_case_honorific_are_proposed():
+    got = spans("this is doctor anand rao dictating. mister limb complains. doctor say rest.",
+                "shape:name")
+    assert {"anand", "anand rao", "limb"} <= set(got)
+    assert not [g for g in got if "dictating" in g or g.startswith("say")]
+
+
+def test_names_and_logins_in_key_value_exports():
+    text = "order.by=DR_GOH_WEI_MING; verified.by=kmtan; order.loc=Clinic_B"
+    assert spans(text, "shape:name") == ["GOH_WEI_MING"]
+    assert spans(text, "shape:handle") == ["kmtan"]

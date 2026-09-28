@@ -44,6 +44,7 @@ from slmjev.judge import (
     OCR_DATE,
     SOCIAL_LEAD,
     SPOKEN_DIGITS,
+    SPOKEN_REF,
     Candidate,
     _cells,
     hl7_people,
@@ -94,6 +95,7 @@ _PLATE = re.compile(r"\b[A-Z]{1,3} ?\d{1,4} ?[A-Z]\b")
 # A picture or scan file name (``IMG_20260923_1542.jpg``): it can point to a photograph.
 _IMAGE_FILE = re.compile(rf"(?<![\w.-]){IMAGE_FILE}(?![\w])")
 _SPOKEN_DIGITS = re.compile(rf"(?<![\w-]){SPOKEN_DIGITS}(?![\w-])")
+_SPOKEN_REF = re.compile(rf"(?<![\w-]){SPOKEN_REF}(?![\w-])")
 # A handle after a messaging or social-media keyword (``WeChat ID linzq_1992sg``).
 _HANDLE = re.compile(rf"{SOCIAL_LEAD}({HANDLE})(?![\w@])")
 # A URL without a scheme, with a path (``social.example.com/hafiz.jamal.1993``).
@@ -137,8 +139,13 @@ _AT_HANDLE = re.compile(r"(?<![\w.@])@[A-Za-z][A-Za-z0-9._]{1,30}[A-Za-z0-9_]")
 _HONORIFIC = r"(?:Mr|Mrs|Ms|Mdm|Madam|Miss|Dr|Prof|Mstr|Master)\.?"
 # Title case (``Tan``, ``D'Cruz``, ``Ah-Kow``, ``E-Lynn``), upper case (``TAN``, ``D'CRUZ``),
 # initials (``G.C.``) or the ``Md.`` / ``MD.`` short form of Mohammad
-_WORD = (r"(?:[A-Z]'?[A-Z]?[a-z]+(?:['\-][A-Z]?[a-z]+)*|[A-Z]-[A-Z](?:[a-z]+|[A-Z]+)"
-         r"|[A-Z]'?[A-Z]+(?:['\-][A-Z]+)*|[A-Z]\.(?:[A-Z]\.)+|M[Dd]\.)")
+# Letters may carry accents (``Nguyễn Thị Hoa``, ``José Peña``; Latin-1, Latin Extended-A, the
+# Vietnamese horned letters and Latin Extended Additional): those ranges mix cases, so they count
+# as both.
+_UP = "A-ZÀ-ÖØ-ÞĀ-ſƠƯẠ-ỹ"
+_LO = "a-zß-öø-ÿĀ-ſơưẠ-ỹ"
+_WORD = (rf"(?:[{_UP}]'?[{_UP}]?[{_LO}]+(?:['\-][{_UP}]?[{_LO}]+)*|[{_UP}]-[{_UP}]"
+         rf"(?:[{_LO}]+|[{_UP}]+)|[{_UP}]'?[{_UP}]+(?:['\-][{_UP}]+)*|[A-Z]\.(?:[A-Z]\.)+|M[Dd]\.)")
 _PARTICLE = r"(?:van|von|de|da|dos|del|la|le)"
 _CONNECTOR = rf"(?i:bin|binti|binte|bte|b\.|d/o|s/o|a/l|a/p|@|{_PARTICLE})"
 # The words of a name are joined by spaces or tabs, never a line break: a run across lines joins
@@ -162,7 +169,11 @@ _ROLES = (r"nurse|sn|sons?|daughters?|wife|husband|mother|father|brothers?|siste
           r"anak(?:[ \t]+(?:perempuan|lelaki|laki-laki))?|cucu|isteri|istri|suami|ibu|bapa|"
           r"ayah|abang|kakak|adik|menantu|sepupu|"
           # shorthand relations (``Husb (Khairul)``, ``dtr Alicia``, ``my bro Alvin``; notes_v10)
-          r"husb|hubby|bro|sis|dtr")
+          r"husb|hubby|bro|sis|dtr|"
+          # Malay and Indonesian terms of address and form labels, Tagalog relations
+          # (``Jururawat: Zarina``, ``Puan Rosnah``, ``Ibu Sari``, ``Pak Budi``; notes_v12)
+          r"encik|puan|cik|tuan|pak|bu|jururawat|perawat|penjaga|majikan|penerjemah|"
+          r"penterjemah|doktor|dokter|pesakit|pasien|bidan|asawa|kapatid|nars|pasyente")
 # Staff and form-field abbreviations that take a colon or hyphen before one name (``PT:
 # Rajeswari``, ``DSA: Salina``, ``Bed 2 - RAJOO``); case-sensitive, so ``pt`` in prose is no cue.
 _STAFF = r"PT|OT|ST|DSA|RN|SSN|SRN|EN|MO|HO|MSW|SW|APN|NC|CM"
@@ -194,6 +205,55 @@ _QUOTED = re.compile(rf"(?<!\w)[\"“]({_WORD}(?:[ \t]+{_WORD}){{0,2}}(?:[ \t]+[
 # (``-- PN/HO``)
 _INITIALS_LINE = re.compile(rf"^[ \t]*(?:>+|-{{1,2}})?[ \t]*([A-Z]{{2,3}})(?:/(?:{_STAFF}))?"
                             r"[ \t]*$", re.MULTILINE)
+# Undotted initials after a word saying who checked, signed or wrote (``Checked: CMX/TYS``,
+# ``Minutes taken by BT``; notes_v12); each part of a ``/`` pair is its own candidate
+_INITIALS_CUE = re.compile(
+    r"(?i:\b(?:signed|sgd|initials?|countersigned|checked|dispensed|verified|prepared|packed|"
+    r"witnessed|counted|scribe|minuted|(?:minutes|notes|taken|recorded|written)[ \t]+by)\b"
+    r"(?:[ \t]+by)?[ \t]*[:\-]?[ \t]*)"
+    r"([A-Z]{2,3}(?:[ \t]*/[ \t]*[A-Z]{2,3})*)(?!\w|\.\w)")
+# Initials opening a line as a speaker's label (``CY: Explained ...``), taken when the same
+# initials open two lines or more
+_SPEAKER = re.compile(r"^[ \t]*(?:[-*•][ \t]*)?([A-Z]{2,3})[ \t]*:[ \t]*(?=[A-Za-z])",
+                      re.MULTILINE)
+# Initials a record gives a person, in brackets after the name (``Dr Clara Yeo [CY]``, ``wife
+# Kamala [K]``, ``Benjamin Tan (BT)``; notes_v12). One letter only in square brackets: ``(M)``
+# is a sex. Only a role in brackets may stand between the name and its initials.
+_LEGEND = re.compile(r"\[([A-Z]{1,3})\]|\(([A-Z]{2,3})\)")
+_LEGEND_GAP = re.compile(r"[ \t]*(?:\([^()\n]{0,40}\)[ \t]*)?")
+# a person in a key=value export (``order.by=DR_NAIR_SUNIL``), and a login there
+# (``verified.by=lwchong``; notes_v12)
+_KV_NAME = re.compile(r"(?i:\b(?:by|name|doctor|dr|clinician|nurse|author|requester))[ \t]*="
+                      r"[ \t]*(?:DR_|Dr_)?([A-Za-z]+(?:_[A-Za-z]+){1,3})(?![\w])")
+_KV_LOGIN = re.compile(r"(?i:\b(?:by|user|userid|login|username))[ \t]*=[ \t]*"
+                       r"([a-z][a-z0-9.]{2,19}[a-z0-9])(?![\w.])")
+# A name written in lower case after a lower-case honorific, as dictation software and quick
+# phone notes write it (``mister lim ah beng``, ``doctor harpreet core``; notes_v12). Each run of
+# one to three words up to a stop word is proposed; the judge picks. Lower-case relation words
+# (``son marcus``) were tried on notes_v1-v12: 29 candidates for 1 name.
+_LOWER_AFTER_HONORIFIC = re.compile(
+    r"(?<![\w])(?:mr|mrs|ms|mdm|madam|dr|mister|missus|doctor|prof)\.?[ \t]+"
+    r"([a-z][a-z'’-]*(?:[ \t]+[a-z][a-z'’-]*){0,2})")
+# ... and a common verb or adverb ends the run: ``doctor`` is often a plain noun (``doctor say
+# hip fracture``, ``the GI doctor also wants``; notes_v4-v11)
+_LOWER_NOT_NAME_WORDS = """
+    say says said also write writes wrote will would can could should may might must did does
+    do is was are has have had want wants wanted ask asks asked tell tells told give gives gave
+    ok okay already just not never still then end come came go went see saw check checked
+    dictating dictated speaking here
+    """
+_LOWER_NOT_NAME = set(_LOWER_NOT_NAME_WORDS.split())
+# Names in Tamil, Devanagari, Bengali, Thai or Myanmar script: glossed in Latin letters in
+# brackets (``ரேவதி (Revathi)``), or after a relation word or a name label of that language
+# (``மகள் ரேவதி``, ``நோயாளி: லட்சுமி``; notes_v12)
+_SCRIPT = r"[\u0900-\u097F\u0980-\u09FF\u0B80-\u0BFF\u0E00-\u0E7F\u1000-\u109F]+"
+_SCRIPT_GLOSSED = re.compile(rf"({_SCRIPT})[ \t]*[(（]"
+                             rf"({_WORD}(?:[ \t]+(?:{_CONNECTOR}[ \t]+)?{_WORD}){{0,4}})[)）]")
+_SCRIPT_ROLES = ("நோயாளி|பெயர்|மகள்|மகன்|மனைவி|கணவர்|தாய்|தந்தை|"  # Tamil
+                 "नाम|मरीज़|मरीज|बेटा|बेटी|पत्नी|पति|"  # Hindi
+                 "নাম|রোগী|ছেলে|মেয়ে|স্ত্রী|স্বামী|"  # Bengali
+                 "ชื่อ|ผู้ป่วย|คุณ")  # Thai
+_SCRIPT_AFTER_ROLE = re.compile(rf"(?:{_SCRIPT_ROLES})[ \t]*[:：]?[ \t]*({_SCRIPT})")
 # a name in Chinese characters in brackets (``TAN Bee Hwa (陈美华)``) or after a name field
 _HAN_NAME = re.compile(r"(?:(?<=\()|(?<=（)|(?<=[Nn]ame:)[ \t]*|(?<=[Pp]atient:)[ \t]*|"
                        r"(?<=姓名[:：])[ \t]*)"
@@ -233,6 +293,7 @@ _ORG = """
     institute pte ltd llp inc corp company construction services trading enterprise enterprises
     holdings group grant fund scheme foundation society association ministry board council
     authority agency bank church mosque temple court station department dept office
+    crematorium columbarium parlour parlor branch
     """
 # ... and words that end a heading, a service or a document rather than a name (``Work Pass
 # Division``, ``STUDY ENROLMENT``, ``Speech and Language Therapy``, ``Varghese LLC``, P15)
@@ -247,7 +308,18 @@ _FRAGMENT = re.compile(r"[\W_]*(?:\d{1,3}|[A-Za-z])[\W_]*")
 # ``Ma`` is also a surname, so a span after an honorific (``Dr Ma``) is kept.
 _KIN_WORDS = {"ah", "ma", "mah", "pa", "mama", "papa", "mum", "mummy", "mom", "dad", "daddy",
               "gong", "kong", "po", "popo", "grandma", "grandpa", "granny", "nenek", "atuk",
-              "mak", "cik", "pak", "makcik", "pakcik"}
+              "mak", "cik", "pak", "makcik", "pakcik",
+              # Tamil, Hindi and Tagalog (``Amma``, ``Appa``, ``Lola``; notes_v12)
+              "amma", "appa", "thatha", "paati", "patti", "akka", "nani", "dadi", "lola", "lolo",
+              "nanay", "tatay", "inay", "itay", "kuya"}
+# Function words of Tagalog, Malay and Indonesian, as written in lower case. An engine's "name"
+# holding one is a phrase of the note (``siya pero``, ``minta nomor``, ``Tumawag na po ako sa``;
+# notes_v12). ``Ng`` and ``Ang`` are surnames: only the lower-case words count.
+_FOREIGN_FUNCTION = {"po", "sa", "ng", "na", "ako", "siya", "pero", "mga", "ay", "ko", "niya",
+                     "lang", "din", "rin", "naman", "kasi", "yung", "ang", "ito", "minta", "nomor",
+                     "dan", "yang", "di", "ke", "untuk", "dengan", "sudah", "saya", "dia", "tidak",
+                     "ada", "pada", "itu", "ini", "akan", "dari", "atau", "juga", "boleh", "tak",
+                     "nak", "lah", "kami", "kita", "mau", "belum", "lagi"}
 
 # Capitalised words that start sentences or name things other than people. A run is trimmed of
 # these at both ends; a run made only of them is not proposed. Common surnames that are also
@@ -290,6 +362,12 @@ _STOP_WORDS = """
     occupation hi hello hey morning afternoon evening good
     anak perempuan lelaki cucu isteri istri suami ibu bapa ayah abang kakak adik menantu sepupu
     husb hubby bro sis dtr
+    tarikh tanggal nama alamat umur jantina lahir telefon nombor nomor waris penjaga jururawat
+    perawat doktor dokter pesakit pasien majikan agensi agency paspor pasport penerjemah
+    penterjemah staf kontrol ulang lawatan seterusnya temujanji rujukan catatan tandatangan
+    klinik ubat obat bidan keluarga pekerja pangalan petsa tirahan edad nars pasyente tumawag
+    obituary cortege funeral wake crematorium columbarium beloved late condolences medifund
+    paramedic
     """
 _STOP = {w.lower() for w in _STOP_WORDS.split()}
 _FUNCTION = {"the", "of", "and", "or", "for", "to", "in", "on", "at", "by", "with", "from", "my",
@@ -448,6 +526,8 @@ def _trim_engine_name(text: str, s: int, e: int) -> tuple[int, int] | None:
     as the engine gave it, one word too: the engine found it."""
     words = [(m.start() + s, m.end() + s - 1, m.group(0))
              for m in re.finditer(r"[^\W_]+(?:['’\-.][^\W_]+)*", text[s - 1:e])]
+    if any(w[2] in _FOREIGN_FUNCTION for w in words) and not _after_cue(text, s):
+        return None
     org = [i for i, w in enumerate(words) if w[2].lower() in _ORG_WORDS]
     if org:
         words = words[org[-1] + 1:]
@@ -482,6 +562,13 @@ def _starts_org(text: str, e: int) -> bool:
     Bridge Law LLC``)."""
     m = _NEXT_WORDS.match(text, e)
     return bool(m) and any(w.lower().strip(".,") in _ORG_WORDS for w in m.group().split())
+
+
+def _initials_of(name: str, ini: str) -> bool:
+    """Whether ``ini`` are initials of words of ``name``, in order (``CY`` of ``Clara Yeo
+    Li-Ann``, ``BH`` of ``TAN Bee Hwa``)."""
+    heads = iter(w[0].upper() for w in re.findall(r"[^\W\d_]+", name))
+    return all(c in heads for c in ini)
 
 
 def _kin_only(text: str, p: Proposal) -> bool:
@@ -519,7 +606,14 @@ def _field_ids(text: str) -> Iterable[tuple[int, int]]:
 _NAME_HEADER_WORDS = {"name", "names", "patient", "pt", "staff", "user", "username", "clinician",
                       "doctor", "dr", "nurse", "author", "caller", "nok", "carer", "caregiver",
                       "informant", "witness", "officer", "member", "employee", "worker",
-                      "resident", "client", "attendee", "participant", "by"}
+                      "resident", "client", "attendee", "participant", "by",
+                      # who signed a row (``| Sign |`` over ``SLK``, notes_v12) or did the work
+                      # (theatre lists)
+                      "sign", "signature", "sig", "initials", "initial", "checked", "verified",
+                      "dispensed", "scribe", "rn", "surgeon", "anaesthetist", "anesthetist",
+                      "scrub", "circulating", "assistant", "pharmacist", "therapist",
+                      "midwife", "vaccinator", "consultant", "registrar", "parent", "guardian",
+                      "mother", "father", "spouse", "kin"}
 _NAME_CELL = re.compile(r"[A-Za-z][A-Za-z .,'’_/-]{0,58}[A-Za-z.]")
 
 
@@ -602,6 +696,9 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
     for s, e in _spans(_SPOKEN_DIGITS, text):  # dictated numbers (``nine one seven ...``)
         if len(spoken_digits(text[s - 1:e]).lstrip("+")) >= 7:
             add(s, e, "shape:spoken_number", "phone")
+    for s, e in _spans(_SPOKEN_REF, text):  # ``two six slash four four ...``
+        if len(spoken_digits(text[s - 1:e])) >= 5:
+            add(s, e, "shape:spoken_number")
     for s, e in _spans(_HANDLE, text, group=1):
         add(s, e, "shape:handle")
     for s, e in _spans(_URL_PATH, text):
@@ -614,7 +711,9 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
         # a reference a rule is sure of; or letter and digit segments joined by hyphens
         # (``OPD-PT-26-33091``, ``BIO-26-00918-A``): the whole code, where ``_IDLIKE`` finds
         # only its digit tail
-        # (``BIO-26-00918-A``); an upper-case prefix takes shorter codes (``FGS-0142``)
+        # (``BIO-26-00918-A``); an upper-case prefix takes shorter codes (``FGS-0142``). Three
+        # digits (``HF-017``) were tried on notes_v1-v12: 25 decoys (``VP-300``, ``IPC-WI-014``)
+        # for 6 subject codes.
         if rule_certain(text, Candidate(s, e)) or ("-" in tok and re.search(r"[A-Za-z]", tok) and (
                 digits >= 5 or (digits >= 3 and re.match(r"[A-Z]{2,5}-", tok)))):
             add(s, e, "shape:id")
@@ -633,6 +732,21 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
         add(s, e, "shape:name", "name")
     for s, e in _spans(_INITIALS_LINE, text, group=1):
         add(s, e, "shape:name", "name")
+    for m in _INITIALS_CUE.finditer(text):
+        for part in re.finditer(r"[A-Z]+", m.group(1)):
+            if not _is_stop(part.group()) and part.group() != "OK":
+                s = m.start(1) + part.start() + 1
+                add(s, s + len(part.group()) - 1, "shape:initials", "name")
+    speakers = [(m.group(1), m.start(1)) for m in _SPEAKER.finditer(text)
+                if not _is_stop(m.group(1)) and not re.fullmatch(_STAFF, m.group(1))]
+    for ini, s in speakers:
+        if sum(1 for i, _ in speakers if i == ini) >= 2:
+            add(s + 1, s + len(ini), "shape:initials", "name")
+    for s, e in _spans(_KV_NAME, text, group=1):
+        if not all(_is_stop(w) for w in text[s - 1:e].split("_")):
+            add(s, e, "shape:name", "name")
+    for s, e in _spans(_KV_LOGIN, text, group=1):
+        add(s, e, "shape:handle")
     for s, e in _spans(_MASKED_NRIC, text):
         if e - s + 1 == 9:
             add(s, e, "shape:id", "national_id")
@@ -650,9 +764,20 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
         if (t := _trim_name(text, s, e)) is not None:
             add(*t, "shape:name", "name")
     runs = [(p.start, p.end) for p in found.values() if "shape:name" in p.sources]
-    for rx in (_HAN_NAME, _HAN_AFTER_ROMAN, _HAN_AFTER_COLON, _HAN_AFTER_ROLE):
+    for rx in (_HAN_NAME, _HAN_AFTER_ROMAN, _HAN_AFTER_COLON, _HAN_AFTER_ROLE,
+               _SCRIPT_GLOSSED, _SCRIPT_AFTER_ROLE):
         for s, e in _spans(rx, text, group=1):
             add(s, e, "shape:name", "name")
+    for s, e in _spans(_SCRIPT_GLOSSED, text, group=2):  # the gloss: ``(Revathi)``
+        t = _trim_name(text, s, e) if " " in text[s - 1:e] else (s, e)
+        if t and not _is_stop(text[t[0] - 1:t[1]]):
+            add(*t, "shape:name", "name")
+    for m in _LOWER_AFTER_HONORIFIC.finditer(text):
+        words = list(re.finditer(r"\S+", m.group(1)))
+        for w in words:
+            if _is_stop(w.group()) or w.group() in _LOWER_NOT_NAME:
+                break
+            add(m.start(1) + 1, m.start(1) + w.end(), "shape:name", "name")
     for rx in (_AFTER_ROLE, _BEFORE_ROLE, _SIGNOFF, _POSSESSIVE, _QUOTED):
         for s, e in _spans(rx, text, group=1):
             # a cue before an organisation's name cues no person (``Yours faithfully,\nKallang
@@ -704,6 +829,23 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
              if (p.type or "").lower() in ("name", "person") and not _kin_only(text, p)]
     kin = {(p.start, p.end) for p in found.values()
            if (p.type or "").lower() in ("name", "person") and p not in names}
+    # Initials given to a person in brackets after the name (``Dr Clara Yeo [CY]``) name that
+    # person wherever else they stand: as a speaker (``CY: ...``), a minute-taker (``Minutes
+    # taken by BT``). One letter only as a speaker's label at the start of a line.
+    legend = set()
+    for m in _LEGEND.finditer(text):
+        g = 1 if m.group(1) else 2
+        ini = m.group(g)
+        if _is_stop(ini) or re.fullmatch(_STAFF, ini):
+            continue
+        if any(p.end <= m.start() and _LEGEND_GAP.fullmatch(text[p.end:m.start()])
+               and _initials_of(text[p.start - 1:p.end], ini) for p in names):
+            add(m.start(g) + 1, m.end(g), "shape:initials", "name")
+            legend.add(ini)
+    for ini in legend:
+        rx = rf"(?<![\w/])({ini})(?!\w)" if len(ini) > 1 else rf"(?m)^[ \t]*({ini})[ \t]*:"
+        for s, e in _spans(re.compile(rx), text, group=1):
+            add(s, e, "shape:initials", "name")
     # A name proposed once is proposed wherever else it is written the same way: the cue or the
     # engine that found it may not be there the next time (a chat speaker's third message,
     # notes_v9). Not inside another name, and each mention is still judged on its own context.

@@ -190,6 +190,10 @@ _DIGIT_WORD = {"zero": "0", "oh": "0", "one": "1", "two": "2", "three": "3", "fo
 _DW = r"(?:zero|oh|one|two|three|four|five|six|seven|eight|nine)"
 SPOKEN_DIGITS = (rf"(?i:(?:plus[ \t]+)?(?:(?:double|triple)[ \t]+)?{_DW}"
                  rf"(?:[ \t,-]+(?:(?:double|triple)[ \t]+)?{_DW}){{4,}})")
+# A reference dictated with a slash or a dash between its digit groups (``two six slash four
+# four one two nine zero``, notes_v12)
+SPOKEN_REF = (rf"(?i:{_DW}(?:[ \t]+{_DW})*[ \t]+(?:slash|dash|stroke|hyphen)[ \t]+{_DW}"
+              rf"(?:[ \t]+{_DW})*)")
 
 
 # HL7 v2 fields that hold a person (notes_v11: surnames before ``^`` were never proposed). XPN:
