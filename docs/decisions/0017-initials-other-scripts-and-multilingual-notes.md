@@ -1,6 +1,6 @@
 # 0017: Initials, other scripts, dictation and multilingual notes (P20)
 
-Date: 2026-09-28. Status: **accepted**. Blind on notes_v13: **PASS** (see *Blind (notes_v13)*).
+Date: 2026-09-28. Status: **accepted**. Blind on notes_v13: **PASS**; repeated on notes_v14: **FAIL** (see the last two sections).
 
 ## Context
 P19 (0016) failed the notes_v12 blind run on direct-identifier recall (0.907 against 0.98) and on
@@ -147,3 +147,62 @@ or an ECE 0.004 higher, would fail.
 notes_v13 is a dev set from here on. One set by one writer is a narrow sample, and P16–P19 each
 failed on the set after a fix, so this pass needs repeating on another unseen set before it is
 relied on.
+
+## Confirmation (notes_v14): FAIL
+The pass was repeated with the same frozen code on notes_v14 (the code hashes are identical to
+the notes_v13 freeze): 32 notes by another separate writer, 24,740 characters, 305 identifier gold
+(139 names, 270 direct), 29 SHI, 5 notes with no PII. The brief asked for OCR'd faxes with names
+split across lines, forwarded e-mail threads, audit-trail logs, medication tables, a text
+pedigree, sign-in registers, bilingual forms and a Malay and a Tamil letter. The header-only check
+also printed two note lines starting with `#` (wrapped unit numbers); nothing else was read before
+the run, and no code changed.
+
+| check | threshold | notes_v14 | |
+|---|---|---|---|
+| direct-identifier recall | ≥ 0.98 | 0.978 (264 of 270) | **fail**, by 1 span |
+| precision | ≥ 0.90 | 0.870 | **fail** |
+| ECE | ≤ 0.05 | 0.057 (406 candidates) | **fail** |
+| F1 against MediPhi's 0.889 | > 0.889 | 0.919 on notes_v14; sd20 (dev) 1.000 | pass |
+| p95 latency | recorded | 63.8 s per 1k chars (mean); per note p50 67.0 s, **p95 117.0 s** | recorded |
+
+**FAIL.** The notes_v13 pass did not repeat, so P20 is not a release candidate.
+
+- Recall 0.974, F1 0.919. `mrn`, `phone`, `email`, `dob`, `fax`, `postal_code`, `address`,
+  `case_visit`, `device`, `biometric` and `photo` reach 1.000; `name` 0.978 on 139;
+  `national_id` 0.966 on 29; `other_id` 0.933 on 30; `date_of_death` 0.5 on 4.
+- **6 direct misses:**
+  - two year-only dates of death in a text pedigree (`d. 1998`, `Mar 2011`), judged `none`;
+  - an NRIC spoken with its letters (`S six seven three two nine six nine D`), sent to review
+    under the wrong categories;
+  - the initials `KPL`, and the lone given names `Hamidah` and `Suresh`.
+- **Other misses:** two lower-case log-in names (`x_lowsm`, `lowjm`).
+- **Covered in part:** the names split across lines (`LIM CHOON` / `HOCK`), OCR-corrupted
+  digits (`#O7-334`, `9173 552O`), and inverted `SURNAME, Given` names.
+- **45 false positives** (1 on a negative note):
+  - **A Malay letter (11):** its words and a town, called names by the NER engine or Privacy
+    Filter (`Beliau`, `Saya`, `menjaga`, `yang merawat`, `Johor Bahru`, …). P20's function-word
+    list (which has `saya` and `yang`) filters only the proposer's own name runs, not the
+    feeders' spans.
+  - **A Tamil letter (4):** script fragments called names by Privacy Filter (`என்`, `மக`).
+  - **Institutional letterheads (12):** this writer leaves letterhead addresses, switchboard
+    numbers and company UENs unmarked, where notes_v13's writer labelled every phone number.
+    Without these, precision would be about 0.90, still at the gate's edge.
+  - **Headings and common words (12):** `RADIOLOGY REQUEST`, `VISITOR LOG`, `BORANG PENDAFTARAN`,
+    a log's column header, `Proband` twice, `Grandson`, `July`, `NRIC`.
+  - **Codes (6):** document, protocol and form numbers called IDs.
+- **Calibration by kind of call:**
+  - rule fast path 0.037 (43 candidates);
+  - identifier 0.053 (292);
+  - none 0.006 (32);
+  - SHI lexicon-proposed 0.034 (22);
+  - SHI other 0.316 (17).
+- **SHI:** recall 0.655, precision 0.553.
+- **Other systems:**
+
+  | system | recall | precision |
+  |---|---|---|
+  | slm:jev alone | 0.918 | 0.922 |
+  | Privacy Filter | 0.866 | 0.885 |
+  | MediPhi-3.8B | 0.311 | 0.404 |
+
+notes_v14 is a dev set from here on.

@@ -396,8 +396,11 @@ models/             GGUF / adapters / calibration.json (gitignored)
     (261 of 265; 260 needed), precision 0.917, ECE 0.047, F1 0.949; p95 108 s per note (68.6 s
     per 1k chars mean). Thin margins. 5 silent misses: initials `LTS`/`KH`, lower-case `jun` and
     `fatimah`, one code. slm:jev alone 0.922, PF 0.799, MediPhi 0.286 recall.
-  - notes_v1–v13 and sd20 are all dev sets now. Repeat the pass on another unseen set before
-    relying on it.
+  - **notes_v14 blind repeat: FAIL** (same frozen code): direct-identifier recall 0.978 (264 of
+    270; 265 needed), precision 0.870, ECE 0.057, F1 0.919; p95 117 s per note. Misses: pedigree
+    year-only dates of death, a spoken NRIC, initials, two lone given names, two log-ins. FPs:
+    Malay/Tamil letter words from the feeders, unmarked letterheads, headings, form numbers.
+  - notes_v1–v14 and sd20 are all dev sets now. P20 is not a release candidate.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.
