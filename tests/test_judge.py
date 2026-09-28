@@ -349,6 +349,12 @@ def test_property_model_question_is_opt_in_and_never_overrides_rules():
     ("wound photos IMG_4410.JPG and IMG_4411.JPG uploaded", "IMG_4410.JPG", "photo"),
     ("see wound_left-heel.2026.png", "wound_left-heel.2026.png", "photo"),
     ("unit W0412 26 118730 A transfused", "W0412 26 118730 A", "other_id"),
+    # notes_v10 misses: a dictated phone number, a spoken NRIC lead
+    ("use mobile nine one seven seven zero four two six or email",
+     "nine one seven seven zero four two six", "phone"),
+    ("office line six five double three one two eight zero",
+     "six five double three one two eight zero", "phone"),
+    ("verified with I C ending 447J he is calling", "447J", "national_id"),
 ])
 def test_rule_certain_spans_skip_the_model(t, sub, ident):
     fake = Fake(script({"none": 0.99}))
@@ -392,6 +398,8 @@ def test_rule_certain_spans_skip_the_model(t, sub, ident):
     ("NRIC S1234567D; bed ending 412D", "412D"),  # the tail is not right after the lead
     ("see discharge_summary.pdf attached", "discharge_summary.pdf"),  # not an image
     ("unit W0412 26 11873 A", "W0412 26 11873"),  # five digits: not a donation number
+    ("code one two three four five six seven", "one two three four five six seven"),  # 7 digits
+    ("ref two one two three four five six seven", "two one two three four five six seven"),
 ])
 def test_uncertain_shapes_still_go_to_the_model(t, sub):
     fake = Fake(script({"none": 0.99}))
@@ -403,6 +411,62 @@ def test_uncertain_shapes_still_go_to_the_model(t, sub):
 
 
 # --- structured cells ------------------------------------------------------------------------
+
+
+CSV = ("Appointments export (synthetic)\n"
+       "Clinic,ApptDate,PatientName,MRN,Mobile,Remarks\n"
+       'EYE-3,2026-09-29,"TAN, AH KOW",1210448871,91048826,"post-op, R eye"\n'
+       'EYE-3,2026-09-29,"LIM, BEE HWA",1209925310,83306712,"interpreter"\n')
+
+
+def _col(t, sub, nth=0):
+    i = -1
+    for _ in range(nth + 1):
+        i = t.index(sub, i + 1)
+    return J.table_column(t, i + 1, i + len(sub))
+
+
+def test_table_column_finds_the_header_of_a_pasted_table():
+    assert _col(CSV, "1209925310") == "MRN"
+    assert _col(CSV, "83306712") == "Mobile"
+    assert _col(CSV, "LIM, BEE HWA") == "PatientName"  # quotes protect the comma
+    assert _col(CSV, "interpreter") == "Remarks"
+    assert _col(CSV, "PatientName") is None  # the header row itself
+    assert _col(CSV, "export") is None  # not a table row
+    pipes = ("| No | Name | FIN |\n|---|---|---|\n| 1 | SAW KYAW MIN | G0561176N |\n"
+             "| 2 | MD RAKIB HASAN | M9756691N |\n")
+    assert _col(pipes, "M9756691N") == "FIN" and _col(pipes, "SAW KYAW MIN") == "Name"
+    tsv = "time\tuser\taction\n08:14\tONG_JIAHUI\tVIEW\n"
+    assert _col(tsv, "ONG_JIAHUI") == "user"
+
+
+@pytest.mark.parametrize("t", [
+    "Plan: IV fluids, antiemetics, review in AM\nFamily: wife, son 91234567, daughter\n",
+    "Seen with wife, son and daughter.\nBP 120/80, HR 88, SpO2 98%, T 37.1\n",
+])
+def test_prose_with_commas_is_not_a_table(t):
+    i = t.index("9") if "9123" in t else t.index("88")
+    assert J.table_column(t, i + 1, i + 2) is None
+
+
+def test_a_table_row_is_asked_with_its_column_header():
+    fake = Fake(script({"mrn": 0.9, "none": 0.05}))
+    i = CSV.index("1209925310")
+    J.Judge(fake, fast_path=False).judge(CSV, J.Candidate(i + 1, i + 10))
+    assert fake.calls and fake.calls[0][0].startswith("Column: MRN\nText:\n")
+
+
+def test_an_id_shaped_table_cell_is_never_dropped():
+    fake = Fake(script({"none": 0.99}))
+    judge = J.Judge(fake, fast_path=False)
+    i = CSV.index("1209925310")
+    rec = judge.judge(CSV, J.Candidate(i + 1, i + 10))
+    assert rec["decision"] == "review" and rec["judge"]["reasons"] == ["cell_id_shape"]
+    i = CSV.rindex("2026-09-29")  # a date in a date column may be dropped
+    assert judge.judge(CSV, J.Candidate(i + 1, i + 10))["decision"] == "not_identifier"
+    i = CSV.index("448871")  # part of a cell is not a whole cell
+    assert judge.judge(CSV, J.Candidate(i + 1, i + 6))["decision"] == "not_identifier"
+    assert J.table_cell(CSV, CSV.index("LIM") + 1, CSV.index("LIM") + 12) == ("PatientName", True)
 
 
 def test_cell_column_joins_the_prefix():

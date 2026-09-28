@@ -35,14 +35,19 @@ from dataclasses import dataclass, field
 from slmjev import rules
 from slmjev.judge import (
     _STREET_TYPES,
+    _TABLE_DELIMS,
     DONATION_NO,
     HANDLE,
     IMAGE_FILE,
     MASKED_NRIC,
     NRIC_TAIL,
     SOCIAL_LEAD,
+    SPOKEN_DIGITS,
     Candidate,
+    _cells,
     rule_certain,
+    spoken_digits,
+    table_column,
 )
 
 # --- dates ---------------------------------------------------------------------------------
@@ -82,6 +87,7 @@ _SLASH_DATE = re.compile(r"\d{1,4}/\d{1,2}/\d{1,4}")
 _PLATE = re.compile(r"\b[A-Z]{1,3} ?\d{1,4} ?[A-Z]\b")
 # A picture or scan file name (``IMG_20260923_1542.jpg``): it can point to a photograph.
 _IMAGE_FILE = re.compile(rf"(?<![\w.-]){IMAGE_FILE}(?![\w])")
+_SPOKEN_DIGITS = re.compile(rf"(?<![\w-]){SPOKEN_DIGITS}(?![\w-])")
 # A handle after a messaging or social-media keyword (``WeChat ID linzq_1992sg``).
 _HANDLE = re.compile(rf"{SOCIAL_LEAD}({HANDLE})(?![\w@])")
 # A URL without a scheme, with a path (``social.example.com/hafiz.jamal.1993``).
@@ -148,7 +154,9 @@ _ROLES = (r"nurse|sn|sons?|daughters?|wife|husband|mother|father|brothers?|siste
           r"witnessed(?:[ \t]+by)?|"
           # Malay and Indonesian relations (``anak perempuan Salmah``, ``cucu Irfan``, notes_v9)
           r"anak(?:[ \t]+(?:perempuan|lelaki|laki-laki))?|cucu|isteri|istri|suami|ibu|bapa|"
-          r"ayah|abang|kakak|adik|menantu|sepupu")
+          r"ayah|abang|kakak|adik|menantu|sepupu|"
+          # shorthand relations (``Husb (Khairul)``, ``dtr Alicia``, ``my bro Alvin``; notes_v10)
+          r"husb|hubby|bro|sis|dtr")
 # Staff and form-field abbreviations that take a colon or hyphen before one name (``PT:
 # Rajeswari``, ``DSA: Salina``, ``Bed 2 - RAJOO``); case-sensitive, so ``pt`` in prose is no cue.
 _STAFF = r"PT|OT|ST|DSA|RN|SSN|SRN|EN|MO|HO|MSW|SW|APN|NC|CM"
@@ -270,6 +278,7 @@ _STOP_WORDS = """
     clinical night mbbs frcpa mrcp frcs mmed phd adm resus recheck cbg care nationality
     occupation hi hello hey morning afternoon evening good
     anak perempuan lelaki cucu isteri istri suami ibu bapa ayah abang kakak adik menantu sepupu
+    husb hubby bro sis dtr
     """
 _STOP = {w.lower() for w in _STOP_WORDS.split()}
 _FUNCTION = {"the", "of", "and", "or", "for", "to", "in", "on", "at", "by", "with", "from", "my",
@@ -493,6 +502,40 @@ def _field_ids(text: str) -> Iterable[tuple[int, int]]:
             yield m.end() + 1, end
 
 
+# A table column whose header names people (``PatientName``, ``user_name``, ``Staff``), and a
+# cell under it written like a name: letters with spaces, dots, commas, hyphens, slashes or
+# underscores (``KOH, SOOK LING``, ``RAJENDRAN S/O MUNUSAMY``, ``ONG_JIAHUI``; notes_v10).
+_NAME_HEADER_WORDS = {"name", "names", "patient", "pt", "staff", "user", "username", "clinician",
+                      "doctor", "dr", "nurse", "author", "caller", "nok", "carer", "caregiver",
+                      "informant", "witness", "officer", "member", "employee", "worker",
+                      "resident", "client", "attendee", "participant", "by"}
+_NAME_CELL = re.compile(r"[A-Za-z][A-Za-z .,'’_/-]{0,58}[A-Za-z.]")
+
+
+def _name_cells(text: str) -> Iterable[tuple[int, int]]:
+    """1-based spans of the name-like cells of name columns in tables pasted into the text."""
+    for m in re.finditer(r"[^\n]+", text):
+        line, base = m.group(), m.start()
+        for delim in _TABLE_DELIMS:
+            cells = _cells(line, delim)
+            if len(cells) < 3:
+                continue
+            for a, b in cells:
+                raw = line[a:b]
+                val = raw.strip().strip('"').strip()
+                if not val or not _NAME_CELL.fullmatch(val):
+                    continue
+                if all(_is_stop(w) for w in re.split(r"[ _,./-]+", val) if w):
+                    continue
+                s = base + a + raw.index(val) + 1
+                e = s + len(val) - 1
+                head = table_column(text, s, e)
+                words = {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", head or "")}
+                if words & _NAME_HEADER_WORDS:
+                    yield s, e
+            break  # the first delimiter that splits the line is the table's, as in table_column
+
+
 def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             detectors: dict | None = None) -> list[Proposal]:
     """Candidate spans in ``text``, sorted by position; each interval once."""
@@ -542,6 +585,9 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             add(s, e, "shape:plate")
     for s, e in _spans(_IMAGE_FILE, text):
         add(s, e, "shape:file", "photo")
+    for s, e in _spans(_SPOKEN_DIGITS, text):  # dictated numbers (``nine one seven ...``)
+        if len(spoken_digits(text[s - 1:e]).lstrip("+")) >= 7:
+            add(s, e, "shape:spoken_number", "phone")
     for s, e in _spans(_HANDLE, text, group=1):
         add(s, e, "shape:handle")
     for s, e in _spans(_URL_PATH, text):
@@ -615,6 +661,8 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
                                              for _, (a, b) in addresses):
             continue
         add(s, e, "shape:address", "address")
+    for s, e in _name_cells(text):
+        add(s, e, "shape:name_column", "name")
     for label, rx in _SHI_RX:
         for s, e in _spans(rx, text):
             add(s, e, f"lexicon:{label}", label)

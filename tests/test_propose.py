@@ -338,6 +338,31 @@ def test_only_name_like_words_are_repeated():
     assert not any("shape:repeat" in p.sources for p in props)
 
 
+def test_name_columns_of_a_table_are_proposed():
+    text = ("time\tuser_name\taction\tward\n08:14\tONG_JIAHUI\tVIEW\tWard 64\n"
+            "08:20\tRAJ_KUMAR_N\tPRINT\tWard 64\n")
+    got = spans(text, "shape:name_column")
+    assert {"ONG_JIAHUI", "RAJ_KUMAR_N"} <= set(got)
+    assert not {"VIEW", "PRINT", "Ward 64"} & set(got)
+    csv = ('Clinic,ApptDate,PatientName,Status\nEYE-3,2026-09-29,"KOH, SOOK LING",Seen\n'
+           'EYE-3,2026-09-29,"DE SOUZA, Mark Anthony",No show\n')
+    got = spans(csv, "shape:name_column")
+    assert {"KOH, SOOK LING", "DE SOUZA, Mark Anthony"} <= set(got)
+    assert not {"Seen", "No show", "EYE-3"} & set(got)
+
+
+def test_shorthand_relations_cue_a_name():
+    text = "Husb (Khairul) will fetch her. Dtr Siti to call."
+    assert {"Khairul", "Siti"} <= set(spans(text, "shape:name"))
+    assert "Husb" not in {text[p.start - 1:p.end] for p in propose.propose(text)}
+
+
+def test_dictated_numbers_are_proposed():
+    text = "call back on nine one seven seven zero four two six, box two three"
+    got = spans(text, "shape:spoken_number")
+    assert got == ["nine one seven seven zero four two six"]
+
+
 def test_a_cue_before_an_organisation_cues_no_name():
     text = ("Yours faithfully,\nMarina Crest Law LLC\n"
             "Fell at work (Goh & Sons Plumbing Pte Ltd).\nRegards,\nWei Ling")

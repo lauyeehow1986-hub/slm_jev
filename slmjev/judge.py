@@ -14,10 +14,10 @@ inside a context window, and asks several typed questions over it:
 
 Rule-certain spans (a valid NRIC/FIN checksum, an email, a URL, a postal code after
 ``Singapore`` or a street address, an ID after an ID keyword) skip the model entirely
-(``rule_certain``). A structured cell's column header joins the prefix, and a whole cell that is
-ID-shaped, date-shaped outside a date column, or a date far from the rest of its column
-(``slmjev.column``) is never dropped (``cell_review``). A compact date after a date word or in a
-date column is asked as a date (``family_in_context``).
+(``rule_certain``). A structured cell's column header joins the prefix (for a table pasted into
+text too, ``table_cell``), and a whole cell that is ID-shaped, date-shaped outside a date column,
+or a date far from the rest of its column (``slmjev.column``) is never dropped (``cell_review``).
+A compact date after a date word or in a date column is asked as a date (``family_in_context``).
 Decisions compare the *calibrated* probability (``Judge.calibrator``, fitted in P4 by
 ``slmjev.calibrate``) with the thresholds.
 
@@ -179,10 +179,31 @@ DONATION_NO = r"[A-Z]\d{4} ?\d{2} ?\d{6}(?: [A-Z0-9](?![\w-]))?"
 # The tail of an NRIC/FIN given on its own (``NRIC ending 412D``, ``IC last 4: 567A``): the
 # lead, then the tail as group 1. Shared with the proposer. The acronyms are case-sensitive;
 # the gap before "ending" holds no digits or clause breaks (a full NRIC, "; bed").
-NRIC_TAIL = (r"\b(?:NRIC|IC|FIN)\b[^\n\d;,]{0,24}?\b(?i:ending(?:[ \t]+(?:in|with))?|"
+NRIC_TAIL = (r"\b(?:NRIC|IC|I/C|I C|FIN)\b[^\n\d;,]{0,24}?\b(?i:ending(?:[ \t]+(?:in|with))?|"
              r"ends?[ \t]+(?:in|with)|last[ \t]+(?:4|four|3|three)(?:[ \t]+(?:digits?|"
              r"char(?:acter)?s?))?)(?i:[ \t]+of)?[ \t]*[:\-]?[ \t]*([A-Z]?\d{3,4}[A-Z])(?!\w)")
 _NRIC_TAIL_RX = re.compile(NRIC_TAIL)
+# A number spelled out digit by digit, as dictation software writes it (``nine one seven seven
+# zero four two six``, notes_v10): 7 or more digit words, ``double``/``triple`` allowed.
+_DIGIT_WORD = {"zero": "0", "oh": "0", "one": "1", "two": "2", "three": "3", "four": "4",
+               "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9"}
+_DW = r"(?:zero|oh|one|two|three|four|five|six|seven|eight|nine)"
+SPOKEN_DIGITS = (rf"(?i:(?:plus[ \t]+)?(?:(?:double|triple)[ \t]+)?{_DW}"
+                 rf"(?:[ \t,-]+(?:(?:double|triple)[ \t]+)?{_DW}){{4,}})")
+
+
+def spoken_digits(s: str) -> str:
+    """The digits a spelled-out number stands for (``plus six five ...`` -> ``+65...``)."""
+    out, times = [], 1
+    for w in re.findall(r"[a-z]+", s.lower()):
+        if w == "plus":
+            out.append("+")
+        elif w in ("double", "triple"):
+            times = 2 if w == "double" else 3
+        elif w in _DIGIT_WORD:
+            out.append(_DIGIT_WORD[w] * times)
+            times = 1
+    return "".join(out)
 _POSTAL_LEAD = re.compile(r"(?:\bSingapore\s*|\bS\(?)$")
 # The same lead merged into the candidate: the proposer joins ``S276963`` or
 # ``Singapore 482263`` into one span, which the model dropped or called an address (0007).
@@ -232,8 +253,8 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
 
     Only shapes a rule can confirm qualify: a valid NRIC/FIN checksum or a masked NRIC/FIN
     (``G****262U``); a blood donation number (``W0417 26 318857 K``); a picture file name
-    (``IMG_4410.JPG``); a whole email or URL (with
-    a scheme, or without one but with a path); an accession-number shape (``HS26-018455``); a
+    (``IMG_4410.JPG``); a Singapore phone number spelled out in digit words; a whole email or URL
+    (with a scheme, or without one but with a path); an accession-number shape (``HS26-018455``); a
     handle with a digit, ``_`` or ``.`` after a messaging keyword (``WeChat ID``); a 6-digit postal
     code right after ``Singapore``/``S(`` (or with that lead inside the span), or ending a street
     address with a valid sector; an ID-shaped token right after an ID keyword (``NRIC``,
@@ -285,6 +306,8 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
         return "other_id", "donation_shape"
     if re.fullmatch(IMAGE_FILE, m):
         return "photo", "image_file"
+    if re.fullmatch(SPOKEN_DIGITS, m) and re.fullmatch(r"(?:\+65)?[3689]\d{7}", spoken_digits(m)):
+        return "phone", "spoken_phone"
     return None
 
 
@@ -532,6 +555,76 @@ def context_window(text: str, start: int, end: int, width: int = 160) -> str:
     return f"{lead}{clean(left)}[[{clean(text[s:e])}]]{clean(right)}{tail}"
 
 
+_TABLE_DELIMS = ("\t", "|", ",", ";")
+# A header cell: a short label, not a sentence (no colon or full stop), no long numbers.
+_HEADER_CELL = re.compile(r"[A-Za-z][\w /#()&'-]{0,29}")
+
+
+def _cells(line: str, delim: str) -> list[tuple[int, int]]:
+    """The ``(start, end)`` offsets of the cells of a delimited line; double quotes protect a
+    delimiter, except in a pipe table."""
+    out, s, quoted = [], 0, False
+    for i, ch in enumerate(line):
+        if ch == '"' and delim != "|":
+            quoted = not quoted
+        elif ch == delim and not quoted:
+            out.append((s, i))
+            s = i + 1
+    out.append((s, len(line)))
+    return out
+
+
+def _header_cells(line: str, cells: list[tuple[int, int]]) -> list[str] | None:
+    vals = [line[a:b].strip().strip('"').strip() for a, b in cells]
+    filled = [v for v in vals if v]
+    if len(filled) >= 3 and all(_HEADER_CELL.fullmatch(v) and not re.search(r"\d{3}", v)
+                                for v in filled):
+        return vals
+    return None
+
+
+def table_column(text: str, start: int, end: int, max_rows: int = 60) -> str | None:
+    """The header of the table column a span sits in, for a table pasted into free text (CSV,
+    tab- or pipe-separated): the span is inside one cell of a row with 3+ cells, and a header row
+    with the same number of cells is above it, through rows of that shape. None otherwise, and
+    for a span on the header row itself. In a pasted CSV export the judge accepted an MRN in row 1,
+    with the header in its window, and rejected the same column further down (notes_v10)."""
+    return table_cell(text, start, end, max_rows)[0]
+
+
+def table_cell(text: str, start: int, end: int, max_rows: int = 60) -> tuple[str | None, bool]:
+    """``(header, whole)``: :func:`table_column`'s header, and whether the span is the whole
+    (unquoted, stripped) value of its cell."""
+    s0 = text.rfind("\n", 0, start - 1) + 1
+    e0 = text.find("\n", end)
+    line = text[s0:len(text) if e0 < 0 else e0]
+    a, b = start - 1 - s0, end - s0
+    for delim in _TABLE_DELIMS:
+        cells = _cells(line, delim)
+        if len(cells) < 3:
+            continue
+        idx = next((k for k, (x, y) in enumerate(cells) if x <= a and b <= y), None)
+        if idx is None or _header_cells(line, cells):
+            return None, False
+        x, y = cells[idx]
+        whole = line[x:y].strip().strip('"').strip() == line[a:b].strip()
+        pos = s0
+        for _ in range(max_rows):
+            if pos == 0:
+                break
+            p0 = text.rfind("\n", 0, pos - 1) + 1
+            prev = text[p0:pos - 1]
+            pc = _cells(prev, delim)
+            if len(pc) != len(cells):
+                break
+            head = _header_cells(prev, pc)
+            if head:
+                return head[idx] or None, whole and bool(head[idx])
+            pos = p0
+        return None, False
+    return None, False
+
+
 def prefix_for(text: str, cand: Candidate, width: int = 160, column: str | None = None) -> str:
     """The shared prompt prefix; a structured cell's ``column`` header comes first."""
     head = f"Column: {' '.join(column.split())[:60]}\n" if column else ""
@@ -560,16 +653,21 @@ def family_in_context(text: str, cand: Candidate, column: str | None = None) -> 
 
 
 def cell_review(text: str, cand: Candidate, family: str, column: str | None,
-                column_outlier: bool = False) -> str | None:
+                column_outlier: bool = False, whole: bool | None = None) -> str | None:
     """A review reason for a whole structured cell the model may not drop, else None.
 
     A bare cell has no context but its header, and the model trusts the header: P4 saw case
     numbers in a ``ward`` column answered ``none`` with certainty. So a whole-cell value that is
     date-shaped (outside a date column) or ID-shaped (5+ digits), or that the caller found to be
     an outlier in its column (``slmjev.column.date_outliers``: a DOB typed into a procedure-date
-    column), is never dropped: where the judge would drop it, it goes to review instead."""
+    column), is never dropped: where the judge would drop it, it goes to review instead.
+    ``whole`` says the span is a whole cell of a table pasted into text (``table_cell``); by
+    default a span is whole when it is all of ``text``. With its header in the prefix, the judge
+    still dropped MRNs and mobile numbers in rows 2-4 of a pasted CSV export (notes_v10)."""
     m = text[cand.start - 1:cand.end].strip()
-    if not column or m != text.strip():
+    if whole is None:
+        whole = m == text.strip()
+    if not column or not whole:
         return None
     if column_outlier:
         return "column_outlier"
@@ -644,7 +742,9 @@ class Judge:
                 rec["context"] = address_context(text, cand, ident)
             info.update(fast_path=reason, reasons=[])
             return rec
-        prefix = prefix_for(text, cand, self.width, column)
+        # a span in a table pasted into free text is asked with its column header, as a cell is
+        tcol, twhole = (None, False) if column else table_cell(text, cand.start, cand.end)
+        prefix = prefix_for(text, cand, self.width, column or tcol)
         span = span_text(match)
         th = self.thresholds
         try:
@@ -715,8 +815,9 @@ class Judge:
 
         decision = decide(p_id if th.space == "raw" else conf, cat_p, th, reasons)
         # a context-free cell may be accepted, never dropped
-        if decision == "not_identifier" and (cell_reason := cell_review(
-                text, cand, family, column, column_outlier)):
+        if decision == "not_identifier" and (cell_reason := (
+                cell_review(text, cand, family, column, column_outlier) if column
+                else cell_review(text, cand, family, tcol, whole=twhole))):
             decision = "review"
             reasons.append(cell_reason)
         rec["decision"] = decision
