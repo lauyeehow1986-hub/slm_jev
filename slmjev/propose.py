@@ -34,19 +34,25 @@ from dataclasses import dataclass, field
 
 from slmjev import rules
 from slmjev.judge import (
+    _DEATH_LEAD,
+    _LOGIN_COLUMN,
     _STREET_TYPES,
     _TABLE_DELIMS,
+    DEATH_DATE,
     DONATION_NO,
     HANDLE,
     IMAGE_FILE,
+    LOGIN,
     MASKED_NRIC,
     NRIC_TAIL,
     OCR_DATE,
     SOCIAL_LEAD,
     SPOKEN_DIGITS,
+    SPOKEN_NRIC,
     SPOKEN_REF,
     Candidate,
     _cells,
+    fixed_width_column,
     hl7_people,
     ocr_date,
     rule_certain,
@@ -96,6 +102,11 @@ _PLATE = re.compile(r"\b[A-Z]{1,3} ?\d{1,4} ?[A-Z]\b")
 _IMAGE_FILE = re.compile(rf"(?<![\w.-]){IMAGE_FILE}(?![\w])")
 _SPOKEN_DIGITS = re.compile(rf"(?<![\w-]){SPOKEN_DIGITS}(?![\w-])")
 _SPOKEN_REF = re.compile(rf"(?<![\w-]){SPOKEN_REF}(?![\w-])")
+_SPOKEN_NRIC = re.compile(rf"(?<![\w-]){SPOKEN_NRIC}(?![\w-])")
+# a date after a word saying someone died, a year alone too (``d. 1998``; notes_v14)
+_DEATH_DATE = re.compile(rf"(?<![\w/.-]){DEATH_DATE}(?![\w/-]|\.\d)")
+# a log-in name alone in a cell of a fixed-width table (see ``fixed_width_column``)
+_LOGIN_CELL = re.compile(rf"(?:^|(?<=  ))({LOGIN})(?=  |[ \t]*$)", re.MULTILINE)
 # A handle after a messaging or social-media keyword (``WeChat ID linzq_1992sg``).
 _HANDLE = re.compile(rf"{SOCIAL_LEAD}({HANDLE})(?![\w@])")
 # A URL without a scheme, with a path (``social.example.com/hafiz.jamal.1993``).
@@ -150,7 +161,10 @@ _PARTICLE = r"(?:van|von|de|da|dos|del|la|le)"
 _CONNECTOR = rf"(?i:bin|binti|binte|bte|b\.|d/o|s/o|a/l|a/p|@|{_PARTICLE})"
 # The words of a name are joined by spaces or tabs, never a line break: a run across lines joins
 # a heading to the next line (``LABORATORY REPORT\nPatient Name``, P7).
-_NAME_RUN = re.compile(rf"(?<![\w']){_WORD}(?:(?:[ \t]+{_CONNECTOR})?[ \t]+{_WORD}){{1,5}}"
+# Words of a run are one or two spaces (or a tab) apart: a wider gap is a fixed-width table's
+# column gap (``TIMESTAMP            USER-ID    USER NAME``, notes_v14).
+_GAP = r"(?: {1,2}|\t)"
+_NAME_RUN = re.compile(rf"(?<![\w']){_WORD}(?:(?:{_GAP}{_CONNECTOR})?{_GAP}{_WORD}){{1,5}}"
                        rf"(?![\w'])")
 # ``de Souza``: a lower-case surname particle and one capitalised word
 _PARTICLE_NAME = re.compile(rf"(?<![\w']){_PARTICLE}[ \t]+{_WORD}(?![\w'])")
@@ -209,7 +223,9 @@ _INITIALS_LINE = re.compile(rf"^[ \t]*(?:>+|-{{1,2}})?[ \t]*([A-Z]{{2,3}})(?:/(?
 # ``Minutes taken by BT``; notes_v12); each part of a ``/`` pair is its own candidate
 _INITIALS_CUE = re.compile(
     r"(?i:\b(?:signed|sgd|initials?|countersigned|checked|dispensed|verified|prepared|packed|"
-    r"witnessed|counted|scribe|minuted|(?:minutes|notes|taken|recorded|written)[ \t]+by)\b"
+    r"witnessed|counted|scribe|minuted|(?:minutes|notes|taken|recorded|written)[ \t]+by|"
+    # a list's status before a patient's initials (``5. Withdrawn: KPL``; notes_v14)
+    r"withdrawn|deferred|postponed)\b"
     r"(?:[ \t]+by)?[ \t]*[:\-]?[ \t]*)"
     r"([A-Z]{2,3}(?:[ \t]*/[ \t]*[A-Z]{2,3})*)(?!\w|\.\w)")
 # Initials opening a line as a speaker's label (``CY: Explained ...``), taken when the same
@@ -254,6 +270,19 @@ _SCRIPT_ROLES = ("நோயாளி|பெயர்|மகள்|மகன்|�
                  "নাম|রোগী|ছেলে|মেয়ে|স্ত্রী|স্বামী|"  # Bengali
                  "ชื่อ|ผู้ป่วย|คุณ")  # Thai
 _SCRIPT_AFTER_ROLE = re.compile(rf"(?:{_SCRIPT_ROLES})[ \t]*[:：]?[ \t]*({_SCRIPT})")
+# ... or in brackets after a name in Latin letters (``SOMCHAI KAEWKLA (สมชาย แก้วกล้า)``;
+# notes_v13)
+_SCRIPT_BRACKETED = re.compile(rf"[A-Za-z][ \t]*[(（]({_SCRIPT}(?:[ \t]+{_SCRIPT}){{0,3}})[)）]")
+# ... or a name in Latin letters after such a word (``மகன் Suresh``, notes_v14)
+_LATIN_AFTER_SCRIPT_ROLE = re.compile(rf"(?:{_SCRIPT_ROLES})[ \t]*[:：]?[ \t]*"
+                                      rf"({_WORD}(?:[ \t]+(?:{_CONNECTOR}[ \t]+)?{_WORD}){{0,3}})"
+                                      r"(?![\w'])")
+# One word signing a line with the signer's department after a comma (``Hamidah, Medical
+# Records.``; notes_v14)
+_SIGN_DEPT = re.compile(rf"^[ \t]*(?:[-–—][ \t]*)?({_WORD}),[ \t]*(?:[A-Z][a-z]+[ \t]+){{0,3}}"
+                        r"(?:Records|Affairs|Office|Department|Dept|Unit|Services|Team|Section|"
+                        r"Registry|Pharmacy|Admissions|Billing|Finance|Counter)\b",
+                        re.MULTILINE)
 # a name in Chinese characters in brackets (``TAN Bee Hwa (陈美华)``) or after a name field
 _HAN_NAME = re.compile(r"(?:(?<=\()|(?<=（)|(?<=[Nn]ame:)[ \t]*|(?<=[Pp]atient:)[ \t]*|"
                        r"(?<=姓名[:：])[ \t]*)"
@@ -301,6 +330,7 @@ _HEADING = """
     division committee courts llc logistics engineering transport ambulance service
     therapy pathology enrolment enrollment transfer consultation notice guidelines statement
     message appointments inpatients outpatients outpatient holder shield room day gh sheet scale
+    request log register borang pendaftaran mdt
     """
 _ORG_WORDS = set(_ORG.split()) | set(_HEADING.split())
 _FRAGMENT = re.compile(r"[\W_]*(?:\d{1,3}|[A-Za-z])[\W_]*")
@@ -368,6 +398,8 @@ _STOP_WORDS = """
     klinik ubat obat bidan keluarga pekerja pangalan petsa tirahan edad nars pasyente tumawag
     obituary cortege funeral wake crematorium columbarium beloved late condolences medifund
     paramedic
+    beliau saya kepada encik puan tuan proband grandson granddaughter grandchild nephew niece
+    july timestamp user role action
     """
 _STOP = {w.lower() for w in _STOP_WORDS.split()}
 _FUNCTION = {"the", "of", "and", "or", "for", "to", "in", "on", "at", "by", "with", "from", "my",
@@ -421,7 +453,9 @@ _SHI_TERMS = {
     "hiv_sti": ["hiv-1", "hiv-2", "hiv", "aids", "human immunodeficiency virus", "syphilis",
                 "gonorrhoea", "gonorrhea", "chlamydia", "genital herpes", "herpes simplex",
                 "genital warts", "trichomonas", "trichomoniasis", "hepatitis b", "hepatitis c",
-                "hpv", "sexually transmitted", "std", "sti", "prep", "antiretroviral"],
+                "hpv", "sexually transmitted", "std", "sti", "prep", "antiretroviral",
+                # syphilis serology (notes_v14)
+                "vdrl", "rpr", "tpha"],
     "mental_health": ["depression", "depressive", "schizophrenia", "schizoaffective", "bipolar",
                       "psychosis", "psychotic", "anxiety", "panic disorder", "ptsd",
                       "post-traumatic stress", "ocd", "obsessive-compulsive", "suicide",
@@ -462,6 +496,13 @@ _SHI_RX = [
         rf"(?:{'|'.join(re.escape(t) for t in sorted(terms, key=len, reverse=True))})"
         rf"(?:[\s-]+(?:{_SHI_HEADS}))*(?![\w-])", re.IGNORECASE))
     for label, terms in _SHI_TERMS.items()
+] + [
+    # a disclosed assault by a relative or partner: ``husband hit her``, ``son kicked him``
+    ("other_sensitive", re.compile(
+        r"\b(?:(?:ex-?)?(?:husband|wife|partner|boyfriend|girlfriend)|(?:step)?(?:father|mother)"
+        r"|son|daughter|brother|sister|(?:son|daughter)-in-law|employer)[ \t]+"
+        r"(?:hit|hits|slapped|slaps|punched|punches|kicked|kicks|beat|beats|choked|chokes"
+        r"|strangled|shoved|pushed)[ \t]+(?:her|him|me|them)\b", re.IGNORECASE)),
 ]
 
 
@@ -527,6 +568,14 @@ def _trim_engine_name(text: str, s: int, e: int) -> tuple[int, int] | None:
     words = [(m.start() + s, m.end() + s - 1, m.group(0))
              for m in re.finditer(r"[^\W_]+(?:['’\-.][^\W_]+)*", text[s - 1:e])]
     if any(w[2] in _FOREIGN_FUNCTION for w in words) and not _after_cue(text, s):
+        return None
+    # ... and two words or more starting with one are a phrase even after a cue (``Doktor yang
+    # merawat``, ``Ayah saya tinggal``; notes_v14); ``Mr ng`` alone is a surname
+    if len(words) > 1 and words[0][2] in _FOREIGN_FUNCTION:
+        return None
+    # a name written only in Tamil, Devanagari, Bengali, Thai or Myanmar script is proposed by the
+    # script shapes above; an engine's is a word or a piece of one (``என்``, ``மக``; notes_v13-v14)
+    if not re.search(r"[A-Za-z]", text[s - 1:e]) and re.search(_SCRIPT, text[s - 1:e]):
         return None
     org = [i for i, w in enumerate(words) if w[2].lower() in _ORG_WORDS]
     if org:
@@ -699,6 +748,14 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
     for s, e in _spans(_SPOKEN_REF, text):  # ``two six slash four four ...``
         if len(spoken_digits(text[s - 1:e])) >= 5:
             add(s, e, "shape:spoken_number")
+    for s, e in _spans(_SPOKEN_NRIC, text):  # ``S six seven three ... D``
+        add(s, e, "shape:spoken_number", "national_id")
+    for s, e in _spans(_DEATH_DATE, text):
+        if _DEATH_LEAD.search(text[max(0, s - 1 - 32):s - 1]):
+            add(s, e, "shape:date", "date")
+    for s, e in _spans(_LOGIN_CELL, text, group=1):
+        if _LOGIN_COLUMN.search(fixed_width_column(text, s) or ""):
+            add(s, e, "shape:handle")
     for s, e in _spans(_HANDLE, text, group=1):
         add(s, e, "shape:handle")
     for s, e in _spans(_URL_PATH, text):
@@ -765,7 +822,7 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             add(*t, "shape:name", "name")
     runs = [(p.start, p.end) for p in found.values() if "shape:name" in p.sources]
     for rx in (_HAN_NAME, _HAN_AFTER_ROMAN, _HAN_AFTER_COLON, _HAN_AFTER_ROLE,
-               _SCRIPT_GLOSSED, _SCRIPT_AFTER_ROLE):
+               _SCRIPT_GLOSSED, _SCRIPT_AFTER_ROLE, _SCRIPT_BRACKETED):
         for s, e in _spans(rx, text, group=1):
             add(s, e, "shape:name", "name")
     for s, e in _spans(_SCRIPT_GLOSSED, text, group=2):  # the gloss: ``(Revathi)``
@@ -778,7 +835,8 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             if _is_stop(w.group()) or w.group() in _LOWER_NOT_NAME:
                 break
             add(m.start(1) + 1, m.start(1) + w.end(), "shape:name", "name")
-    for rx in (_AFTER_ROLE, _BEFORE_ROLE, _SIGNOFF, _POSSESSIVE, _QUOTED):
+    for rx in (_AFTER_ROLE, _BEFORE_ROLE, _SIGNOFF, _POSSESSIVE, _QUOTED, _SIGN_DEPT,
+               _LATIN_AFTER_SCRIPT_ROLE):
         for s, e in _spans(rx, text, group=1):
             # a cue before an organisation's name cues no person (``Yours faithfully,\nKallang
             # Bridge Law LLC``: the run itself is no name, see ``_trim_name``)
@@ -815,6 +873,11 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             # an engine's lone fragment that no rule or shape proposed: 1-3 digits or one letter
             # (``10``, ``041``, ``T``, ``S$``). Short names (``Ros``, ``Ng``) are no fragments,
             # nor is a piece next to another engine span (``Room [04]-[12, S637118]``)
+            continue
+        words = re.findall(r"[^\W\d_]+", text[s - 1:e])
+        if (c.type and words and not re.search(r"\d", text[s - 1:e])
+                and all(_is_stop(w) for w in words) and (s, e) not in found):
+            # an engine's span of stop words only, of any type (``NRIC`` called an account)
             continue
         if (c.type or "").lower() in ("name", "person"):
             # an engine's "name" gets the same trimming as the name shapes above: what ends at

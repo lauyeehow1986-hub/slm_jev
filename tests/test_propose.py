@@ -485,3 +485,40 @@ def test_names_and_logins_in_key_value_exports():
     text = "order.by=DR_GOH_WEI_MING; verified.by=kmtan; order.loc=Clinic_B"
     assert spans(text, "shape:name") == ["GOH_WEI_MING"]
     assert spans(text, "shape:handle") == ["kmtan"]
+
+
+def test_notes_v14_shapes_are_proposed():
+    text = ("Pedigree: I-1 grandfather, d. 1998 aged 70; II-2 uncle, d. Apr 2012.\n"
+            "Voicemail: my IC is S one two three four five six seven D, call back.\n"
+            "5. Withdrawn: KLT - relist.\n"
+            "மகன் Ravi சென்னையில்.\n"
+            "Name TAN AH KOW (สมชาย ใจดี)\n"
+            "Mariam, Medical Records.")
+    got = set(spans(text))
+    assert {"1998", "Apr 2012", "S one two three four five six seven D", "KLT", "Ravi",
+            "สมชาย ใจดี", "Mariam"} <= got
+
+
+def test_a_disclosed_assault_is_proposed_as_sensitive():
+    text = "MSW: disclosed husband hit her in July. Ball hit him on the knee."
+    assert set(spans(text, "lexicon:other_sensitive")) == {"husband hit her"}
+
+
+def test_logins_in_a_fixed_width_table_are_proposed():
+    text = ("TIMESTAMP            USER-ID    USER NAME     ROLE\n"
+            "2026-01-02 08:00:00  x_tanab    TAN AH BENG   RN\n"
+            "2026-01-02 09:00:00  limcs      LIM CHOO SENG MO\n")
+    got = set(spans(text, "shape:handle"))
+    assert {"x_tanab", "limcs"} <= got
+    # a column gap is no gap between the words of a name
+    assert not any("USER" in s or "TIMESTAMP" in s for s in spans(text, "shape:name"))
+
+
+def test_multilingual_and_heading_engine_spans_are_skipped():
+    text = ("Kepada Doktor yang merawat, Ayah saya tinggal seorang. Beliau sakit. "
+            "அவர் என் மகன். RADIOLOGY REQUEST form. NRIC seen. Proband is well.")
+    got = _extra_spans(text, ("yang merawat", "name"), ("saya tinggal", "name"),
+                       ("Beliau", "name"), ("என்", "name"), ("NRIC", "account"),
+                       ("Proband", "name"))
+    assert not {"yang merawat", "saya tinggal", "Beliau", "என்", "NRIC", "Proband"} & got
+    assert "RADIOLOGY REQUEST" not in spans(text, "shape:name")

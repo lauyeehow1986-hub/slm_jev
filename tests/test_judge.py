@@ -704,3 +704,27 @@ def test_a_date_in_a_dob_column_is_on_the_fast_path():
     # fast_path=False asks the model
     J.Judge(fake, fast_path=False).judge("2 Feb 1940", J.Candidate(1, 10), column="DOB")
     assert fake.calls
+
+
+@pytest.mark.parametrize("text, span, want", [
+    ("my IC is S one two three four five six seven D, call",
+     "S one two three four five six seven D", ("national_id", "spoken_nric")),
+    ("grandfather, d. 1998 aged 70", "1998", ("date_of_death", "death_keyword")),
+    ("he died on 3 Mar 2020 at home", "3 Mar 2020", ("date_of_death", "death_keyword")),
+    ("ORDER    ENTERED   BY        ITEM\n7718230  22/09     lowjm     CT abdomen", "lowjm",
+     ("other_id", "login_column")),
+])
+def test_notes_v14_fast_paths(text, span, want):
+    s = text.index(span) + 1
+    assert J.rule_certain(text, J.Candidate(s, s + len(span) - 1)) == want
+
+
+@pytest.mark.parametrize("text, span", [
+    ("my IC is S one two three four five six seven A, call",
+     "S one two three four five six seven A"),
+    ("guideline issued 1998, revised", "1998"),
+    ("ORDER    ENTERED   ITEM      STATUS\n7718230  22/09     lowjm     done", "lowjm"),
+])
+def test_notes_v14_fast_paths_need_their_cue(text, span):
+    s = text.index(span) + 1
+    assert J.rule_certain(text, J.Candidate(s, s + len(span) - 1)) is None

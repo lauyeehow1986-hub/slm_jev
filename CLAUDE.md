@@ -401,6 +401,20 @@ models/             GGUF / adapters / calibration.json (gitignored)
     year-only dates of death, a spoken NRIC, initials, two lone given names, two log-ins. FPs:
     Malay/Tamil letter words from the feeders, unmarked letterheads, headings, form numbers.
   - notes_v1–v14 and sd20 are all dev sets now. P20 is not a release candidate.
+- [x] P21 (0018, 2026-09-29): the notes_v14 misses. Fast paths in `rule_certain` for spoken
+  NRICs (checksum), a date or year right after a death word, and a lower-case log-in in a
+  fixed-width `USER`/`BY` column. `slmjev/propose.py` also proposes script names in brackets,
+  Latin names after other-script relation words, department sign-offs, initials after
+  withdrawn/deferred, syphilis tests and disclosed assaults. Name runs stop at column gaps; feeder
+  spans made only of stop words are dropped.
+  - Dev: notes_v14 direct 0.978 → 0.996, precision 0.870 → 0.928, ECE 0.057 → 0.033; no new
+    misses on v12/v13.
+  - **notes_v15 blind: FAIL** (synthetic): direct-identifier recall 0.976 (249 of 255; 250
+    needed), precision 0.894, ECE 0.052, F1 0.933; p95 94 s per note. Misses, none proposed:
+    kardex sign-off initials, dotted initials, a lone surname on a sign-off line, a name in a
+    table row, a space-split NRIC after a dotted leader. FPs: unmarked letterheads, headings,
+    Singlish words, codes; the new assault pattern's `son hits her` was judged a name.
+  - notes_v1–v15 and sd20 are all dev sets now. P21 is not a release candidate.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.

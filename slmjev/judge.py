@@ -194,6 +194,16 @@ SPOKEN_DIGITS = (rf"(?i:(?:plus[ \t]+)?(?:(?:double|triple)[ \t]+)?{_DW}"
 # four one two nine zero``, notes_v12)
 SPOKEN_REF = (rf"(?i:{_DW}(?:[ \t]+{_DW})*[ \t]+(?:slash|dash|stroke|hyphen)[ \t]+{_DW}"
               rf"(?:[ \t]+{_DW})*)")
+# An NRIC/FIN read out with its letters: ``S six seven three two nine six nine D`` (notes_v14)
+SPOKEN_NRIC = rf"[STFGM][ \t]+(?i:{_DW}(?:[ \t,-]+{_DW}){{6}})[ \t]+[A-Z]"
+# A date right after a word saying someone died (``d. 1998``, ``died Mar 2011``, ``DOD:``); a
+# year alone or a month and year too, as a pedigree writes them. The judge called both of those
+# ``none`` (notes_v14).
+_DEATH_LEAD = re.compile(r"(?:\bd\.|\b(?i:died|deceased|passed[ \t]+away|date[ \t]+of[ \t]+death)"
+                         r"|\bDOD|†)[ \t]*(?:(?i:in|on)[ \t]+)?[:\-]?[ \t]*$")
+_MON_NAME = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]{0,6}\.?"
+DEATH_DATE = (rf"(?:(?:\d{{1,2}}[ \t]+)?{_MON_NAME}[ \t]+(?:19|20)\d{{2}}|(?:19|20)\d{{2}}"
+              r"|\d{1,2}[/.-]\d{1,2}[/.-](?:\d{2}|\d{4})|(?:19|20)\d{2}-\d{2}-\d{2})")
 
 
 # HL7 v2 fields that hold a person (notes_v11: surnames before ``^`` were never proposed). XPN:
@@ -321,17 +331,19 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     """``(identifier, reason)`` when code alone is sure the span identifies someone, else None.
 
     Only shapes a rule can confirm qualify: a valid NRIC/FIN checksum or a masked NRIC/FIN
-    (``G****262U``); a blood donation number (``W0417 26 318857 K``); a picture file name
-    (``IMG_4410.JPG``); a Singapore phone number spelled out in digit words; a whole email or URL
-    (with a scheme, or without one but with a path); an accession-number shape (``HS26-018455``); a
-    handle with a digit, ``_`` or ``.`` after a messaging keyword (``WeChat ID``); a 6-digit postal
-    code right after ``Singapore``/``S(`` (or with that lead inside the span), or ending a street
-    address with a valid sector; an ID-shaped token right after an ID keyword (``NRIC``,
-    ``temp IC``, ``MRN``, ...), a person component of an HL7 name or clinician field (``TAN`` in
-    ``PID|...|TAN^MEI LING``), a record reference right after ``Lab No`` / ``Reg. No.`` /
-    ``Accession`` / ``claim ref`` / ``policy`` (or a code with a letter after a bare ``sample``),
-    an account number right after ``account`` / ``a/c``, or an NRIC/FIN tail after ``NRIC
-    ending`` / ``IC last 4``.
+    (``G****262U``), also spoken with its letters (``S one two ... seven D``); a date or year right
+    after a death word (``d. 1998``, ``died on 3 Mar 2020``); a lower-case login in a fixed-width
+    table's ``USER``/``BY`` column; a blood donation number (``W0417 26 318857 K``); a picture file
+    name (``IMG_4410.JPG``); a Singapore phone number spelled out in digit words; a whole email or
+    URL (with a scheme, or without one but with a path); an accession-number shape
+    (``HS26-018455``); a handle with a digit, ``_`` or ``.`` after a messaging keyword
+    (``WeChat ID``); a 6-digit postal code right after ``Singapore``/``S(`` (or with that lead
+    inside the span), or ending a street address with a valid sector; an ID-shaped token right
+    after an ID keyword (``NRIC``, ``temp IC``, ``MRN``, ...), a person component of an HL7 name
+    or clinician field (``TAN`` in ``PID|...|TAN^MEI LING``), a record reference right after
+    ``Lab No`` / ``Reg. No.`` / ``Accession`` / ``claim ref`` / ``policy`` (or a code with a
+    letter after a bare ``sample``), an account number right after ``account`` / ``a/c``, or an
+    NRIC/FIN tail after ``NRIC ending`` / ``IC last 4``.
     They skip the model; everything else is judged. Accepting is the fail-closed direction, since
     it only ever removes more."""
     m = text[cand.start - 1:cand.end].strip()
@@ -340,6 +352,14 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
         return hl7, "hl7_person"
     if rules.nric_valid(m):
         return "national_id", "nric_checksum"
+    if re.fullmatch(SPOKEN_NRIC, m):
+        spoken = m[0] + spoken_digits(m[1:-1]) + m[-1]
+        if len(spoken) == 9 and rules.nric_valid(spoken):
+            return "national_id", "spoken_nric"
+    if re.fullmatch(DEATH_DATE, m) and _DEATH_LEAD.search(left[-32:]):
+        return "date_of_death", "death_keyword"
+    if re.fullmatch(LOGIN, m) and _LOGIN_COLUMN.search(fixed_width_column(text, cand.start) or ""):
+        return "other_id", "login_column"
     if len(m) == 9 and re.fullmatch(MASKED_NRIC, m):
         return "national_id", "masked_nric"
     if _EMAIL.fullmatch(m):
@@ -695,6 +715,41 @@ def table_cell(text: str, start: int, end: int, max_rows: int = 60) -> tuple[str
             pos = p0
         return None, False
     return None, False
+
+
+# A fixed-width table, its columns lined up with spaces (an EMR audit trail, an order-entry log;
+# notes_v14): a header line of 3+ upper-case labels two or more spaces apart, and rows below it
+# whose cells start under a label.
+_FIXED_CELL = re.compile(r"\S+(?: \S+)*")
+_FIXED_HEAD = re.compile(r"[A-Z][A-Z0-9/#()&'.-]*(?: [A-Z][A-Z0-9/#()&'.-]*)*")
+_RULE_LINE = re.compile(r"[ \t]*[-=_*]{3,}[ \t]*")
+
+
+def fixed_width_column(text: str, start: int, max_rows: int = 40) -> str | None:
+    """The label over the column a span starting at ``start`` sits in, for a fixed-width table
+    pasted into the text; None if there is none above it (a blank line ends the search)."""
+    s0 = text.rfind("\n", 0, start - 1) + 1
+    col, pos = start - 1 - s0, s0
+    for _ in range(max_rows):
+        if pos == 0:
+            return None
+        p0 = text.rfind("\n", 0, pos - 1) + 1
+        prev = text[p0:pos - 1]
+        if not prev.strip():
+            return None
+        cells = [(m.start(), m.group()) for m in _FIXED_CELL.finditer(prev)]
+        if (len(cells) >= 3 and not _RULE_LINE.fullmatch(prev)
+                and all(_FIXED_HEAD.fullmatch(c) for _, c in cells)):
+            under = [c for a, c in cells if a <= col]
+            return under[-1] if under else None
+        pos = p0
+    return None
+
+
+# A log-in name (``x_lowsm``, ``lowjm``) under a user or ``BY`` column of such a table: the judge
+# called one an HIV test and never saw the other (notes_v14)
+LOGIN = r"[a-z][a-z0-9_.]{2,19}[a-z0-9]"
+_LOGIN_COLUMN = re.compile(r"\b(?:USER|USER-?ID|USERNAME|LOGIN|BY)\b")
 
 
 def prefix_for(text: str, cand: Candidate, width: int = 160, column: str | None = None) -> str:
