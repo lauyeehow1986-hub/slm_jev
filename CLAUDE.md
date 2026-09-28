@@ -368,6 +368,20 @@ models/             GGUF / adapters / calibration.json (gitignored)
     (`l4.O2.l95l`), a DOB cell under a `DOB` column judged `none`, a first-name possessive, a
     repeated nickname called SHI, a Chinese-script name after a role word and a space.
   - notes_v1–v11 and sd20 are all dev sets now. A new change needs a new unseen set.
+- [x] P19 (0016, 2026-09-28): the notes_v11 misses. `slmjev/judge.py` reads pasted HL7 v2
+  segments by field position (`hl7_people`: name and clinician fields; a component is on the fast
+  path), reads OCR look-alikes in dates (`ocr_date`: `l`/`O` as 1/0), and accepts a whole date
+  cell under a birth/death column on the fast path (`date_column`). `slmjev/propose.py` proposes
+  those, and Chinese-script names after a role word (`医师 李建国`).
+  - Dev: 7 of 9 notes_v11 direct misses fixed (direct 0.972 → 0.994). No new misses; FPs same.
+    Repeating single parts of names was tried and dropped (36 non-identifiers for 1 name).
+  - **notes_v12 blind: FAIL** (synthetic): direct-identifier recall 0.907 (330 of 364) and
+    precision 0.884 both fail. ECE 0.043 and F1 0.891 pass; p95 180 s per 1k chars. NRIC, MRN,
+    phone, e-mail and DOB 1.000; names 0.853 on 218. Every system fell (PF alone 0.767).
+  - The misses: initials labelled as names (18 of 42: minutes, dispensing labels, a flowsheet),
+    lower-case voice-to-text names, lone given names, Tamil script. The FPs: ordinary words of
+    Tagalog/Malay/Indonesian notes and kin terms called names.
+  - notes_v1–v12 and sd20 are all dev sets now. A new change needs a new unseen set.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.
