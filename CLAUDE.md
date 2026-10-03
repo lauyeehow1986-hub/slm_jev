@@ -431,6 +431,20 @@ models/             GGUF / adapters / calibration.json (gitignored)
     never proposed: initials in table cells, log-ins, a Tamil-script name, year-only DOBs,
     "last 4" NRIC fragments, an OCR-corrupted phone.
   - notes_v1–v18 and sd20 are all dev sets now. P22 is not a release candidate.
+- [x] P23 (0020, 2026-10-03): propose more, in general form: initials in more sign-off slots,
+  `Init` and lower-case log columns, ID-header cells, names after Tamil/Hindi/Bengali honorifics
+  and Malay kin possessives, masked NRIC tails, hyphen-wrapped IDs, OCR'd NRICs and mobiles,
+  free-phone numbers, years of birth. New rule-certain spans (masked NRIC tails, ID-keyed
+  key=value pairs, wrapped IDs), a YOB column fast path, and an SHI call on a person-slot span
+  read as name. Calibration unchanged (`calibration_p22.json`).
+  - Dev: no new miss or FP on seven sets; pooled v16–v18 direct 0.998, precision 0.947.
+  - **notes_v19–v21 pooled blind: FAIL** (synthetic, 96 notes by three new writers, same
+    convention and gate). Direct-identifier recall 0.979 (826 of 844, CI 0.967–0.987; 828
+    needed). Precision 0.900 (at the gate), ECE 0.031 and F1 0.933 pass. v19 passes on its own
+    (direct 1.000); v20 (data-management records) and v21 (patient-written, cross-border) fail.
+    17 of 18 direct misses were never proposed: bare NRIC tails after "last 4", lower-case
+    sign-off initials, names in CSV/XML fields, overseas phones and addresses.
+  - notes_v1–v21 and sd20 are all dev sets now. P23 is not a release candidate.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.

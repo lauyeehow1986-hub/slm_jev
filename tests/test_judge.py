@@ -739,3 +739,68 @@ def test_a_spaced_nric_is_certain_only_with_its_checksum(m, want):
     text = f"NRIC ........ {m}\n"
     s = text.index(m) + 1
     assert J.rule_certain(text, J.Candidate(s, s + len(m) - 1)) == want
+
+
+@pytest.mark.parametrize("text, span, want", [
+    ("Visitor IC *417G, bed 12", "*417G", ("national_id", "masked_nric")),
+    ("Visitor IC XXXX902K, bed 12", "XXXX902K", ("national_id", "masked_nric")),
+    ("ts=0912 BB_TXN=XM-26-09-4417 qty=2", "XM-26-09-4417", ("other_id", "kv_id_key")),
+    ("src=LAB PAT_MRN=1027755103 ok", "1027755103", ("mrn", "kv_id_key")),
+    ("transfer, MRN 5512-\n208-44 to ward", "5512-\n208-44", ("mrn", "id_keyword")),
+])
+def test_p23_rule_certain_spans(text, span, want):
+    s = text.index(span) + 1
+    assert J.rule_certain(text, J.Candidate(s, s + len(span) - 1)) == want
+
+
+@pytest.mark.parametrize("text, span", [
+    ("ts=0912 build_ver=2026-09-4417 ok", "2026-09-4417"),  # the key names no ID
+    ("qty=1 BB_TXN=12 ok", "12"),  # too few digits
+    ("page 5512-\n208-44 of the scan", "5512-\n208-44"),  # no ID keyword before the wrap
+])
+def test_p23_rule_certain_needs_its_cue(text, span):
+    s = text.index(span) + 1
+    assert J.rule_certain(text, J.Candidate(s, s + len(span) - 1)) is None
+
+
+def test_a_header_with_a_full_stop_still_names_its_column():
+    t = "BC No. | DOB | Class\nT2615522K | 21/07/2015 | 4B\nT2611830C | 30/01/2015 | 4C\n"
+    assert _col(t, "30/01/2015") == "DOB"
+
+
+def test_a_year_after_a_sex_marker_is_a_date_and_certain_in_a_yob_column():
+    t = "Init\tSex/YOB\tSeen\nKLT\tM/1957\t11SEP2026\nRNA\tF/1983\t16SEP2026\n"
+    i = t.index("1983")
+    c = J.Candidate(i + 1, i + 4)
+    assert J.family_in_context(t, c) == "date"
+    fake = Fake(script({"none": 0.99}))
+    r = J.Judge(fake).judge(t, c)
+    assert r["identifier"] == "dob" and r["judge"]["fast_path"] == "yob_column" and not fake.calls
+    prose = "Guideline revised 1983 and again later."
+    i = prose.index("1983")
+    assert J.family_in_context(prose, J.Candidate(i + 1, i + 4)) != "date"
+
+
+def test_a_lower_case_log_header_marks_a_login_column():
+    t = ("ts                   uid     user             act\n"
+         "2026-09-24T09:12:07  u47812  tanml            VIEW\n")
+    i = t.index("tanml")
+    assert J.rule_certain(t, J.Candidate(i + 1, i + 5)) == ("other_id", "login_column")
+
+
+def test_an_shi_category_on_a_name_shape_is_read_as_a_name():
+    t = "Delivered 0412h. Sign: SMN. Baby well."
+    i = t.index("SMN")
+    fake = Fake(script({"other_sensitive": 0.9, "none": 0.02}))
+    slot = J.Candidate(i + 1, i + 3, type="name", detector="shape:initials")
+    r = J.Judge(fake, fast_path=False).judge(t, slot)
+    assert r["category"] == "name" and r["judge"].get("shi_on_name")
+    # a generic name shape is not a person slot: headings get SHI calls too
+    shape = J.Candidate(i + 1, i + 3, type="name", detector="shape:name")
+    assert J.Judge(fake, fast_path=False).judge(t, shape)["category"] == "other_sensitive"
+    # a sensitive term proposed as a name keeps its SHI category
+    t = "Known HIV positive, on ART."
+    i = t.index("HIV")
+    r = J.Judge(fake, fast_path=False).judge(
+        t, J.Candidate(i + 1, i + 3, type="name", detector="shape:name_column"))
+    assert r["category"] == "other_sensitive"

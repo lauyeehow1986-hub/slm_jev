@@ -1,0 +1,436 @@
+# notes_v21 — held-out Singapore-style clinical/admin notes with gold spans.
+# SYNTHETIC: NOT REAL PATIENT DATA. Every person, name, NRIC/FIN, MRN, phone number, address, email and health detail below is invented for testing; any match to a real person, number or mailbox is coincidental.
+# Author: writer F. Written from general knowledge only, by an author who did not see the system under test, its rules, its code, or any earlier evaluation sets.
+# Theme of this set: patient- and family-written text and cross-border records (portal messages, emails, voicemails, handwritten notes, social posts, translated overseas letters, travel, maritime, dormitory, agency, school/club, probate, crowdfunding).
+# FORMAT: a note starts with a header line "=== v21_nNN | <kind> ===". The note text is every line after it up to the next "===" header line.
+# FORMAT: a gold span is written inline as {{label|text}}. The note text contains only "text"; braces and "label|" are markup. Spans are never nested, never contain "{{", "}}" or "|", and have no leading/trailing spaces. Anything not inside {{...}} is not an identifier.
+# LABELS (identifiers): name, national_id, mrn, case_visit, address, postal_code, phone, fax, email, dob, date_of_death, device, biometric, photo, other_id
+# LABELS (SHI): hiv_sti, mental_health, substance_use, genetic, reproductive_sexual, other_sensitive
+# LABELS (other): date_other = any date of the patient's care/events that is not a DOB or date of death.
+# CONVENTION: honorifics and titles (Dr, Mr, Mrs, Ms, Mdm, SN, SSN, Prof, Encik, Puan, Pn, Ny., Tn., dr., Aling, Maung, U, Daw, Kak, Uncle, Coach, Capt., C/O, DR.) are OUTSIDE name spans. A name span covers the full name as written (incl. bin/binti/s/o/d/o/a/l forms).
+# CONVENTION: every mention of a person is labelled name, including repeats, surnames alone after a title, given names alone, nicknames, chat display names and INITIALS (in any form, incl. lower case). Kinship words used alone (Ah Ma, Bapak, papa, mum) are not names.
+# CONVENTION: institution, hospital, clinic, company, law-firm, ship-operator and ministry NAMES are decoys and never marked, even when they contain surnames (e.g. a law firm named after partners).
+# CONVENTION: EVERY phone number, fax number, email address, street address and postal code is marked wherever it appears, including letterheads, footers, switchboards, hotlines, department faxes and generic mailboxes. Company/organisation registration numbers (UEN, ROC, ROS, company reg., agency licence) are other_id.
+# CONVENTION: field captions (NRIC, FIN, MRN, Tel, Fax, HP, DID, UEN, IC, Mob, Ph) are outside spans; only the value is labelled. Phone extensions are inside the phone span when written with the number. Phone numbers spoken in words, partly masked, used as a chat sender or as a PayNow proxy are still phone.
+# CONVENTION: "Singapore" and country names are outside address spans; for overseas addresses the city/state/province named after the street line is also outside. The postal code is its own postal_code span (foreign postcodes too) and keeps an "S" prefix inside the span when written like "S543268".
+# CONVENTION: national_id = NRIC/FIN/birth certificate/passport/MyKad/NIK/NRC/Aadhaar/PRC resident ID/birth registration no. mrn = hospital record numbers (incl. overseas UHID/RN/hospital no./clinic file no.). case_visit = visit/admission/outpatient/IP/registration numbers of an episode. device = device serial numbers, vehicle plates, vessel IMO number and call sign. other_id = everything else identifying (letter refs about the patient, claim/policy/estimate refs, practitioner and translator registration numbers, handles, profile URLs, bank accounts, court/probate refs, LPA refs, certificate numbers, employee numbers, seaman's book numbers, permit IPA numbers).
+# CONVENTION: decoys left UNMARKED: organisation names, ward/bed/room numbers (including dormitory block-room codes), queue numbers, lab values, drug doses, times, ICD codes, device model names, drug/vaccine batch and lot numbers, SOP/form/clause/package codes, flight numbers, GPS positions, prices, generic dates not about a person's care.
+# CONVENTION: the date of a letter, email or chat message that is about a specific patient is date_other. A relative date written as a date ("Sun 12 Jan", "15th") is date_other.
+# CONVENTION (SHI): ordinary diagnoses (diabetes, TB, fracture, stroke, cancer, concussion) are not SHI. Dementia/Alzheimer's, depression, psychosis, self-harm and suicidality are mental_health; abuse, assault and suspected non-accidental injury are other_sensitive.
+# NRIC/FIN checksum: weights 2,7,6,5,4,3,2; +4 for T/G, +3 for M; r = sum mod 11; S/T -> JZIHGFEDCBA, F/G -> XWUTRQPNMLK, M -> XWUTRQPNJLK. All NRIC/FIN-shaped values are valid (spaces ignored) EXCEPT one deliberate error.
+# DELIBERATELY INVALID: in v21_n03 the NRIC "S7369393E" (as read out by a relative) has a wrong check letter (valid would end in D); it is still labelled national_id.
+# Masked values (with X or *) cannot be checksum-validated and are still labelled with their identifier type. MCR numbers like "M14922A" are practitioner registrations (other_id), not FINs.
+# NEGATIVE CONTROLS (no identifiers): v21_n06, v21_n12, v21_n19, v21_n25, v21_n30.
+=== v21_n01 | patient-portal secure message ===
+Portal > Secure Messages > Diabetes Centre (Nurse Educator)
+From: {{name|LIM WEI LING}}   MRN {{mrn|SGH-0048213-7}}
+Sent: {{date_other|Tue 14/01/2025}} 22:47
+
+hi Nurse {{name|Farah}}, sorry msg so late. my readings this wk abit high, 11-13 after dinner, fasting 8-9. still taking metformin 850mg BD + the new one (jardiance 10mg) every morning. no hypo. the CGM sensor s/n {{device|3MH041K277QX}} dropped off on {{date_other|Sun 12 Jan}} in the shower, only 6 days old, can replace or not? i still got 1 spare but after that finish.
+
+also my mum Mdm {{name|Goh Siew Hwa}} ({{name|吴秀花}}) appt card says {{date_other|20.1.25}} 9.40am Clinic B but she cannot go that day bcos my brother overseas and nobody bring her, can shift to the next week? pls call me {{phone|9127 4480}} after 6pm, office cannot pick up.
+
+been feeling v low since Dec, cannot sleep, GP say maybe {{mental_health|depression}} and gave me referral, dunno if related to the sugar or the new med.
+tks,
+{{name|Wei Ling}}
+=== v21_n02 | patient-family email to feedback mailbox ===
+From: "{{name|Nurul Huda Nordin}}" <{{email|nurulhuda.88@mail.example.com}}>
+To: {{email|patient.feedback@hosp.example.org}}
+Date: {{date_other|Mon, 3 Mar 2025}} 08:15 +0800
+Subject: Complaint - my father discharged with wrong medicine
+
+Assalamualaikum and good morning,
+
+My father {{name|Nordin bin Salleh}} (IC {{national_id|S5884583C}}, MRN {{mrn|4417092-J}}) was discharged from Ward 64 on {{date_other|28/2}}. The pharmacy packed warfarin 5mg but the doctor told us to stop it because of the stomach bleed. Luckily my brother {{name|Faizal}} check the bag at home before Bapak take it. Bapak is 74 and cannot read English labels, and the counselling was very fast because the pharmacy was closing.
+
+Please call me at {{phone|8765 2209}} (HP) or office DID {{phone|6248 3107 ext 225}}. Replacement medicine can deliver to {{address|Blk 23 Jalan Membina, #11-207}}, Singapore {{postal_code|160023}}. We hope this will not happen to other elderly patients.
+
+Terima kasih,
+{{name|Nurul Huda}} (daughter), also on behalf of Kak {{name|Ros}}
+=== v21_n03 | voicemail transcription ===
+Voicemail box: Renal Coordinator line {{phone|6321 7765}}
+Received {{date_other|07-04-2025}} 19:02, length 0:58. Transcribed by SN {{name|Aileen Chua}}.
+
+"Hello, this is, uh, {{name|Ravi}}... {{name|Ravi Arumugam}}, calling for my wife {{name|Selvi}}, {{name|Selvi d/o Govindasamy}}. The hospital number is {{mrn|M-2290-416}}, her IC is {{national_id|S7369393E}}. She cannot come for dialysis tomorrow, she got fever 38.5 since afternoon and shivering after the last session. Can someone call me back, my number is {{phone|nine one two three, four five six zero}}... sorry, {{phone|9123 4560}}. Also she asking about the {{genetic|polycystic kidney gene test}} for our son, the counsellor said can do. OK, thank you, bye."
+
+Action: called back 19:20, spoke to husband. Advised ED in view of rigors and possible line infection. Informed on-call renal registrar. - {{name|AC}}
+=== v21_n04 | transcription of handwritten caregiver notebook ===
+[Transcribed from photocopy of carer's notebook brought to geriatric clinic on {{date_other|19 May 2025}}; unclear words marked (?)]
+
+{{date_other|12/5}} Mon - Ah Ma ({{name|Tay Bee Choo}}) BP 158/90. Refuse eat lunch, only drink milo. Called GP clinic {{phone|6455 0912}}, nurse say observe.
+{{date_other|13/5}} - fell in toilet at night!! bruise L hip. {{name|Marites}} (helper) found her 3am. Neighbour uncle {{name|Ah Seng}} help carry to bed.
+{{date_other|14/5}} - Polyclinic, Q no. 2087, reg no. {{case_visit|P25-0514-0387}}. Xray no fracture (?)
+{{date_other|15/5}} - Ah Ma keep asking for "the ang moh doctor", confused?? Day centre say she shout at staff and refuse bath.
+{{date_other|16/5}} - {{name|Marites}} FIN {{national_id|G1644787R}} - work permit renew, must bring Ah Ma along? ask agency.
+{{date_other|17/5}} - my HP change to {{phone|9011 3378}} - granddaughter. Pls update hospital.
+{{date_other|18/5}} - Ah Ma sleep whole day, wake up at night walking around house. Gave half tab of the sleeping med from last yr (?) - ask doctor if can.
+=== v21_n05 | online parenting-forum thread (transcribed screenshot) ===
+Board: Kids' Health > Infections
+Thread: "anyone's kid got HFMD AND kawasaki?? scared"
+Posted by {{other_id|@mummy_of_3_jw}} · {{date_other|2 Jun 2025}} · profile {{other_id|https://forum.example.org/u/mummy_of_3_jw}}
+
+Hi mummies, my youngest {{name|Jayden}} (2yo) was warded at the children's hosp last wk, fever 6 days + red eyes + peeling fingers, doc said incomplete Kawasaki, gave IVIG and aspirin. Discharged {{date_other|30 May}}. The memo got case no. {{case_visit|CH25-118842}}, any nurse here can explain what "mild dilatation" on echo means?? Hubby v stressed, my MIL keep blaming me for going back to work 😭
+pls PM or WA me {{phone|8xxx 6631}}, tq
+
+Reply · {{other_id|@daddyKen88}}: my girl had the same in 2023, echo normal after 6 wks, dun worry too much. Wrote everything here {{other_id|https://kenloh.example.net/blog/kawasaki-diary}}. jia you!
+=== v21_n06 | patient-education leaflet (dengue) ===
+DENGUE: WHAT TO WATCH FOR AT HOME
+Leaflet PE-114, version 3 (reviewed March 2024)
+
+Most people with dengue recover in 1-2 weeks. There is no specific antiviral treatment.
+
+Do:
+- Drink at least 2-3 litres of fluids a day (water, isotonic drinks, soup).
+- Take paracetamol 500 mg, 1-2 tablets every 6 hours if needed (max 8 tablets in 24 hours).
+- Rest and use mosquito repellent so you do not spread the virus.
+
+Do NOT take ibuprofen, aspirin or other NSAIDs; they increase bleeding risk.
+
+Return to the Emergency Department immediately if you have: severe abdominal pain, persistent vomiting, bleeding gums or nose, black stools, drowsiness or restlessness, or cold clammy hands. Days 3-7 of illness are the critical phase, even if the fever has gone.
+
+Your platelet count will be checked at each review. A level below 20 x10^9/L may need admission.
+=== v21_n07 | translated referral letter (Malay -> English), Malaysia ===
+[Certified translation of original in Bahasa Melayu. Translator: {{name|Siti Rohana Mat Isa}}]
+
+HOSPITAL PAKAR SELATAN, {{address|No. 3, Jalan Bukit Indah 15/2, Taman Bukit Indah}}, {{postal_code|81200}} Johor Bahru, Johor, Malaysia. Tel: {{phone|+607-236 8800}}  Faks: {{fax|+607-236 8811}}
+Date: {{date_other|09 September 2025}}
+
+To: The Doctor in charge, Cardiology Clinic, Singapore
+
+Re: Patient {{name|MOHD HAFIZ BIN ABDULLAH}}, MyKad {{national_id|850312-01-5527}}, DOB {{dob|12.03.1985}}, RN {{mrn|HPS00219874}}
+
+This 40-year-old man, a Singapore PR working in Tuas, presented to our Emergency Department on {{date_other|6/9/2025}} with central chest pain radiating to the left arm. Troponin was raised. Angiogram on {{date_other|7/9}}: 90% proximal LAD stenosis, one drug-eluting stent inserted (stent serial {{device|SN 21K0447-B19}}). Echo EF 50%. He reports {{substance_use|smoking 20 cigarettes a day and binge drinking at weekends}}. Please continue DAPT for 12 months and statin; he prefers follow-up in Singapore near his workplace.
+
+His wife, Puan {{name|Zarina}}, accompanied him.
+
+Yours sincerely,
+Dr {{name|Thinesh a/l Murugiah}}, Consultant Cardiologist, MMC No. {{other_id|52281}}
+=== v21_n08 | translated discharge summary (Indonesian -> English), Indonesia ===
+[Translated from Bahasa Indonesia by agency staff]
+RS Harapan Sehat Medan, {{address|Jl. Gatot Subroto No. 118}}, Medan {{postal_code|20112}}, Sumatera Utara. Telp {{phone|(061) 845 2210}}
+
+RESUME MEDIS / DISCHARGE SUMMARY
+No. RM (medical record no.): {{mrn|00-41-77-29}}
+Nama (name): Ny. {{name|SRI WAHYUNI}}
+NIK: {{national_id|1271046508790003}}    Tgl lahir (DOB): {{dob|25-08-1979}}
+Singapore Work Permit FIN {{national_id|G5200070Q}}
+Masuk/admitted: {{date_other|11-08-2025}}   Keluar/discharged: {{date_other|16-08-2025}}
+
+Diagnosis: {{reproductive_sexual|incomplete spontaneous abortion at 11 weeks}}, curettage done {{date_other|12-08-2025}}; anaemia (Hb 8.1 g/dL), 2 units PRC given. Oral iron for 3 months.
+Patient works as a domestic helper in Singapore and was on home leave. Fit to fly from {{date_other|20-08-2025}}; avoid heavy lifting for 2 weeks.
+Husband: Tn. {{name|Agus}}, HP {{phone|+62 812-6033-4417}}
+
+DPJP (doctor in charge): dr. {{name|Benny Situmorang}}, Sp.OG
+=== v21_n09 | translated discharge card (Tamil -> English), India ===
+Sri Murugan Multispeciality Hospital, {{address|42, Anna Salai, Teynampet}}, Chennai - {{postal_code|600018}}. Ph: {{phone|044-2433 1190}}
+IP No: {{case_visit|IP/2025/08812}}     UHID: {{mrn|SMH-221-4409}}
+Name: {{name|K. SARAVANAN S/o KUPPUSAMY}}    Age/Sex: 34/M
+Aadhaar: {{national_id|XXXX XXXX 6612}}    Singapore Work Permit FIN: {{national_id|G8356148W}}
+DOA: {{date_other|02.08.2025}}     DOD (date of discharge): {{date_other|09.08.2025}}
+
+Diagnosis: Road traffic accident (two-wheeler) - fracture shaft of R femur, IM nailing done {{date_other|03.08.2025}}. Wound healthy, sutures removed before discharge.
+Incidental: {{hiv_sti|HIV-1 antibody reactive, confirmed}}; counselled; referred to ART centre. Patient asked that the result not be told to his employer.
+Advice: physiotherapy daily, review after 6 weeks with X-ray, no weight bearing on right leg, walker.
+Attender: brother {{name|Senthil}}
+
+[Translated from Tamil by Language Services. Original discharge card has 2 pages; the second page (drug chart) was not translated.]
+=== v21_n10 | translated outpatient record (Chinese -> English), PRC ===
+Xiamen Haicang Peoples' Hospital (厦门海沧人民医院), {{address|No. 89 Wengjiao Road, Haicang District}}, Xiamen {{postal_code|361026}}
+Outpatient no. 门诊号: {{case_visit|MZ20250621-0193}}     Visit date: {{date_other|2025-06-21}}
+Patient: {{name|陈志明}} ({{name|CHEN Zhiming}}), male, 58
+Resident ID 身份证: {{national_id|350205196703154418}}     DOB: {{dob|1967年3月15日}}
+
+Chief complaint: upper abdominal pain x 2 months, weight loss 5 kg.
+History: {{substance_use|alcohol dependence, drinks baijiu about 250 ml daily for 20 years}}. Hepatitis B serology negative.
+Findings: CT shows 3.1 cm lesion segment VI liver, AFP 412 ng/mL. Impression: HCC, BCLC A, Child-Pugh A.
+Plan: discussed resection or ablation, and advised to stop alcohol completely; patient wishes treatment in Singapore where his daughter lives.
+Daughter: {{name|CHEN Yu Ting}} ({{name|陈雨婷}}), HP {{phone|+65 9680 2234}}
+Physician 医师: {{name|林晓燕}} (seal)
+
+[Translator's note: "250 ml" converted from 半斤.]
+=== v21_n11 | medical certificate with translated annotation, Philippines ===
+Mactan Community Hospital, {{address|M.L. Quezon National Highway, Pusok}}, Lapu-Lapu City, Cebu {{postal_code|6015}}. Tel. {{phone|(032) 340-5521}}
+
+MEDICAL CERTIFICATE
+Date: {{date_other|July 2, 2025}}
+
+This is to certify that {{name|Ma. Cristina R. Dela Cruz}}, 31 y/o, female, of {{address|Purok 4, Brgy. Gun-ob}}, Lapu-Lapu City, Hospital No. {{mrn|2025-07-04413}}, Passport {{national_id|P4821907B}}, was examined on the above date. She completed 6 months anti-TB treatment ({{date_other|Dec 2024}} to {{date_other|Jun 2025}}); sputum AFB negative x2, CXR stable. She is fit to work as a domestic helper abroad.
+
+{{name|JOSE P. MANALO}}, MD   Lic. No. {{other_id|0098712}}
+
+[Handwritten annotation in Tagalog at bottom, translated: "Daughter of Aling {{name|Nena}} who sells fish at the market. If any problem call the mother {{phone|0917 552 3380}}. - {{name|jpm}}"]
+=== v21_n12 | FAQ page (international patients) ===
+FREQUENTLY ASKED QUESTIONS - INTERNATIONAL PATIENTS
+
+Q: Do I need a referral letter from my home doctor?
+A: It is recommended. Please bring all previous reports, scans on CD and a list of current medicines.
+
+Q: How long does it take to receive a cost estimate?
+A: Usually 3 working days after we receive your medical reports. Estimates are valid for 30 days and are not a final bill.
+
+Q: Can a family member stay with me?
+A: One companion may stay overnight in single and double rooms. Four-bed wards do not allow overnight companions.
+
+Q: Which payment methods are accepted?
+A: Credit card, bank transfer and approved letters of guarantee from insurers. A deposit of 50% to 100% of the estimate is collected on admission.
+
+Q: Can I get my medical report translated?
+A: Yes, into Malay, Bahasa Indonesia, Chinese, Tamil, Burmese or Vietnamese, for a fee of S$80 per page. Allow 10 working days. Request form IP-07 (rev. 2023).
+=== v21_n13 | translated hospital letter (Burmese -> English), Myanmar ===
+Shwe Pyi Thar Specialist Clinic, {{address|No. 214, Pyay Road, 8 Mile, Mayangone Township}}, Yangon. Ph: {{phone|+95 1 654 228}}
+
+Date: {{date_other|14.10.2025}}
+To whom it may concern
+
+Patient: Maung {{name|Kyaw Zin Htet}}, son of U {{name|Tin Win}} and Daw {{name|Khin Myo Aye}}
+NRC: {{national_id|12/MaYaKa(N)045219}}     DOB: {{dob|14-11-1997}}
+
+This 27-year-old man has been under my care for {{mental_health|schizophrenia}} since {{date_other|March 2021}}. He is stable on risperidone 2 mg at night, with no admissions in the last 3 years, and he is working. He has been granted a Singapore Work Permit In-Principle Approval no. {{other_id|IPA-2025-7714093}} (shipyard). Please continue his medication; one month's supply is given. Early warning signs (poor sleep, suspiciousness) were explained to him and his family.
+
+Dr {{name|Aye Aye Thant}}, M.B.,B.S., M.Med.Sc (Psychiatry)
+
+[Translated from Burmese. The original letter is handwritten on clinic letterhead with a round seal.]
+=== v21_n14 | medical-travel cost estimate ===
+International Patient Centre, {{address|71 Moulmein Rise, Level 3}}, Singapore {{postal_code|308155}}
+Tel {{phone|+65 6311 4072}} · {{email|ipc.estimates@ipc.example.com}}
+
+COST ESTIMATE {{other_id|EST-25-04471}} (valid 30 days)
+Prepared for: Mrs {{name|NGUYEN Thi Lan}}, 46, Passport {{national_id|C8803315}} (Viet Nam)
+Proposed admission: week of {{date_other|22 Sep 2025}}
+
+Procedure: laparoscopic hysterectomy + bilateral salpingo-oophorectomy (risk-reducing), {{genetic|BRCA2 pathogenic variant carrier}}.
+Package LH-02: surgeon & anaesthetist fees S$9,800-12,500; hospital (2 nights, single room) S$11,200-14,000; histology S$650. Estimated total S$21,650-27,150 excluding GST. Pre-admission tests and any ICU stay are not included.
+Companion: son {{name|Trần Quốc Bảo}}
+Prepared by Patient Liaison on {{date_other|18/08/2025}}. Final charges depend on the actual length of stay, complications and the surgeon's findings; histology may change the recommended follow-up.
+=== v21_n15 | consulate letter ===
+HIGH COMMISSION - CONSULAR SECTION
+{{address|18 Anson Crescent, #12-03}}, Singapore {{postal_code|079912}}. Tel {{phone|6255 0075}} Email {{email|consular.sg@mofa.example.org}}
+Date: {{date_other|09 October 2025}}
+
+To: The Medical Social Worker, Neurosurgery, (hospital)
+
+Re: Mr {{name|MD. RAFIQUL ISLAM}}, Bangladeshi national, WP FIN {{national_id|G9007200K}}, now in Ward 9B Bed 22 (MRN {{mrn|SB-7716203}})
+
+Mr {{name|Rafiqul}} sustained a head injury at his worksite on {{date_other|04 Oct 2025}}. His family in Bhola District is very worried as he is the only earner. His father, Mr {{name|Abdul Mannan}}, Mobile {{phone|+880 1711 334 902}}, requests a medical report and an opinion on fitness to travel by air. The employer, Sinar Bina Engineering Pte Ltd (UEN {{other_id|200918327M}}), has agreed to bear the cost of repatriation with a medical escort if needed.
+
+{{name|Shahnaz Parveen}}
+Counsellor (Consular)
+=== v21_n16 | ship's medical log / seafarer clinic note ===
+MV ORIENT LARK - IMO {{device|9734821}}. Operator: Lark Shipping.
+Ship's hospital log, entry 14/25
+
+Crew: 2nd Engineer {{name|DIZON, Rommel A.}}, Filipino. Passport {{national_id|P7739012C}}; Seaman's Book No. {{other_id|C0447128}}. DOB {{dob|1988-02-29}}.
+Seen {{date_other|12 Feb 2025}} 0630 LT, position 01°12'N 103°48'E, at anchor Western Anchorage.
+C/O dysuria and urethral discharge x3 days, contact ashore in Manila 10 days ago.
+Impression: {{hiv_sti|probable gonococcal urethritis}}. Given ceftriaxone 500 mg IM stat + doxycycline 100 mg BD x7d per radio medical advice.
+Plan: shore referral for {{hiv_sti|HIV and syphilis screening}} - Seafarers Clinic, {{address|30 Jurong Port Road, #01-12}}, Singapore {{postal_code|619104}}, Tel {{phone|6265 1188}}. Port agent to arrange launch. Crew member advised abstinence until results and partner notification.
+
+Master: Capt. {{name|Henrik Aasland}}       Medical officer: C/O {{name|R. Mendoza}}
+=== v21_n17 | travel-clinic record ===
+Traveller: {{name|SUBRAMANIAM, Priya}}     NRIC {{national_id|S9140723Z}}     DOB {{dob|04/07/1991}}
+Clinic file {{mrn|TC-091-55732}}     Visit {{date_other|26-Mar-2025}}
+
+Itinerary: Kenya and Tanzania (safari), depart {{date_other|10 Apr}}, return {{date_other|24 Apr}}. Travelling with husband (seen separately).
+Currently {{reproductive_sexual|14 weeks pregnant}} (G2P1). Yellow fever vaccine: risks discussed; medical exemption letter issued, cert no. {{other_id|YFX/25/0381}}.
+Given today: typhoid Vi (batch W1204), hepatitis A booster (batch AHAVB771). Malaria: mefloquine not advised; discussed mosquito avoidance, consider deferring travel.
+Emergency contact: {{name|Mehta, A.}} {{phone|+65 9744 0081}}.
+Seen by Dr {{name|Wong K.Y.}}
+=== v21_n18 | dormitory medical post daily log ===
+Kranji Lodge 2 Medical Post, {{address|21 Kranji Way Lane 3}}, Singapore {{postal_code|739440}}. Post tel {{phone|6365 2217}}
+Date: {{date_other|Sat 19/07/2025}}    Duty: MA {{name|Hossain}}
+
+Time  Name                 FIN          Room     Complaint -> action
+0805  {{name|MIAH ABUL KASHEM}}     {{national_id|G7873332U}}   C-04-11  fever 38.9, cough; ART neg -> ref clinic
+0840  {{name|Selvam R.}}            {{national_id|G1685146P}}   A-02-07  L palm laceration (grinder at site) -> dressing, employer informed
+0912  {{name|ZAW MIN OO}}           {{national_id|M9188807J}}   B-07-03  "cannot sleep, want go home", tearful -> {{mental_health|low mood with passive suicidal thoughts}}; escorted to ED
+
+Remarks: roommate {{name|Kyaw Kyaw}} says {{name|Zaw}} {{other_sensitive|was slapped by the site supervisor}} last week. MSW and dorm operator informed; worker does not want police report for now, fears losing job. Private ambulance {{device|SBA 2241 K}} used for transfer.
+=== v21_n19 | volunteer newsletter (generic) ===
+FRIENDS OF THE WARDS - QUARTERLY NEWSLETTER, ISSUE 37
+
+Thank you to everyone who joined our Hari Raya and Deepavali bedside visits this year. More than 120 volunteers contributed over 3,400 hours across the medical, surgical and rehabilitation wards.
+
+New this quarter:
+- The befriender training course now runs on the first Saturday of every month, 9 am to 1 pm, in Seminar Room 2.
+- Our book trolley has 600 new large-print titles in English, Chinese, Malay and Tamil.
+- The hospital garden therapy corner has reopened after renovation.
+
+Reminder: volunteers must not take photographs of patients, share patient information on social media, or bring food for patients without checking with the nurse in charge.
+
+Upcoming: Christmas carolling on level 5 and 7, and the annual volunteer appreciation lunch (details by email to registered volunteers).
+=== v21_n20 | domestic-worker agency email ===
+From: {{name|Jasmine Koh}} <{{email|jasmine@bright-helpers.example.com}}>
+To: {{email|ward56.ns@hosp.example.org}}
+Date: {{date_other|Wed 9 Apr 2025}} 10:32
+Subject: our FDW - employer want cancel WP, pls advise discharge date
+
+Dear Sister,
+
+Our FDW Ms {{name|SITI AMINAH}} (FIN {{national_id|F9537961M}}) admitted your ward since {{date_other|5/4}}. Her employer Mdm {{name|Chua Lay Peng}} inform us she will cancel the work permit because helper {{reproductive_sexual|pregnant}} (6ME test positive). Pls advise discharge date so we can arrange her stay at our boarding, {{address|10 Upper Weld Road, #03-17}}, Singapore {{postal_code|207531}}. Her sister {{name|Ani}} in Batam also call us many times asking, we dont know what to tell her.
+
+Regards,
+{{name|Jasmine Koh}} (Ms)
+Bright Helpers Employment Agency, UEN {{other_id|202145871K}}
+Tel {{phone|6299 4400}}
+=== v21_n21 | childcare centre incident report ===
+Little Acorns Infant & Childcare, {{address|Blk 677B Jurong West St 64, #01-210}}, Singapore {{postal_code|642677}}. Tel {{phone|6790 3412}}
+
+INCIDENT REPORT
+Child: {{name|MUHAMMAD RAYYAN BIN ISKANDAR}}   DOB {{dob|11 Nov 2021}}   Birth cert. {{national_id|T2177386C}}   Class N1-Sunflower
+Date/time: {{date_other|02.10.2025}} 15:20
+
+{{name|Rayyan}} slipped from the low climbing frame during outdoor play and landed on his right arm. Ms {{name|Kavitha}} applied ice with the assistant teacher. Bruise 3 cm R forearm, full movement, child consolable.
+During nappy change Ms {{name|K.}} also noted several older bruises of different colours on the back of both thighs. {{other_sensitive|Possible non-accidental injury}} - escalated per child-protection SOP CP-03 to the principal, Mrs {{name|Pereira}}.
+Parent informed: father Mr {{name|Iskandar Shah}} at {{phone|9475 6620}}, 15:35. Mother not reachable.
+
+Reported by: {{name|KAVITHA D/O RAMASAMY}}
+=== v21_n22 | sports-club injury report ===
+Tanglin Bay Rugby Football Club, {{address|5 Portsdown Close}}, Singapore {{postal_code|139301}}. Tel {{phone|6473 8812}}
+
+Player: {{name|Oliver James Fernandez-Tan}}   DOB {{dob|2008-05-03}}
+Incident: {{date_other|Sat 23 Aug 2025}}, U19 league match, 52nd minute.
+Head-to-head collision in a tackle; brief loss of consciousness (~10 s), confused afterwards and could not recall the score. Failed head injury assessment, removed from play.
+First aider: {{name|Shaun D'Souza}}. Witnesses: Coach {{name|Barnaby}} and the match referee.
+Taken to ED by mother {{name|Melissa Tan}} (mobile {{phone|+65 9188 0347}}). CT brain normal; concussion.
+Graduated return to play over 2 weeks with no symptoms at each stage; parents given written head-injury advice; cleared by club doctor on {{date_other|15/9}}.
+=== v21_n23 | probate solicitor letter re deceased patient ===
+LIM & RAMAN LLP, {{address|1 Raffles Place, #44-01}}, Singapore {{postal_code|048616}}. Tel {{phone|6532 7700}} Fax {{fax|6532 7711}}
+Our ref: {{other_id|LR/PRB/2025/0331/JY}}
+{{date_other|21 October 2025}}
+
+The Medical Records Office
+
+Dear Sirs,
+ESTATE OF {{name|HO KAH WAI}} ({{name|何家伟}}), DECEASED - NRIC {{national_id|S2213879J}}
+
+The deceased passed away in your hospital on {{date_of_death|3 August 2025}}. We act for the executrix, Mdm {{name|Leong Pui Yee}}, under Grant of Probate {{other_id|HCF/P 1442/2025}}. The deceased's last address was {{address|8 Jalan Kembangan, Opera Estate}}, Singapore {{postal_code|469012}}.
+
+We request a medical report for his final admission from {{date_other|28 July 2025}}, including his mental capacity when he signed his will on {{date_other|14 June 2025}}, as his nephew Mr {{name|Ho Jun Jie}} contests the will on the ground of {{mental_health|Alzheimer's dementia}}.
+
+Please contact the writer on the above number. Our fees for the report will be borne by the estate.
+
+Yours faithfully,
+LIM & RAMAN LLP
+=== v21_n24 | crowdfunding appeal ===
+"Help Baby {{name|Aria}} fight SMA 🙏" · {{other_id|https://give.example.org/c/help-baby-aria-2025}}
+Organiser: {{name|Nicholas Ang}} ({{other_id|@nic.ang.sg}}), father
+
+Our little {{name|Aria Ang Xin Yi}} was born on {{dob|17 March 2025}}, and on {{date_other|9 June}} she was diagnosed with {{genetic|spinal muscular atrophy type 1 (homozygous SMN1 deletion)}}. She cannot lift her head and now feeds by tube. The gene therapy costs more than S$2.8 million. Her inpatient bill so far (IP no. {{case_visit|IP25-061177}}) is S$64,310 after subsidy.
+My wife {{name|Shermaine}} stopped work to care for {{name|Aria}} full-time.
+
+PayNow to {{phone|9862 1473}} ({{name|Nicholas Ang}}). Cards and letters for {{name|Aria}}: c/o {{address|Blk 268C Compassvale Link, #09-41}}, {{postal_code|S543268}}.
+
+Comments
+{{other_id|@auntie_peggy}}: praying for u {{name|Nic}} & {{name|Sher}}!! 🙏🙏
+=== v21_n25 | blank patient feedback card ===
+WE VALUE YOUR FEEDBACK
+
+Name: ______________________   Contact no.: ______________   Email: ______________
+Ward / Clinic visited: __________   Date of visit: ___ / ___ / ______
+
+How would you rate (1 = poor, 5 = excellent):
+Courtesy of staff       1  2  3  4  5
+Waiting time            1  2  3  4  5
+Cleanliness             1  2  3  4  5
+Explanation of care     1  2  3  4  5
+
+Compliments / suggestions:
+_____________________________________________________________
+
+[ ] I would like a reply.   [ ] Please keep my feedback anonymous.
+Drop this card in any feedback box. Form QS-12 (rev. 2022)
+=== v21_n26 | WhatsApp family group export (submitted to MSW) ===
+Chat: "Papa hospital grp 🏥"
+[{{date_other|11/03/25}}, 21:14] {{name|Lynette Tan}}: papa moved to ward 8 bed 12. for enquiries MRN {{mrn|1029384-B}}
+[{{date_other|11/03/25}}, 21:16] {{phone|+65 9012 7731}}: who visiting tmr? I can go after 2pm
+[{{date_other|11/03/25}}, 21:17] {{name|Lynette Tan}}: that's Uncle {{name|Boon}}'s new number guys, save it
+[{{date_other|11/03/25}}, 21:20] {{name|Ben}} 🐻: i go after work. got papa IC? clinic counter wants it
+[{{date_other|11/03/25}}, 21:21] {{name|Lynette Tan}}: {{national_id|S69 45333 C}}
+[{{date_other|11/03/25}}, 21:23] {{name|Ben}} 🐻: ok. dr say liver damage from drinking... {{substance_use|alcoholic cirrhosis}} 😔
+[{{date_other|11/03/25}}, 21:25] {{name|Mei}}: 🙏 i fly back from perth on the {{date_other|15th}}, SQ 226
+[{{date_other|12/03/25}}, 07:02] {{name|Lynette Tan}}: <attached: {{photo|IMG-20250312-WA0004.jpg}}> papa's face photo for the NOK pass, pls send to {{name|Mei}}
+=== v21_n27 | patient feedback reply letter ===
+Patient Relations Office, {{address|9 Bedok North Rise}}, Singapore {{postal_code|469661}}. Tel {{phone|6788 4123}}
+Our ref: {{other_id|FB/2025/11/0193}}
+{{date_other|19 November 2025}}
+
+Mr {{name|KRISHNAN S/O ARJUNAN PILLAI}}
+{{address|Blk 125 Bedok North St 2, #05-48}}
+Singapore {{postal_code|460125}}
+
+Dear Mr {{name|Krishnan}},
+
+Re: Your feedback of {{date_other|5 Nov 2025}} on the care of your wife, Mdm {{name|Lakshmi}} (MRN {{mrn|EH0283376Z}})
+
+We have reviewed your concerns with the ward sister and the attending consultant. We apologise for the delay in pain relief on the night of {{date_other|2 Nov}}. We also acknowledge that her {{hiv_sti|HIV status}} was disclosed to a visiting relative without her consent. This should not have happened; the staff member involved (employee no. {{other_id|E041772}}) has been counselled and the ward has been retrained on confidentiality.
+
+Should you wish to discuss further, please contact this office at the number above.
+
+Yours sincerely,
+DR. {{name|GOH BOON KIAT}}
+Chairman, Medical Board
+=== v21_n28 | email thread with overseas family ===
+From: {{name|Daniel Sim}} <{{email|dsim.melb@example.net}}>
+Sent: {{date_other|Thursday, 4 September 2025}} 11:02 PM (AEST)
+To: Dr {{name|Rachel Teo}} <{{email|rachel.teo@hosp.example.org}}>
+Subject: RE: Mum - goals of care
+
+Hi Dr {{name|Teo}},
+Thanks for the call. My sister and I agree with DNR and comfort care. I am mum's LPA donee (LPA ref {{other_id|LPA-2-0042817}}). I can fly in on {{date_other|7 Sep}}. Pls call {{phone|+61 4 1220 5598}} anytime, even night.
+Regards,
+{{name|Dan}}
+Sent from my iPhone
+
+> On {{date_other|4 Sep 2025}}, at 3:15 PM, {{name|Rachel Teo}} wrote:
+> Dear Mr {{name|Sim}}, your mother (MRN {{mrn|0081 2276 F}}) had a further stroke this morning and is now drowsy. Could we speak about her goals of care?
+> Dr {{name|Rachel Teo}} · Consultant, Neurology · MCR {{other_id|M14922A}}
+=== v21_n29 | cross-border insurance claim letter ===
+Amanah Sejahtera Takaful Berhad, {{address|Menara ASTB, 22 Jalan Sultan Ismail}}, {{postal_code|50250}} Kuala Lumpur, Malaysia. Tel {{phone|+603-2178 6600}}
+
+Date: {{date_other|30 June 2025}}
+Claim no.: {{other_id|CLM/MY/2025/0778412}}
+Participant: Encik {{name|AZMAN BIN YUSOF}}, MyKad {{national_id|780925-14-6081}}
+Covered person: daughter {{name|Nur Sabrina binti Azman}}, MyKad {{national_id|100417-14-0328}}, DOB {{dob|17/04/2010}}
+
+Re: Hospitalisation in Singapore {{date_other|02/06/2025}} - {{date_other|05/06/2025}}, visit no. {{case_visit|V2506020144}}
+
+We regret that we are unable to admit this claim, as the admission was for {{mental_health|an intentional overdose (self-harm)}}, which is excluded under clause 7.3 of the certificate. You may appeal within 60 days with a specialist report. Outpatient follow-up for the same condition is likewise not covered. Please contact claims officer Pn {{name|Rozita}} at {{phone|+603-2178 6600 ext. 6631}}.
+=== v21_n30 | visiting-hours notice ===
+NOTICE TO VISITORS - REVISED VISITING HOURS
+
+With effect from 1 December, visiting hours for all general wards are 12 noon to 8.30 pm daily.
+
+- A maximum of 2 visitors per patient at the bedside at any one time.
+- Children below 12 years old are not allowed in the ICU, HDU and oncology wards.
+- Visitors with fever, cough or runny nose should not visit. Masks are available at the lobby counter.
+- Please register at the visitor kiosk on level 1 with your identity document before going up.
+- Caregivers with an approved caregiver pass may stay beyond visiting hours.
+
+Thank you for helping us keep our patients safe.
+=== v21_n31 | transcription of handwritten GP referral memo ===
+[Transcribed {{date_other|30/9/25}} by clinic staff from a handwritten memo on clinic letterhead]
+Kampong Glam Family Clinic, {{address|712 North Bridge Rd}}, S({{postal_code|198685}}). Tel {{phone|6293-8841}} Fax {{fax|6293 8840}}
+
+Dear Dr / Colleague,
+Re: Ms {{name|Natasha}}
+{{name|Abdullah}}, NRIC {{national_id|S03 1184 8G}}, 22 yo
+c/o {{reproductive_sexual|amenorrhoea 9/52, UPT +ve}}, requests {{reproductive_sexual|TOP}}. Hx {{substance_use|ketamine use}} last yr, says now stopped (?). Partner not aware. Pls contact her only on HP {{phone|8O12 7745}} (not home tel).
+Thanks,
+Dr {{name|S. Mohd Yusoff}}   MCR {{other_id|M09213J}}
+
+[Transcriber's note: last digit of NRIC unclear (8 or 3?), confirmed 8 against registration record; "8O12" copied as written. - {{name|jl}}]
+=== v21_n32 | translated childhood vaccination record (Vietnamese -> English) ===
+Original: Sổ tiêm chủng (immunisation booklet), Ward 7 Health Station, {{address|158 Võ Thị Sáu, Phường 7, Quận 3}}, Ho Chi Minh City. Tel {{phone|(028) 3930 4472}}
+
+Child: {{name|Lê Hoàng Minh Khôi}}     Born: {{dob|05/01/2019}}     Birth registration no.: {{national_id|142/2019/KS-P7}}
+Mother: {{name|Hoàng Thị Thu}}     Father: {{name|Lê Văn Phúc}}
+
+BCG                  {{date_other|07/01/2019}}   batch 0418
+Hepatitis B birth    {{date_other|05/01/2019}}   batch HB-1922
+DTaP-IPV-Hib-HepB 1  {{date_other|08/03/2019}}
+DTaP-IPV-Hib-HepB 2  {{date_other|10/04/2019}}
+MMR 1                {{date_other|12/01/2020}}
+MMR 2                not recorded
+
+For P1 registration and School Health Service review; child's Student's Pass FIN {{national_id|M3922381X}}. Singapore address: {{address|Riverbreeze Condo, 28 Upper Serangoon View, #11-07}}, Singapore {{postal_code|534208}}.
+[Translated by {{name|Đỗ Thanh Hương}}]

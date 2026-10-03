@@ -1,0 +1,438 @@
+# notes_v20 — held-out Singapore-style clinical/admin notes with gold spans.
+# SYNTHETIC: NOT REAL PATIENT DATA. Every person, name, NRIC/FIN, MRN, phone number, address, email and health detail below is invented for testing; any match to a real person, number or mailbox is coincidental.
+# Author: writer E. Written from general knowledge only, by an author who did not see the system under test, its rules, or earlier evaluation sets.
+# Theme of this set: research, registry, quality and data-management records (CRFs, SAE reports, deviation logs,
+#   data queries, registry forms, biobank manifests, genetics, spreadsheets, JSON/XML, ethics, monitoring,
+#   device/ECG/lab printouts, M&M, RCA, data-access requests) plus 5 negative controls (n18-n22).
+# FORMAT: each note starts with a header line "=== v20_nNN | <kind> ===". The note text is every line after it up
+#   to the next "===" header line. Gold spans are inline as {{label|text}}; the note text contains only "text".
+#   Spans are never nested; anything outside {{...}} is not an identifier.
+# LABELS (identifiers): name, national_id, mrn, case_visit, address, postal_code, phone, fax, email, dob,
+#   date_of_death, device, biometric, photo, other_id
+# LABELS (SHI): hiv_sti, mental_health, substance_use, genetic, reproductive_sexual, other_sensitive
+# LABELS (other): date_other = any date of a patient's/participant's care or study events that is not a DOB or
+#   date of death. Generic document dates (letter dates, protocol/SAP versions, meeting dates, log update dates)
+#   are NOT marked.
+# CONVENTIONS:
+#   - Honorifics/titles (Dr, Mr, Mrs, Ms, Mdm, SN, SSN, Prof, A/Prof, Uncle, "BABY OF") are outside name spans.
+#     Every mention of a person is a name span: full names, repeats, lone surnames/given names, nicknames,
+#     lower-case names, names in Chinese characters (separate span from the romanised form), and INITIALS.
+#   - "Singapore" is outside address spans; the postal code is its own postal_code span and keeps an "S" prefix
+#     inside the span when written like "S540115".
+#   - Field captions (NRIC, FIN, MRN, Tel, Fax, HP, DID, UEN, IMEI) are outside spans; only the value is labelled.
+#   - LETTERHEADS AND INSTITUTIONAL CONTACTS: organisation names (hospitals, clinics, companies, ministries,
+#     registries, dormitory names) are never marked; but every phone, fax, email, street address and postal code
+#     is marked wherever it appears (letterheads, footers, hotlines, generic mailboxes), and organisation
+#     registration numbers (UEN/ROC/charity no.) are other_id.
+#   - mrn = hospital record numbers; case_visit = admission/visit/encounter numbers of a hospital episode;
+#     device = device/lead/logger/USB serials, IMEI, vehicle plates; other_id = study subject IDs, screening
+#     numbers, sample/accession numbers, donor codes, registry case numbers, pathology numbers, report refs,
+#     ORCID, UEN, coroner case numbers. Masked/partial NRIC/FIN values are still national_id.
+#   - Decoys left unmarked: institution names, ward/bed/room numbers, lab values, doses, times, ICD codes,
+#     device model numbers, protocol/CIRB/incident/query reference numbers, version dates.
+# DELIBERATELY INVALID IDs: in v20_n04 the NRIC "S7134582D" has a WRONG check letter on purpose (the monitor is
+#   querying a transcription error); it is still labelled national_id. The correct value S7134582C also appears.
+#   Masked values containing "*" (v20_n08) cannot be checksum-verified.
+
+=== v20_n01 | case report form page ===
+STUDY HEART-SG-07 (Protocol v3.2, 14 Jan 2025)   CRF PAGE 2 — DEMOGRAPHICS & ELIGIBILITY
+Site 04 — Changi General Hospital, Cardiology Clinical Research Unit
+Subject ID: {{other_id|04-0117}}     Screening No.: {{other_id|SCR/04/0231}}
+Subject initials: {{name|T.A.K.}}     Hospital MRN: {{mrn|CGH 2208 4471 K}}
+Date of birth: {{dob|1961-03-09}}   Sex: M   Ethnicity: Chinese
+NRIC (for source verification only - DO NOT transcribe to EDC): {{national_id|S6820473I}}
+Visit 1 (Screening) date: {{date_other|02/OCT/2025}}
+Informed consent signed {{date_other|02/OCT/2025}} 10:42 by subject; impartial witness {{name|Nurul Huda bte Ismail}} (CRC)
+Consent taken by: Dr {{name|LIM Wei Jie, Kenneth}} (Sub-I)
+Inclusion 1-6: Y Y Y Y Y Y     Exclusion 1-9: N (all)
+LVEF at screening 34% (TTE {{date_other|29 Sep 2025}}); NT-proBNP 2140 pg/mL
+Remarks: subject prefers calls to go to daughter {{name|Tan Siew Ling}} on {{phone|9734 5512}} after 6pm.
+Investigator signature: {{name|K. Lim}}     Date: {{date_other|02.10.2025}}
+
+=== v20_n02 | serious adverse event report ===
+SERIOUS ADVERSE EVENT REPORT — INITIAL [x]  FOLLOW-UP [ ]
+Sponsor: Meridian Biotherapeutics Pte Ltd (UEN {{other_id|201934417K}})
+Pharmacovigilance fax: {{fax|+65 6871 2290}}   Safety mailbox: {{email|safety.sg@meridian-bio.example.com}}
+Protocol MBT-ONC-112   Site 101 — National Cancer Centre Singapore
+Subject no.: {{other_id|101-0042}}   Initials: {{name|N-A-R}}   Age: 47   Sex: F
+Event term: febrile neutropenia (CTCAE grade 4)   Onset: {{date_other|17-Aug-2025}}
+Hospitalised: {{date_other|18 Aug 2025}} (Ward 64, bed 12)   Discharged: {{date_other|24/08/2025}}
+Admission no.: {{case_visit|25-118940-3}}
+Seriousness: hospitalisation; important medical event
+Narrative: 47-year-old Malay female with HER2-negative breast cancer presented to ED with T 39.1 C, ANC 0.1 x10^9/L, nine days after cycle 3 (C3D1 {{date_other|08 Aug 2025}}). Blood cultures grew E. coli; treated with piperacillin-tazobactam 4.5 g q6h. Her husband, {{name|Rahman bin Osman}}, said she had stopped the G-CSF injections at home. Concomitant meds: sertraline 50 mg OD for {{mental_health|major depressive disorder}} since 2023.
+Causality (investigator): related to IP.   Outcome: recovered without sequelae.
+Reporter: Dr {{name|Priya Ramasamy}}, Sub-I, DID {{phone|6436 8172}}, {{email|priya.ramasamy@nccs-research.example.org}}
+Sponsor receipt: {{date_other|19AUG2025}} 14:05, logged by {{name|jasmine chua}} (PV associate)
+
+=== v20_n03 | protocol-deviation log ===
+PROTOCOL DEVIATION LOG — Study SG-DIAB-RWE (CIRB Ref 2024/2117)   Site: Tan Tock Seng Hospital
+No    | Subj     | Identified  | Category    | Description                                                     | Reported by
+PD-01 | {{other_id|TTSH-017}} | {{date_other|03 Mar 2025}} | Visit window | V3 done day +11 (window +/-7)                                   | {{name|C. Ong}}
+PD-02 | {{other_id|TTSH-022}} | {{date_other|11 Mar 2025}} | ICF         | Re-consent to ICF v4 not done before V4; pt {{name|MUTHU s/o Ganesan}} re-consented {{date_other|14/3/25}} | {{name|C. Ong}}
+PD-03 | {{other_id|TTSH-031}} | {{date_other|2 Apr 2025}}  | Eligibility | HbA1c 12.4% > max 12.0%; enrolled in error, PI informed          | {{name|Faridah}}
+PD-04 | {{other_id|TTSH-031}} | {{date_other|2 Apr 2025}}  | Privacy     | Source copy faxed to sponsor with full NRIC {{national_id|S5903361A}} visible; sponsor confirmed shredding | {{name|Faridah}}
+PD-05 | {{other_id|TTSH-040}} | {{date_other|19-05-2025}}  | IP storage  | Kit stored at 31 C for ~3 h (fridge door ajar); kits quarantined | {{name|Benedict Yeo}}
+Log maintained by {{name|Ong Chee Meng}} (CRC).  PI: A/Prof {{name|Seah Li Ting}}.
+
+=== v20_n04 | data-query thread ===
+From: {{name|Marcus Pereira}} <{{email|m.pereira@cro-asiapac.example.net}}>
+To: {{email|crc.site12@sgh-research.example.org}}
+Cc: Dr {{name|Goh Boon Kiat}} <{{email|goh.bk@sgh-research.example.org}}>
+Subject: RE: RE: Query Q-0417 / Subject {{other_id|12-008}}
+Sent: Tue 9 Sep 2025 16:22
+
+Hi {{name|Wen Hui}},
+Thanks. One item still open on {{other_id|12-008}}: the scanned eligibility worksheet shows NRIC {{national_id|S7134582D}} but the screening log has {{national_id|S7134582C}}. One of them is a transcription error - please check against the original IC and redact before re-uploading. Also the DOB in EDC is {{dob|07/11/1958}} but the worksheet says {{dob|11/07/1958}}; which is correct?
+Regards,
+{{name|Marcus}}
+
+> From: {{name|Chew Wen Hui}}
+> Sent: Mon 8 Sep 2025 09:10
+> Hi {{name|Marcus}}, Q-0417 answered: Visit 5 date corrected to {{date_other|21-Jul-2025}} (was keyed as {{date_other|12-Jul}}). Source is the clinic note signed by Dr {{name|Goh}}. Patient's son {{name|Kelvin}} called from {{phone|8123 4409}} to say his father will be overseas until Oct, so V6 may fall out of window.
+> {{name|Wen Hui}}
+> Clinical Research Coordinator | Singapore General Hospital | DID {{phone|6321 4876}} | Fax {{fax|6224 9031}}
+
+=== v20_n05 | disease-registry abstraction form ===
+SINGAPORE STROKE REGISTRY — CASE ABSTRACTION FORM (form v2023.2)
+Abstractor: {{name|Siti Mariam Jaafar}}
+Patient name: {{name|KHOO, Beng Hock}} ({{name|邱明福}})     NRIC/FIN: {{national_id|S4408815J}}
+DOB: {{dob|23.06.1949}}   Gender: M   Race: Chinese
+Address: {{address|Blk 412 Ang Mo Kio Ave 10, #08-1157}}, Singapore {{postal_code|560412}}
+Contact: {{phone|6455 0918}} (home); NOK {{name|Khoo Mei Fen}} (daughter) {{phone|9188 2065}}
+Hospital: Tan Tock Seng Hospital   MRN: {{mrn|TT1834526}}   Admission no.: {{case_visit|A25-0098817}}
+Onset: {{date_other|11 May 2025}} ~07:30 (last seen well 23:00 on {{date_other|10/5}})
+Arrival: {{date_other|11 May 2025}} 09:12 by ambulance
+Stroke type: ischaemic, L MCA territory. NIHSS 14. IV thrombolysis 10:01; EVT TICI 2b.
+Risk factors: HTN, DM2, AF (new), current smoker 30 pack-years, {{substance_use|alcohol use disorder (AUDIT 21)}}
+mRS at discharge 4. Discharged {{date_other|29-05-2025}} to a community hospital.
+Implantable loop recorder inserted {{date_other|27/05/2025}}, serial {{device|RTP448210S}}.
+
+=== v20_n06 | biobank sample manifest ===
+BIOBANK SHIPMENT MANIFEST — shipment SHP-25-0391
+From: Tissue Repository, {{address|20 College Road, Level 3}}, Singapore {{postal_code|169856}}   Tel {{phone|6576 7410}}
+To: Genomics Core, {{address|61 Biopolis Drive, #04-11}}, Singapore {{postal_code|138673}}   Attn: Dr {{name|Arjun Menon}}
+Packed by: {{name|ZHENG Xiaoyu}}   Dry ice 8 kg   Temperature logger s/n {{device|TL55-019287}}
+
+sample_id | donor_code | MRN | collected | type | vol_ul | consent_tier | remark
+{{other_id|BB25-00412-01}} | {{other_id|D-7781}} | {{mrn|M10294417}} | {{date_other|2025-06-03}} | plasma | 500 | T2 |
+{{other_id|BB25-00412-02}} | {{other_id|D-7781}} | {{mrn|M10294417}} | {{date_other|2025-06-03}} | buffy coat | 250 | T2 |
+{{other_id|BB25-00415-01}} | {{other_id|D-7790}} | {{mrn|M10377021}} | {{date_other|2025-06-04}} | serum | 500 | T1 | {{hiv_sti|HIV-positive}} donor, biohazard label applied
+{{other_id|BB25-00419-01}} | {{other_id|D-7802}} | {{mrn|M09981266}} | {{date_other|2025-06-04}} | DNA | 100 | T3 | donor {{name|Lee Kah Wai}} withdrew {{date_other|12/6}} - DO NOT USE
+{{other_id|BB25-00421-01}} | {{other_id|D-7810}} | {{mrn|M10401893}} | {{date_other|2025-06-05}} | FFPE | n/a | T2 | block 3 of 5; {{genetic|known BRCA2 carrier}}
+
+=== v20_n07 | genetic test report with pedigree ===
+MOLECULAR GENETICS LABORATORY — CLINICAL REPORT        Lab accession: {{other_id|MG-2025-03318}}
+Patient: {{name|RAJAGOPAL, Meenakshi}}   DOB: {{dob|04 Feb 1983}}   NRIC: {{national_id|S8542167J}}   MRN: {{mrn|KK 8841203}}
+Referring clinician: Dr {{name|Wong Pei Shan}}, Cancer Genetics Service
+Specimen: EDTA blood, received {{date_other|21 July 2025}}
+Test: hereditary breast/ovarian cancer panel (17 genes), NGS + MLPA
+RESULT: {{genetic|pathogenic variant BRCA1 c.5266dupC (p.Gln1756Profs*74), heterozygous}}
+Interpretation: consistent with hereditary breast and ovarian cancer syndrome; cascade testing of first-degree relatives is recommended.
+Pedigree notes (from referral):
+  II-1  proband ({{name|Meenakshi}}), breast cancer at 41
+  I-2   mother {{name|Kamala}}, ovarian cancer at 52, died {{date_of_death|2016}}
+  II-2  sister {{name|Lakshmi Rajagopal}}, 38, unaffected, wants testing - {{phone|+65 9012 7745}}
+  II-3  brother {{name|Suresh}}, lives in Chennai, {{phone|+91 98401 22657}}
+  III-1 daughter, 12 - predictive testing deferred to age 18
+Reported by: {{name|Tay Hui Min}}, PhD, Laboratory Director      Authorised {{date_other|08/08/2025}}
+
+=== v20_n08 | pasted spreadsheet (screening log CSV) ===
+screening_log_site03_export.csv (pasted from Excel)
+scr_no,initials,yob,sex,nric_masked,contact,screen_dt,outcome,fail_reason,screener
+{{other_id|S03-101}},{{name|LKH}},1957,M,{{national_id|S****512H}},{{phone|96610342}},{{date_other|2025-04-02}},FAIL,eGFR 24,{{name|ashwin}}
+{{other_id|S03-102}},{{name|NBA}},1966,F,{{national_id|T****708Z}},{{phone|83305127}},{{date_other|2025-04-02}},PASS,,{{name|ashwin}}
+{{other_id|S03-103}},{{name|DJM}},1971,M,{{national_id|G****571U}},{{phone|+880 1712 334908}},{{date_other|2025-04-07}},FAIL,"declined; {{substance_use|active methamphetamine use}}",{{name|Hui Ling}}
+{{other_id|S03-104}},{{name|SAM}},1980,F,{{national_id|F****293X}},{{phone|+63 917 552 0184}},{{date_other|2025-04-09}},PASS,"FDW; employer Mrs {{name|Chan}} agreed to time off",{{name|Hui Ling}}
+{{other_id|S03-105}},{{name|K-W.F.}},1949,M,,{{phone|6284 1150}},{{date_other|2025-04-10}},FAIL,"{{mental_health|MoCA 14, suspected dementia}}",{{name|ashwin}}
+
+=== v20_n09 | JSON export snippet ===
+ePRO platform export (one record, pretty-printed):
+{
+  "study": "PSY-MIND-03",
+  "record_id": "{{other_id|PM3-0058}}",
+  "participant": {
+    "name": "{{name|Aung Ko Ko}}",
+    "fin": "{{national_id|G5160832T}}",
+    "dob": "{{dob|1994-12-01}}",
+    "mobile": "{{phone|+6588217034}}",
+    "email": "{{email|aungkoko94@mail.example.com}}"
+  },
+  "dormitory": "Kranji Way Lodge",
+  "dorm_address": "{{address|26 Kranji Way, Blk B #05-112}}",
+  "postal": "{{postal_code|739437}}",
+  "employer": "Sinar Marine Engineering Pte Ltd",
+  "employer_contact": "Mr {{name|Lim}}",
+  "assessments": [
+    {"date": "{{date_other|2025-07-14}}", "instrument": "PHQ-9", "score": 17, "flag": "{{mental_health|moderately severe depression}}"},
+    {"date": "{{date_other|2025-07-28}}", "instrument": "PCL-5", "score": 41, "note": "{{mental_health|probable PTSD}} after worksite fall"}
+  ],
+  "safety_alert": {"item9": 2, "actioned_by": "Dr {{name|Nadia Halim}}", "callback": "{{phone|6389 2271 ext 305}}"},
+  "device_id": "{{device|356938035643809}}"
+}
+
+=== v20_n10 | ethics-board correspondence ===
+Centralised Institutional Review Board
+{{address|20 College Road, The Academia, Level 3}}, Singapore {{postal_code|169856}}  |  Tel {{phone|6323 7515}}  |  {{email|irb.office@cirb.example.org}}
+
+Our ref: CIRB 2025/2384                                                        12 September 2025
+Dr {{name|Fong Kah Mun}}
+Principal Investigator, "GUT-BIOME SG"
+
+Dear Dr {{name|Fong}},
+REPORT OF UNANTICIPATED PROBLEM — LOSS OF PARTICIPANT DATA
+The Board reviewed your report of 2 September 2025 on the loss of an unencrypted USB drive (serial {{device|AA04012736115902}}) holding the enrolment log of 63 participants, including full names, NRIC numbers and mobile numbers. We note that one participant, Ms {{name|Yeo}} (study no. {{other_id|GB-0213}}), has lodged a complaint, and that the coordinator, Mr {{name|Danial Firdaus}}, reported the loss within 24 hours.
+The Board requires that you (a) notify all affected participants in writing by 30 September 2025; (b) submit a corrective and preventive action plan; and (c) suspend new enrolment until encrypted storage is verified.
+Yours sincerely,
+A/Prof {{name|Venkat HARIHARAN}}
+Chairman, CIRB Domain C
+cc: Ms {{name|Leong Kai Xin}}, Research Integrity Office ({{email|rio@example.org}})
+
+=== v20_n11 | monitoring-visit report ===
+INTERIM MONITORING VISIT REPORT — Protocol RENAL-PROTECT-2, Site 07 (National University Hospital)
+Visit dates: 25-26 Jun 2025.  Monitor: {{name|Ho Jia Ying}} (CRA II)
+Site attendees: Prof {{name|Kwek Teck Seng}} (PI), {{name|Rosalind D'Souza}} (CRC), {{name|Hafiz}} (pharmacist)
+SDV: subjects {{other_id|07-001}} to {{other_id|07-009}} (100%); {{other_id|07-010}} to {{other_id|07-014}} (critical data only)
+Findings
+1. {{other_id|07-004}}: SAE hyperkalaemia (K 6.8 mmol/L), admitted {{date_other|3 May 2025}}, adm. no. {{case_visit|NUH25-05-03881}}; reported to sponsor 4 days late.
+2. {{other_id|07-006}}: home address from source ({{address|33 Jalan Kembangan}}, {{postal_code|S419170}}) was photocopied onto the AE worksheet sent to the sponsor; redaction required.
+3. {{other_id|07-011}}: ICF signed {{date_other|14/4/2025}}, before the ICF v5 approval date. Re-consent needed.
+4. Delegation log: Dr {{name|Shalini}} performs eligibility assessments but is not on the log.
+5. {{other_id|07-012}}: {{reproductive_sexual|positive urine pregnancy test}} at V2 ({{date_other|19-May-2025}}); IP stopped, pregnancy follow-up form opened.
+Report prepared by {{name|J.Y. Ho}}; reviewed by {{name|TAN, Gregory}} (CTM).
+
+=== v20_n12 | ICD interrogation report ===
+DEVICE CLINIC — ICD INTERROGATION SUMMARY
+Patient: {{name|FERNANDEZ, Gerard Anthony}}   MRN {{mrn|NHC-0445123}}   DOB {{dob|17/09/1955}}
+Device: dual-chamber ICD, model DX-4400   Serial no.: {{device|PZX 612094 H}}
+RA lead s/n {{device|BCT118843V}}    RV lead s/n {{device|BCT097152V}}
+Implanted {{date_other|12 Jan 2021}} by Dr {{name|Eu Kah Leong}}
+Home remote monitor s/n {{device|RM-2208-77314}}, landline {{phone|6789 4410}}
+Interrogation {{date_other|05/09/2025}}: battery 6.1 yr; RA threshold 0.75 V @ 0.4 ms; RV threshold 1.0 V @ 0.4 ms; RV impedance 520 ohm.
+Events: 2 episodes of VT at 188 bpm terminated by ATP ({{date_other|21 Aug 2025}} 03:14; {{date_other|30 Aug 2025}} 22:47). No shocks. AF burden 3.2%.
+Wife {{name|Maria}} says he has resumed driving (car {{device|SKL 4471 B}}); counselled again on driving restrictions.
+Technologist: {{name|nur farhana}}      Physician: Dr {{name|K.L. Eu}}
+
+=== v20_n13 | ECG report ===
+12-LEAD ECG REPORT (MUSE export)   Acquired {{date_other|2025-09-14}} 08:52:31   Room ED-Resus 2
+PID: {{mrn|SGH9917305Z}}     Name: {{name|HUANG ZHI QIANG}} {{name|黄志强}}
+DOB: {{dob|02-Jan-1972}} (53 yr)   Male   Location: ED   Visit: {{case_visit|E2509140211}}
+Vent. rate 112 bpm; PR 168 ms; QRS 92 ms; QT/QTc 344/470 ms; P-R-T axes 61 -12 74
+Interpretation: sinus tachycardia; ST elevation V1-V4 - consider acute anterior STEMI. Abnormal ECG.
+Compared with ECG of {{date_other|11-MAR-2024}}: ST changes are new.
+Ordered by Dr {{name|Chia}}.   Confirmed by {{name|LOW, ANDREA}} MD on {{date_other|14 Sep 2025}} 09:07
+Cath lab activated via STEMI hotline {{phone|6326 5555}}.
+
+=== v20_n14 | laboratory instrument printout ===
+XN-1000  Seq 0412   Rack 5-03   Pos 2
+Sample No.: {{other_id|2509150412}}     Patient ID: {{mrn|1028 5531 A}}
+Name: {{name|SUBRAMANIAM V}}     Sex: F     Birth: {{dob|1948/04/30}}
+Ward: 7B     Dr: {{name|ANG}}
+Analysed {{date_other|2025/09/15}} 06:41
+WBC   3.12  L  10^3/uL
+RBC   3.41  L  10^6/uL
+HGB   9.8   L  g/dL
+PLT   88    L  10^3/uL
+Flags: Blasts/Abn Lympho?   Smear review required
+Operator: {{name|KWAN Y.S.}}     Validated by: {{name|M. Ismail}} (MLS)
+Comment: critical result phoned to ward 7B ({{phone|6772 4170}}) 06:58, read back by SN {{name|Kavitha}}.
+
+=== v20_n15 | mortality and morbidity review ===
+DEPARTMENT OF GENERAL SURGERY — M&M MEETING, case 3 of 4
+Presenter: Dr {{name|Haziq Rahim}} (R3)     Consultant: A/Prof {{name|Teo}}
+Patient {{name|C.S.M.}}, 68 M, MRN {{mrn|1093-882-71}}. Background: COPD, chronic prednisolone use, {{substance_use|heavy alcohol use (6-8 cans beer/day)}}.
+Admitted {{date_other|2 July}} with perforated sigmoid diverticulitis (Hinchey III). CT performed 7 h after ED arrival. Hartmann's procedure {{date_other|3/7}}. Stoma necrosis on POD5; re-look laparotomy {{date_other|8 Jul}}. Progressive multi-organ failure; died {{date_of_death|19 July 2025}}.
+Issues discussed: overnight delay to CT (on-call registrar Dr {{name|Kumar}} covering two wards); late escalation of rising lactate; stoma viability not documented POD1-3.
+The patient's son, {{name|Chong Wei Han}}, has lodged a formal complaint. Referred to the coroner, case no. {{other_id|CC 1182/2025}}.
+Learning points: early CT for suspected perforation; senior review within 1 h; stoma checks each shift.
+
+=== v20_n16 | root cause analysis ===
+ROOT CAUSE ANALYSIS — Incident IR-2025-0773 (wrong-blood-in-tube, near miss)   QAC-privileged
+Patients: Patient A {{name|LIM Ah Moi}} (MRN {{mrn|HM00938817}}), bed 12; Patient B {{name|LIM Ah Mui}} (MRN {{mrn|HM01120654}}), bed 14 - similar names, same cubicle, Ward 56.
+Timeline
+{{date_other|07/06/2025}} 21:40  Group & match sample taken from Patient B by SN {{name|Joy Mendoza}}; tube labelled at the nurses' station with Patient A's pre-printed label.
+22:55  Blood bank flags discrepancy: group A Rh+ vs historical O Rh+ for Patient A. Unit not issued.
+23:20  SSN {{name|Pang}} informed; both patients re-bled; ROM informed.
+{{date_other|08/06/2025}} 09:00  Patient A's daughter, {{name|Ann}}, informed by phone ({{phone|8452 9013}}) under open disclosure.
+Contributing factors: bedside labelling not done; two-identifier check skipped; label printer located at the station; staffing 1:9 on night shift. {{name|Joy}} had been redeployed from another ward that evening.
+RCA team: A/Prof {{name|Lee Hwee Kiang}} (chair), Ms {{name|Jacqueline Sim}} (nursing), {{name|Mohd Fadli}} (blood bank), {{name|R. Natarajan}} (patient safety).
+
+=== v20_n17 | data-access request email ===
+From: {{name|Kwok Wei Lun}} <{{email|kwok.weilun@research.example.net}}>
+To: Data Access Committee <{{email|dac@ckd-registry.example.org}}>
+Subject: Data access request - linked CKD registry extract (DAR-25-019)
+
+Dear Committee,
+I request a linked extract of the national CKD registry, 2015-2024, with year of birth, sex, ethnicity, eGFR series, dialysis start date and date of death. We do not need names, NRIC numbers or addresses; linkage would use the salted hash already held by the registry.
+One data-quality issue from our pilot: the record for "{{name|TAN, Jeremy}}" (born {{dob|3/3/1981}}) shows a date of death of {{date_of_death|2019-11-02}} but a dialysis start of {{date_other|14 Jan 2020}}. Could the registry team check this before the extract is cut?
+Best wishes,
+{{name|Wei Lun}}
+--
+Asst Prof {{name|KWOK Wei Lun}} | Centre for Quantitative Medicine
+M {{phone|+65 9677 1328}} | ORCID {{other_id|0000-0002-7714-3361}}
+{{address|8 College Road}}, Singapore {{postal_code|169857}}
+
+=== v20_n18 | statistical analysis plan excerpt ===
+SAP v2.0 (15 March 2025) — Section 9: Primary analysis
+9.1 The primary endpoint is change in HbA1c from baseline to week 26.
+9.2 Analysis population: full analysis set (all randomised participants with at least one post-baseline HbA1c).
+9.3 Model: MMRM with treatment, visit, treatment-by-visit, baseline HbA1c and stratification factors (site region, baseline BMI <27.5 vs >=27.5). Unstructured covariance; Kenward-Roger degrees of freedom.
+9.4 Missing data: MAR assumed; tipping-point sensitivity analysis with delta 0.1-0.6% in steps of 0.1.
+9.5 Multiplicity: hierarchical testing at two-sided alpha 0.05 (primary, then key secondary 1 and 2).
+9.6 Sample size: 412 participants (206 per arm) for 90% power to detect a 0.4% difference, SD 1.1%, 15% dropout.
+Approved by the trial steering committee at its meeting on 2 April 2025.
+
+=== v20_n19 | codebook ===
+CODEBOOK — Healthy Ageing Cohort, wave 3 (dataset version 3.1)
+var_name      | type    | description                                  | values / units
+pid_hash      | char64  | salted SHA-256 of participant ID             | -
+age_grp       | int     | age group at visit                           | 1=60-64, 2=65-69, 3=70-74, 4=75+
+sex           | int     | sex                                          | 1=male, 2=female
+eth           | int     | ethnicity                                    | 1=Chinese, 2=Malay, 3=Indian, 4=Others
+postal_sector | char2   | first 2 digits of postal code (coarsened)    | 01-82
+sbp_mean      | num     | mean of 2nd and 3rd seated SBP               | mmHg
+grip_max      | num     | best of 3 dominant-hand grip trials          | kg
+phq9_tot      | int     | PHQ-9 total                                  | 0-27
+death_flag    | int     | died before wave 4                           | 0/1
+Missing codes: -7 refused, -8 not applicable, -9 missing.
+
+=== v20_n20 | blank CRF page ===
+CRF PAGE 5 — CONCOMITANT MEDICATIONS (blank master, version 1.3)
+Subject ID: __ __ - __ __ __ __      Subject initials: __ __ __      Visit: [ ] V1 [ ] V2 [ ] V3
+| # | Medication (generic) | Dose | Unit | Route | Frequency | Start (DD/MMM/YYYY) | Stop / Ongoing | Indication |
+| 1 |                      |      |      |       |           |                     |                |            |
+| 2 |                      |      |      |       |           |                     |                |            |
+| 3 |                      |      |      |       |           |                     |                |            |
+Route codes: PO oral, IV intravenous, SC subcutaneous, IM intramuscular, INH inhaled, TOP topical.
+Investigator signature: ____________________   Date: __ / __ / ____
+
+=== v20_n21 | training attendance template ===
+GCP REFRESHER TRAINING — ATTENDANCE SHEET (template, do not pre-fill)
+Session: 3 hours, Seminar Room 2-14. Facilitator: ____________
+| S/No | Full name (block letters) | Department | Staff ID | Signature | Time in | Time out |
+| 1    |                           |            |          |           |         |          |
+| 2    |                           |            |          |           |         |          |
+| 3    |                           |            |          |           |         |          |
+Topics: ICH E6(R3) principles; informed consent; SAE reporting timelines (24 h / 7 days); source documentation (ALCOA+); data protection.
+Pass mark for the post-test is 80%. Certificates are issued within 14 working days.
+
+=== v20_n22 | aggregate results table ===
+TABLE 14.2.1 — Primary endpoint by arm (FAS, n = 398)
+| Arm      | n   | Baseline HbA1c mean (SD) | Week 26 mean (SD) | Change LS mean (SE) | Diff vs placebo (95% CI) | p     |
+| Drug X   | 201 | 8.42 (0.91)              | 7.38 (0.97)       | -1.02 (0.07)        | -0.61 (-0.80, -0.42)     | <0.001|
+| Placebo  | 197 | 8.39 (0.88)              | 7.97 (1.02)       | -0.41 (0.07)        | -                        | -     |
+Hypoglycaemia (level 2): 3 (1.5%) vs 1 (0.5%). Discontinuation due to AE: 9 (4.5%) vs 5 (2.5%).
+Source: ADaM ADSL/ADLB, data cut 30 June 2025. Small cells (<5) not suppressed as no subgroup breakdown is shown.
+
+=== v20_n23 | XML registry submission ===
+<RegistrySubmission schemaVersion="4.1" registry="BirthDefects">
+  <Facility code="H07">KK Women's and Children's Hospital</Facility>
+  <Case>
+    <CaseNo>{{other_id|BDR-2025-00418}}</CaseNo>
+    <Infant>
+      <Name>BABY OF {{name|NG HUI MIN}}</Name>
+      <BirthCertNo>{{national_id|T2531407C}}</BirthCertNo>
+      <DOB>{{dob|2025-08-30}}</DOB><Sex>F</Sex><BirthWeightG>2410</BirthWeightG>
+      <MRN>{{mrn|KK25-401177}}</MRN>
+    </Infant>
+    <Mother>
+      <Name>{{name|Ng Hui Min}}</Name><NRIC>{{national_id|S8890157F}}</NRIC><DOB>{{dob|1990-02-14}}</DOB>
+      <Address>{{address|Blk 677C Punggol Drive #12-405}}</Address><Postal>{{postal_code|823677}}</Postal>
+      <Mobile>{{phone|90053318}}</Mobile>
+      <Obstetric gravida="3" para="1">{{reproductive_sexual|previous TOP at 14 weeks (2021)}}</Obstetric>
+    </Mother>
+    <Father><Name>{{name|Wong Jun Hao}}</Name><Contact>{{phone|+65 8133 0274}}</Contact></Father>
+    <Diagnosis icd10="Q21.0">Ventricular septal defect</Diagnosis>
+    <Diagnosis icd10="Q90.9">{{genetic|Trisomy 21, karyotype 47,XX,+21}}</Diagnosis>
+    <Abstractor>{{name|P. Nair}}</Abstractor>
+  </Case>
+</RegistrySubmission>
+
+=== v20_n24 | informed consent signature page ===
+PARTICIPANT INFORMATION SHEET & CONSENT FORM — SIGNATURE PAGE
+Study: Healthy Ageing Cohort Singapore (HACS)      Participant study ID: {{other_id|HACS-0233}}
+Participant name (as in NRIC): {{name|MOHAMED ISKANDAR BIN ABDUL LATIF}}
+NRIC: {{national_id|S3089762E}}
+Address: {{address|21 Jalan Chempaka Kuning}}, Singapore {{postal_code|468512}}
+Tel (H): {{phone|6448 1206}}      HP: {{phone|9824 0731}}
+Optional consents: re-contact for future studies [x]; storage of blood for genetic research [x]; retinal photography [x]
+Retinal image file: {{photo|HACS_0233_retina_OD.jpg}}     Fingerprint template ref (attendance kiosk): {{biometric|FPT-0233-7A31E4}}
+Translation: consent explained in Malay by {{name|Zainab Mohd Noor}} (impartial witness, NRIC {{national_id|S7756231A}})
+Participant signature: (signed)      Date: {{date_other|16/07/2025}}
+Person obtaining consent: {{name|Clara Chua}} (research nurse)      Date: {{date_other|16.07.25}}
+
+=== v20_n25 | adverse-event telephone follow-up log ===
+TELEPHONE CONTACT LOG — Study VAX-RSV-60, Site 02
+{{date_other|Thu 4/9/2025}} 15:10  Called subject {{other_id|02-0145}} (Mdm {{name|Goh Siew Kim}}) on {{phone|6252 0118}} - no answer.
+15:30  Called alternate contact, son {{name|Raymond}}, on {{phone|9177 6620}}. He reports his mother was admitted on {{date_other|2 Sept}} after a fall at home; discharged {{date_other|4/9}}. No fever. Injection site redness ~3 cm on day 2, resolved.
+15:42  Son sent a photo of the diary card by WhatsApp ({{photo|IMG-20250903-WA0012.jpg}}); filed in ISF.
+Assessment: fall unrelated to study vaccine; SAE (hospitalisation) form started.
+Caller: {{name|Rachel N.}}     Checked by: Dr. {{name|Paul Sng}}
+
+=== v20_n26 | cancer registry notification ===
+SINGAPORE CANCER REGISTRY — NOTIFICATION (pathology-triggered)
+Name: {{name|NGUYEN THI HOA}}     FIN: {{national_id|M3478120J}}     Passport: {{national_id|C1458823}}
+DOB: {{dob|12 Aug 1988}}   Nationality: Vietnamese   Occupation: spa therapist
+Address: {{address|Blk 115 Rivervale Drive, #06-388}} {{postal_code|S540115}}
+Primary site: cervix   Histology: squamous cell carcinoma   Diagnosis date: {{date_other|28/08/2025}}
+Related tests: {{hiv_sti|HPV 16 positive}}; {{hiv_sti|HIV 1/2 Ag/Ab non-reactive}}
+Path no.: {{other_id|S25-41876}}     Notifying pathologist: Dr {{name|Rebecca Thng}}     Lab fax: {{fax|6227 4510}}
+Registry use: {{email|notify@scr.example.org}}
+
+=== v20_n27 | quality indicator exception report ===
+QUALITY INDICATOR EXCEPTION REPORT — Q3 2025, inpatient falls with injury (tab-separated paste)
+Case	MRN	Ward	Fall date	Injury	Nurse i/c
+1	{{mrn|N2214508}}	9A	{{date_other|04-Jul}}	#NOF (R)	SN {{name|Ma Thida}}
+2	{{mrn|N2290137}}	9A	{{date_other|17-Jul}}	scalp laceration	SN {{name|Elaine Ho}}
+3	{{mrn|N1987725}}	11C	{{date_other|2-Aug}}	wrist fracture	{{name|Siva}}
+4	{{mrn|N2301886}}	11C	{{date_other|29-Aug}}	SDH	SSN {{name|Grace Liew}}
+Notes: case 2 ({{name|Krishnan}}, bed 9A-14) has {{mental_health|schizophrenia}} and was on clozapine; case 4 was on apixaban. Case 3 had {{substance_use|alcohol withdrawal}} (CIWA 18).
+Compiled by the Quality Office: {{email|qio.falls@ktph.example.com}}, Tel {{phone|6555 8000}}.
+
+=== v20_n28 | WhatsApp transcript (study coordinators) ===
+[12/9/25, 8:14 am] {{name|Fiona Lim}}: Morning! Pt {{other_id|0219}} cfm V4 tmr 9am?
+[12/9/25, 8:16 am] {{name|Arif}}: yes but Uncle {{name|Tan}} says he moved house, new addr {{address|Blk 228 Compassvale Walk #11-560}}
+[12/9/25, 8:16 am] {{name|Arif}}: IC last 4 is {{national_id|815J}} right? want to match the clinic list
+[12/9/25, 8:17 am] {{name|Fiona Lim}}: ya. also call his wife {{name|Ah Lian}} {{phone|8726 3014}} if he dont pick up
+[12/9/25, 8:21 am] {{name|Arif}}: <attached: {{photo|IMG-20250912-WA0007.jpg}}> his discharge memo from {{date_other|10 Sep}}
+[12/9/25, 8:22 am] {{name|Fiona Lim}}: pls dont send pt photos here!! upload to the portal. and tell Dr {{name|Leong}} abt the readmission
+[12/9/25, 8:23 am] {{name|Arif}}: ok sorry. deleting
+
+=== v20_n29 | adverse drug reaction report ===
+ADVERSE DRUG REACTION REPORT — to the national pharmacovigilance centre      Report ref: {{other_id|ADR-25-118804}}
+Reporter: {{name|Jasvinder Kaur}}, pharmacist, Bedok Polyclinic, Tel {{phone|6243 6740}}
+Patient: initials {{name|W.Y.F.}}, 24 F, 52 kg      NRIC (last 4): {{national_id|962E}}
+Suspected drug: carbamazepine 200 mg BD, started {{date_other|05/08/2025}} for trigeminal neuralgia
+Reaction: Stevens-Johnson syndrome, onset {{date_other|19/08/2025}}; admitted, adm. no. {{case_visit|CGH-25-778120}}
+Pre-treatment screen: {{genetic|HLA-B*15:02 positive}} (result not seen before dispensing - see narrative)
+Other meds: lithium 400 mg ON for {{mental_health|bipolar affective disorder}} (Dr {{name|Leow}}); combined OCP.
+Narrative: the dispensing label read "Carbamazepine 200mg 1 tab twice daily - queries call {{phone|9022 8451}}", i.e. the patient's own mobile number was printed in the instruction field instead of the pharmacy line. The HLA result had been filed under her mother, {{name|Ong Bee Lian}}, who shares the same surname and DOB year.
+Outcome: recovering.
+
+=== v20_n30 | consent withdrawal letter (transcribed) ===
+[Handwritten letter, transcribed by study team]
+To Dr {{name|Wan}},
+I, {{name|Joseph Lourdes Anthony}} (IC {{national_id|S6031849B}}), want to withdraw from the heart study from today. Please destroy my blood samples also. My wife {{name|Theresa}} not happy with the many calls. If need please call me {{phone|9312 6684}} or email {{email|joe.anthony61@mail.example.net}}. My new address is {{address|47 Lorong Mydin}}, Singapore {{postal_code|416844}}.
+Thank you,
+{{name|Joseph A.}}   {{date_other|3rd Sept 2025}}
+---
+Office use: received {{date_other|05/09/25}} - {{name|KX}}. Withdrawal of consent (samples + data from today) entered in EDC for {{other_id|HS-1187}}. Biobank informed ({{email|biobank.requests@example.org}}).
+
+=== v20_n31 | certificate of sample destruction ===
+CERTIFICATE OF SAMPLE DESTRUCTION
+Biorepository (charity reg. no. {{other_id|T08GB0032E}})
+{{address|11 Biopolis Way, #09-03}}, Singapore {{postal_code|138667}}   Tel {{phone|6601 2244}}   Fax {{fax|6601 2245}}   {{email|biorepository@example.org}}
+Reason: withdrawal of consent by donor {{other_id|D-7802}} (request received {{date_other|12 Jun 2025}})
+Items destroyed: {{other_id|BB25-00419-01}} (DNA, 100 uL); {{other_id|BB25-00419-02}} (plasma, 2 x 500 uL)
+Method: autoclave cycle 134 C / 18 min, run no. 2219, then clinical waste incineration.
+Destroyed on {{date_other|20/06/2025}} by {{name|Rizwan Hossain}}; witnessed by {{name|ONG, Pei Qi}}.
+Data: linked records in the LIMS anonymised; donor contact details deleted.
+
+=== v20_n32 | death linkage reconciliation ===
+DEATH LINKAGE RECONCILIATION — cohort vs. registry death extract, batch 2025-Q2
+study_id | name (cohort) | name (registry) | NRIC | DOD cohort | DOD registry | status
+{{other_id|HACS-0051}} | {{name|Tan Kok Leong}} | {{name|TAN KOK LEONG}} | {{national_id|S2479016I}} | {{date_of_death|2025-04-11}} | {{date_of_death|11/04/2025}} | match
+{{other_id|HACS-0077}} | {{name|Siti binte Yusof}} | {{name|SITI BTE YUSOFF}} | {{national_id|S3317952I}} | {{date_of_death|2025-05-03}} | {{date_of_death|05/03/2025}} | CHECK - day/month swap?
+{{other_id|HACS-0102}} | - | {{name|PILLAI RAMESH}} | {{national_id|S1984036J}} | - | {{date_of_death|02.06.2025}} | missing in cohort; NOK {{name|Devi Ramesh}} to be contacted
+{{other_id|HACS-0140}} | {{name|Lee-Wong Mei Ling, Cheryl}} | {{name|LEE-WONG MEI LING CHERYL}} | {{national_id|S5266471C}} | {{date_of_death|17 Jun 2025}} | {{date_of_death|17/06/2025}} | match
+Notes: for {{other_id|HACS-0102}} the registry cause of death is asphyxia due to hanging (coroner's finding: {{mental_health|suicide}}); flag to the safety officer, Dr {{name|Melvin Goh}}.
+Prepared by {{name|Lynette Koh}} ({{email|lynette.koh@hacs.example.com}}).

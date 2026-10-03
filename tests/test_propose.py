@@ -564,3 +564,69 @@ def test_a_dna_profile_and_a_spaced_nric_are_proposed():
     ids = spans(text, "shape:id")
     assert "S 1234 567 D" in ids
     assert "S 1234 567 A" not in ids
+
+
+@pytest.mark.parametrize("text, want, source", [
+    ("Helpline 1800 555 0142 (24h).", "1800 555 0142", "shape:phone"),
+    ("HP 8l23 4O56 (scanned form)", "8l23 4O56", "shape:ocr_phone"),
+    ("NRIC Sl234567D (scanned)", "Sl234567D", "shape:ocr_nric"),
+    ("Visitor IC *417G signed in", "*417G", "shape:id"),
+    ("Visitor IC XXXX902K signed in", "XXXX902K", "shape:id"),
+    ("Hospital no. 5512-\n208-44 transferred", "5512-\n208-44", "shape:id"),
+    ("04-011 | KLT | M/1957 | 11SEP2026", "1957", "shape:yob"),
+    ("YOB: 1990, smoker", "1990", "shape:yob"),
+    ("Sdr. born in 1974 at Ipoh", "1974", "shape:yob"),
+])
+def test_p23_shapes_are_proposed(text, want, source):
+    assert want in spans(text, source)
+
+
+@pytest.mark.parametrize("text, source", [
+    ("OCR text: lOOk 0lIO here", "shape:ocr_phone"),  # too few real digits
+    ("Visit 2026, follow up 1990 cohort", "shape:yob"),  # no sex marker or YOB word
+    ("Order Sl234567A (scanned)", "shape:ocr_nric"),  # the checksum fails after the swap
+])
+def test_p23_shapes_need_their_cue(text, source):
+    assert spans(text, source) == []
+
+
+@pytest.mark.parametrize("text, want", [
+    ("Disp 25/09/26   Chk: KWL\n", "KWL"),
+    ("Register maintained by TSY\n", "TSY"),
+    ("Plan agreed with family.\nHdS\n", "HdS"),
+    ("Staff on shift: ALW / RKN / JTM\n", "RKN"),
+    ("Thanks,\nPLH\n", "PLH"),
+])
+def test_initials_in_sign_off_slots_are_proposed(text, want):
+    assert want in spans(text)
+
+
+def test_an_initials_list_with_a_staff_role_is_skipped():
+    assert "RKN" not in spans("Staff on shift: RN / RKN / JTM\n", "shape:initials")
+
+
+def test_names_in_other_scripts_after_an_honorific_are_proposed():
+    assert "முருகன் செல்வம்" in spans("பெயர்: திரு. முருகன் செல்வம் / Mr MURUGAN")
+
+
+def test_a_name_after_a_malay_kin_possessive_is_proposed():
+    assert "Hendra" in spans("Tolong hubungi. Suami saya Hendra di Medan.")
+
+
+def test_a_drive_address_is_proposed():
+    assert "8 Science Park Dr" in spans("Clinic at 8 Science Park Dr, Singapore", "shape:address")
+
+
+def test_id_and_initials_columns_are_proposed():
+    t = ("Scr no. | Init | MRN | Outcome\nSCR-104 | B.K.T. | KR0051127J | negative\n"
+         "SCR-105 | W.L. | KR0048890D | negative\n")
+    assert "SCR-105" in spans(t, "shape:id_column")
+    assert "W.L." in spans(t, "shape:name_column")
+
+
+def test_a_lower_case_log_column_holds_names_but_not_staff_roles():
+    t = ("ts                   uid     user             role  act\n"
+         "2026-09-24T09:12:07  u47812  TAN_MEILING      RN    VIEW\n"
+         "2026-09-24T09:13:10  u47813  MO               MO    VIEW\n")
+    got = spans(t, "shape:name_column")
+    assert "TAN_MEILING" in got and "MO" not in got

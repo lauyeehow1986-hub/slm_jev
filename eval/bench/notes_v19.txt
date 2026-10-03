@@ -1,0 +1,404 @@
+# notes_v19 — held-out Singapore-style clinical/admin notes with gold spans.
+# SYNTHETIC: NOT REAL PATIENT DATA. Every person, name, NRIC/FIN, MRN, phone number, address, email and health detail below is invented for testing; any match to a real person, number or mailbox is coincidental.
+# Author: writer D (primary, community and long-term care). Written from general knowledge only, by an author who did not see the system under test, its rules, its code, or any earlier evaluation sets.
+# FORMAT: a note starts with a header line "=== v19_nNN | <kind> ===". The note text is every line after that header up to the next "===" header line.
+# Gold spans are inline as {{label|text}}; only "text" belongs to the note (braces and "label|" are markup). Spans are never nested, never contain "{{", "}}" or "|", and have no leading/trailing spaces. Anything outside {{...}} is not an identifier.
+# LABELS (identifiers): name, national_id, mrn, case_visit, address, postal_code, phone, fax, email, dob, date_of_death, device, biometric, photo, other_id
+# LABELS (SHI): hiv_sti, mental_health, substance_use, genetic, reproductive_sexual, other_sensitive
+# LABELS (other): date_other = any date of the patient's care/events that is not a DOB or date of death.
+# CONVENTIONS:
+# - Honorifics/titles (Dr, Mr, Mrs, Ms, Mdm, SN, SSN, EN, SEN, Encik, Pn, Puan, Prof, A/Prof ...) are outside name spans, also when written in capitals.
+# - Every person is named and every mention is labelled: patients, relatives, carers, staff, clinicians, employers, witnesses, callers; repeated mentions, surnames alone after a title, given names alone, nicknames, chat sender names, sign-offs, and initials (INITIALS used for a person are labelled name).
+# - A name split across a line break is labelled as two separate name spans. Names written in Chinese characters are labelled name.
+# - "Singapore" and the postal code are outside address spans; the postal code is its own postal_code span (an "S" prefix, if written attached, stays inside).
+# - national_id = NRIC/FIN/passport/birth-certificate numbers, including masked or partial forms (e.g. last four characters); mrn = medical record / patient chart / client / resident numbers of any healthcare or care provider; case_visit = visit, admission, encounter, appointment or teleconsult session numbers; device = serial numbers of devices used by/for a person, vehicle plates, IMEI; biometric = biometric templates/identifiers; photo = photographs of a person (file names or references); other_id = any other identifying number/code/handle/URL (insurance policy, claim, accession, MC serial, feedback/incident refs, employee and work-permit numbers, practitioner registration numbers, LPA certificate numbers, social handles, profile URLs).
+# - LETTERHEADS AND INSTITUTIONAL CONTACTS: institution, hospital, clinic, company, agency and ministry NAMES are decoys and are NOT marked. Every phone number, fax number, email address, street address and postal code is marked wherever it appears (letterheads, footers, switchboards, hotlines, department faxes, generic mailboxes). Organisation registration numbers (UEN, ROC, licence, charity reg. no.) are other_id.
+# - Field captions (NRIC, FIN, IC, MRN, Tel, Fax, HP, DID, UEN ...) are outside spans; only the value is labelled.
+# - Decoys left unmarked: organisation names, ward/bed/room numbers, lab values, doses, times, ICD/SNOMED codes, device model numbers, vaccine batch numbers, protocol/document/form numbers, dates not about a person's care.
+# - Emails/URLs use only example.com / example.org / example.net and their subdomains.
+# - Negative controls (no spans at all): v19_n05, v19_n10, v19_n15, v19_n25, v19_n26.
+# - DELIBERATELY INVALID ID: in v19_n19 the NRIC "S8261160G" has a wrong check letter (a copying error in the story; the valid letter would be F). It is still labelled national_id. All other full NRIC/FIN values have valid checksums (spaces/hyphens inside them are formatting only).
+
+=== v19_n01 | polyclinic chronic disease review (diabetes) ===
+Northvale Polyclinic — Chronic Disease Management: DM Review
+Patient: {{name|LIM GEK HUAY}} ({{name|林玉惠}})   NRIC: {{national_id|S5808183C}}   MRN: {{mrn|NVP-0048213}}
+DOB: {{dob|14/03/1958}}   Seen: {{date_other|02 Sep 2026}}
+
+Care-team entries
+[Nurse clinician — SN {{name|Farhana}}] HbA1c 8.4% (prev 7.9% on {{date_other|11/05/2026}}). BP 138/82, wt 71.2 kg, BMI 28.9. Foot screen: monofilament intact bilaterally, pedal pulses palpable. Pt says daughter-in-law {{name|Joyce}} now cooks; more rice at dinner, and she has stopped her evening walks since her knee started aching.
+[Dr {{name|K. Selvarajah}}] T2DM, suboptimal control, no hypoglycaemia. uACR 4.1 mg/mmol, eGFR 72. Increase metformin to 850 mg BD; continue linagliptin 5 mg OM. Recheck HbA1c in 3/12. Retinal photography due — booked {{date_other|9 Oct}}. Discussed insulin as a future option; pt is reluctant ("injection very scary").
+[Dietitian {{name|Wong Pei Shan}}] Plate method reviewed in Hokkien with patient and son {{name|Ah Seng}}. Suggest half bowl brown rice; kopi-O kosong instead of kopi with condensed milk; fruit limited to two servings a day.
+[Care coordinator {{name|Nur Syafiqah}}] Son's HP {{phone|9123 4471}} updated as primary contact. Health Plan goal: walk 20 min after dinner, 5x/week; enrolled in community exercise programme.
+Next review: {{date_other|02-Dec-2026}}, Consult Room 2-14.
+
+=== v19_n02 | polyclinic hypertension review (team log) ===
+HTN REVIEW LOG — Pt: {{name|RAMASAMY, Devi Priya}}   ID {{national_id|S6565415F}}   MRN {{mrn|M-2213-9907}}   Age 61
+Date | Entry | By
+{{date_other|2026-08-14}} | Home BP log avg 152/94. Amlodipine 5 mg OM increased to 10 mg OM. Salt intake reviewed (pickles, papadum). | Dr {{name|Lee W. M.}}
+{{date_other|2026-08-28}} | Phone f/u. Mild ankle swelling. Pt (in Tamil): "kaal konjam veengirukku". Advised leg elevation; not distressing. | SN {{name|Kavitha}}
+{{date_other|2026-09-19}} | BP 136/84. Considered losartan 50 mg — deferred, K+ 4.9, Cr 98. ECG sinus rhythm, no LVH. | Dr {{name|Lee}}
+Husband {{name|Murugan s/o Pillai}} accompanies; he is also followed up here for diabetes.
+Family hx: daughter's genetic test showed {{genetic|familial hypercholesterolaemia (heterozygous LDLR variant)}}; pt agreeable to cascade testing, LDL 4.6 mmol/L.
+Remark: mobile in old record was mistyped. Correct no. {{phone|8467 2019}}; old {{phone|84672091}} — do not use.
+CVD risk (SG-modified Framingham) 14%. Statin discussed; pt wants to "try diet first" for three months.
+
+=== v19_n03 | GP referral letter ===
+Sunbeam Family Clinic
+{{address|Blk 823 Tampines Street 81, #01-210}}, Singapore {{postal_code|520823}}
+Tel {{phone|6786 3302}} | Fax {{fax|6786 3319}} | {{email|frontdesk@sunbeam.example.com}} | UEN {{other_id|201814477K}}
+
+{{date_other|21 August 2026}}
+
+Specialist Outpatient Clinic (Orthopaedics), Eastgate General Hospital
+Attn: Dr {{name|Chua Boon Keng}}
+
+Dear Dr {{name|Chua}},
+Re: {{name|SITI HAJAR BINTE MOHD YUSOF}} | NRIC {{national_id|T0176714Z}} | DOB {{dob|3.7.2001}}
+Thank you for seeing Ms {{name|Siti}}, a 25-year-old childcare teacher, with six weeks of right knee pain and giving way after a futsal injury on {{date_other|9/7/26}}. She heard a "pop" and could not continue playing. Examination shows a positive anterior drawer and Lachman test with a mild effusion; McMurray negative. I suspect an ACL tear.
+Of note, she is {{reproductive_sexual|about 8 weeks pregnant (G1P0)}}, so I have not ordered X-rays; I would be grateful for your assessment and MRI if appropriate. She is using a hinged knee brace and paracetamol only, and has been given a physiotherapy home programme in the meantime.
+Her mother, Pn {{name|Rohani}}, usually brings her and can be reached at {{phone|+65 9734 0128}}.
+Yours sincerely,
+Dr {{name|Aaron Teo Jun Wei}}
+MBBS (S'pore), MCFP — MCR {{other_id|M71245Z}}
+
+=== v19_n04 | GP medical certificate ===
+MEDICAL CERTIFICATE   Serial {{other_id|MC 0918227}}
+Kampong Glam Family Practice, {{address|61 Arab Street}}, Singapore {{postal_code|199756}} · Tel {{phone|6291 8840}}
+This is to certify that  {{name|NGUYEN THI HOA}}  FIN {{national_id|G4850043P}}
+was examined on {{date_other|Tue 15/09/2026}} and is unfit for duty from {{date_other|15/09/2026}} to {{date_other|17/09/2026}} inclusive (3 days).
+Employer (as stated by patient): Golden Lotus Restaurant.
+The diagnosis is not printed on the employer copy. This certificate is not valid for absence from court attendance.
+Verify this MC online: {{other_id|https://verify.example.org/mc/0918227}}
+Dr {{name|Yusri bin Abdul Latif}} (MCR {{other_id|M58830H}})
+
+=== v19_n05 | clinic notice (opening hours) ===
+NOTICE TO PATIENTS
+Revised opening hours with effect from next month:
+Mon–Fri 8.00 am – 1.00 pm and 2.00 pm – 9.00 pm
+Sat 8.30 am – 12.30 pm
+Sun & Public Holidays: CLOSED
+Last registration is 30 minutes before closing. The pharmacy counter closes 15 minutes after the last consultation.
+CHAS, Merdeka Generation and Pioneer Generation cards are accepted. Please bring your physical or digital IC for registration.
+Flu vaccination is available on a walk-in basis while stocks last. Children below 6 must be accompanied by an adult.
+For chronic disease reviews, please bring your medicines and home blood pressure or sugar records.
+诊所营业时间已更改。Waktu operasi klinik telah berubah.
+Thank you for your understanding. — Clinic Management
+
+=== v19_n06 | home-nursing visit record ===
+HOME NURSING VISIT RECORD — Silverlink Home Care
+Client name: {{name|KOH}}
+{{name|SIEW LAN}} ({{name|許秀蘭}})   Client ID {{mrn|SHC-C-30871}}
+Address: {{address|Blk 115 Bedok North Road, #09-1342}} {{postal_code|S460115}}
+Visit: {{date_other|07.09.2026}} 1030h   Nurse: SN {{name|Maricel Dizon}}
+Vitals: T 36.8, BP 124/70, HR 78, SpO2 97% RA. Alert, oriented to person only (baseline).
+Wound: sacral pressure injury stage 2, 2.1 x 1.4 cm, granulating, no slough, no odour. Hydrocolloid dressing changed; periwound skin protected with barrier film.
+IDC 14 Fr changed (last {{date_other|10/8}}); urine clear, 10 ml water in balloon.
+Equipment: alternating-pressure air mattress on loan, serial {{device|AM-7720-118934}}; settings checked.
+Main carer: daughter {{name|Jasmine}} (HP {{phone|9688-2210}}); FDW {{name|Wati}} does 2-hourly turning and says "Nenek makan sikit saja." Advised high-protein supplement twice daily.
+Next visit {{date_other|14/9}}.
+Signed: {{name|M. Dizon}}
+
+=== v19_n07 | nursing-home progress notes ===
+Evergreen Nursing Home — Ward B2, Bed 07
+Resident: {{name|ABDUL RAHMAN BIN OSMAN}}   Res. No. {{mrn|EGN-R-0412}}   NRIC {{national_id|S1579187Z}}
+{{date_other|28/08/26}} 0700 — Night HCA {{name|Thiri}} reports resident wandering x2 between 0200 and 0400. CBG 6.2. Calmed with reassurance in Malay ("Pakcik, dah malam, tidur ya") and a warm drink.
+{{date_other|28/08/26}} 1400 — Visited by son {{name|Faizal}}. Son asks whether father's {{mental_health|depression}} has relapsed; explained by SSN {{name|Lim Hui Min}} that appetite and mood will be monitored.
+{{date_other|29/08/26}} 0915 — Dr {{name|Gopal}} (visiting GP): {{mental_health|BPSD}} with night-time agitation; trial of non-pharmacological measures (daytime activity, light exposure, toileting before bed), no restraints. Quetiapine not started. Review in 2 weeks.
+{{date_other|30/08/26}} 2200 — EN {{name|Aung Myo Thant}}: refused meds; taken at 2230 mixed with apple puree. Slept from 2300.
+{{date_other|31/08/26}} 1000 — Bath given. Small skin tear L forearm (1 cm), cleaned, silicone dressing applied. Family informed.
+
+=== v19_n08 | resident care-plan review (nursing home) ===
+CARE PLAN REVIEW — QUARTERLY
+Resident: {{name|TAN, Ah Choo}} @ {{name|Tan Ah Chu}}   NRIC (masked on form): {{national_id|S****911H}}   Room 3-11
+Review date: {{date_other|Sept 22, 2026}}
+Attendees: {{name|Ong Mei Ling}} (NM), {{name|Ruth Fernandez}} (PT), {{name|R. Balakrishnan}} (MSW), nephew {{name|Tan Kok Wah}} (NOK, {{phone|8155 6630}}), resident.
+1. Falls: two falls since last review ({{date_other|3 Jul}}, {{date_other|19 Aug}}), both unwitnessed at night while going to the toilet. Hip protectors; bed-exit sensor serial {{device|BX-4471-2019-0083}}; commode at bedside.
+2. Continence: toileting every 2 hours by day; pads at night. No UTI this quarter.
+3. Nutrition: weight stable at 46 kg; soft diet, thin fluids.
+4. Psychosocial: low mood since roommate passed away; GDS-15 = 9, {{mental_health|depressive symptoms}}. Refer psychogeriatric outreach; volunteer befriender weekly; enjoys Teochew opera on the radio.
+5. Infection: {{other_sensitive|chronic hepatitis B carrier}}; LFT 6-monthly, last normal.
+Advance care plan on file. Next review: {{date_other|Dec 2026}}.
+
+=== v19_n09 | eldercare day-centre incident note ===
+Sunrise Active Ageing & Day Care Centre, {{address|Blk 2 Jalan Bukit Merah, #01-4410}}, Singapore {{postal_code|150002}} · Tel {{phone|6273 0915}}
+INCIDENT NOTE — ref {{other_id|IR-2026-044}}
+Date/time: {{date_other|Thu, 10 Sep 2026}}, approx. 11.40 am
+Client: Mr {{name|Low}} ({{name|LOW TECK SENG}}), client no. {{mrn|DC-0377}}, NRIC {{national_id|S 0839986 G}}
+During seated exercise, client slid forward off a chair without armrests onto his buttocks. No head strike, no LOC. Programme coordinator {{name|Hidayah}} and care staff {{name|Jennifer Pereira}} assisted him up using the two-person technique. BP 148/90, HR 82. Small abrasion R elbow, cleaned and dressed. Able to walk with his usual stick.
+Wife, Mdm {{name|Chong}}, informed at 12.05 pm on home line {{phone|6452 0337}}. Client declined A&E; family advised to watch for pain or confusion over 24 hours.
+Action: chairs without armrests removed from exercise corner.
+Reported by: {{name|J. Pereira}}   Reviewed by: Centre Manager {{name|Daniel Kwek}}
+
+=== v19_n10 | health-talk flyer ===
+FREE HEALTH TALK: "Eat Well, Age Well"
+Learn how to read food labels, choose healthier oils and plan balanced meals on a budget.
+Topics: the Healthier Choice Symbol, salt and sugar swaps, protein for strong muscles, staying hydrated in hot weather.
+Venue: Community Room, Level 1 of the polyclinic. Talk in English with Mandarin and Malay interpretation.
+Light refreshments (less sugar!) provided. Seats are limited — register at the information counter.
+Bring along your HealthHub app to earn Healthy 365 points.
+欢迎乐龄朋友参加！ Semua dijemput hadir!
+
+=== v19_n11 | community-hospital rehabilitation summary ===
+Riverside Community Hospital — Rehabilitation Discharge Summary
+Name: {{name|D'SOUZA, Marianne Theresa}}   MRN {{mrn|RCH 7781 0045}}   Adm no. {{case_visit|RCH-A-26-02219}}
+DOB {{dob|29-Jan-1949}}   Admitted {{date_other|04/08/2026}}   Discharged {{date_other|01/09/2026}}
+Transferred from Eastgate General Hospital (Ward 8C) after L hemiarthroplasty for NOF fracture (fall at home {{date_other|27/07/2026}}).
+Function: MBI 48 → 81. Ambulant with quad stick 30 m with supervision; stairs 10 steps with rail. Independent in feeding and grooming; needs help with lower-body dressing.
+Therapists: PT {{name|Hazwani}}; OT {{name|Celeste Ng}}. Speech therapy not required.
+Medical issues: post-op anaemia (Hb 9.6 → 11.2 on iron), constipation resolved, BP controlled on amlodipine 5 mg OM. Osteoporosis: started on denosumab 60 mg 6-monthly.
+Home: {{address|23 Jalan Kembangan}}, Singapore {{postal_code|419118}} (2-storey landed; bedroom moved downstairs). OT home visit {{date_other|20 Aug}}: grab bars and shower chair recommended.
+Lives with husband {{name|Gerald}} (82) and helper {{name|Lorna Bautista}}.
+Caregiver contact: daughter {{name|Michelle D'Souza-Lim}}, {{phone|+65 9017 5532}}, {{email|michelle.dsl@mail.example.com}}.
+Follow-up: GP Dr {{name|Wee}} in 2 weeks; orthopaedic clinic {{date_other|6 Oct 2026}}.
+
+=== v19_n12 | hospice home-visit note ===
+Lumina Home Hospice — Home Visit
+Patient: Mr {{name|RAJENDRAN a/l MUTHUSAMY}} ("{{name|Raj}}")   Hospice ID {{mrn|LHH-2026-1187}}
+Address: {{address|Blk 307C Punggol Walk #13-77}}, Singapore {{postal_code|823307}}
+Visit: {{date_other|Sat 26.9.26}} — Dr {{name|Low Shu Fen}} with hospice nurse
+Dx: metastatic carcinoma of pancreas. Pain 6/10 on CSCI morphine; syringe driver (S/N {{device|NK-T34-55120}}) rate increased 10 → 15 mg/24 h. Haloperidol 1.5 mg added for nausea. Drowsy but rousable; taking sips only. Mouth care demonstrated.
+Wife {{name|Saraswathy}} is main carer; son {{name|Vikram}} flying in from Chennai (Indian mobile {{phone|+91 98450 22371}}).
+Pt wishes to die at home; DNR form signed {{date_other|12/09/2026}}. Signs of approaching death explained to family.
+Wife appears to have {{mental_health|anxiety with poor sleep}}; MSW {{name|Fiona Goh}} to follow up.
+24-hour hotline number re-explained. Wife: "Romba nandri, doctor."
+
+=== v19_n13 | telehealth video consult ===
+TELECONSULT — Northvale Polyclinic   Session {{case_visit|TH-7Q4-882-019}}
+Date: {{date_other|2026-09-08}}   Start 14:02   End 14:19
+Patient: {{name|Mohammad Irfan Haziq}}, 21 — identity verified by NRIC last four "{{national_id|476H}}" and DOB.
+Patient location: home, {{address|Blk 451 Jurong West St 42 #05-18}}
+Doctor: Dr {{name|Priscilla Ong}}
+Asthma review. Night cough 3x/week, reliever use most days. PEF 480 (best 560). Inhaler technique observed on video — good, but uses spacer only sometimes.
+Admits he {{substance_use|vapes daily, about one pod a day}}. Counselled; vaping is illegal in Singapore and worsens asthma; offered quit programme referral, which he accepted.
+Mother {{name|Rosnah}} joined midway on her phone ({{phone|9822 1046}}).
+Patient's display name on the call was "{{other_id|irfanhzq_07}}".
+Plan: step up to budesonide/formoterol 200/6 as maintenance and reliever; written asthma action plan sent by app. MC issued for 1 day. Medicines delivered to home. Review by video in 4 weeks.
+
+=== v19_n14 | pharmacist medication-review clinic note ===
+MEDICATION REVIEW CLINIC (pharmacist-led)
+Pt: {{name|Ong Kim Huat}} ({{name|王金发}})   MRN {{mrn|NVP-0039115}}   Age 77
+Referred by Dr {{name|K. Selvarajah}} for polypharmacy (14 items). Brown-bag review {{date_other|16 Sep 2026}}:
+1. Metformin 500 mg BD — taking
+2. Atorvastatin 20 mg ON — stopped himself ("muscle ache")
+3. Amlodipine 10 mg OM — taking
+4. Tramadol 50 mg PRN from a private GP; also {{substance_use|buys unlabelled "strong pain pills" at the pasar malam, takes 2-3 daily}}
+5. Warfarin 3 mg (anticoag clinic no. scribbled on box: {{phone|6355 1720}}) — INR 3.6 last week
+6. Three expired eye-drop bottles and two duplicate strips of paracetamol — discarded with consent.
+Remark: pt wrote his IC {{national_id|S4972940E}} on every pill bottle "so they won't get mixed up".
+Lives alone; neighbour Mdm {{name|Fatimah}} helps fill pill box on Sundays.
+Assessment: high bleeding risk (warfarin + unknown NSAID-like pills), possible serotonergic interaction with tramadol.
+Plan: stop unlabelled pills, bring them in for identification, refer back to doctor re statin rechallenge, weekly blister pack, INR in 1 week.
+Pharmacist: {{name|Charmaine Seet}} (PRN {{other_id|P07712I}})
+
+=== v19_n15 | pharmacy stock-take sheet ===
+MONTHLY STOCK-TAKE — Treatment Room
+Item | Unit | System qty | Counted | Variance
+Paracetamol 500 mg tab | box of 100 | 42 | 42 | 0
+Amoxicillin 500 mg cap | box of 21 | 18 | 17 | -1
+Influenza vaccine (quadrivalent) | PFS | 60 | 60 | 0
+Gauze swab 10 x 10 cm | pkt | 120 | 115 | -5
+Hydrocolloid dressing 10 x 10 cm | pc | 35 | 35 | 0
+Lancets 30G | box of 200 | 9 | 9 | 0
+Glucose test strips | vial of 50 | 26 | 24 | -2
+Insulin pen needles 4 mm | box of 100 | 14 | 14 | 0
+Adrenaline 1 mg/ml amp (anaphylaxis kit) | amp | 6 | 6 | 0
+Remarks: amoxicillin variance traced to a sample pack issued without docket; to be reconciled. Vaccine fridge stayed within 2–8 °C throughout. Two lancet boxes expire next quarter — use first.
+Counted by: pharmacy technician (shift A). Verified by: pharmacist-in-charge.
+
+=== v19_n16 | dental consultation note ===
+Harbourfront Dental Surgery — Chart No. {{mrn|HDS-11842}}
+Pt: {{name|Chew Wan Ting}}, F, DOB {{dob|11 Nov 1992}}, NRIC {{national_id|S9249826C}}
+{{date_other|19.08.2026}}: C/O throbbing pain LR quadrant x 4 days, worse at night. 46 deep distal caries, TTP+, cold test lingering >30 s. No swelling, no lymphadenopathy.
+Medical hx: {{reproductive_sexual|currently 20 weeks pregnant}}; periapical radiograph taken with lead apron and thyroid collar.
+Dx: symptomatic irreversible pulpitis 46. Options (RCT vs extraction) explained; pt chose RCT. LA 2.2 ml lignocaine 2% c 1:80,000 adr. Pulpotomy done, temporary dressing placed. Paracetamol only for pain.
+Intra-oral photos saved as {{photo|HDS11842_intraoral_190826.jpg}}.
+Dentist: Dr {{name|Haris Nathan}}.
+Next appt {{date_other|2 Sep}} 3.30 pm — SMS reminder to {{phone|81239906}}.
+
+=== v19_n17 | optometry record ===
+Clearview Optometrists — Patient Card {{mrn|CV-3390-21}}
+Name: {{name|PANG YI XUAN}} ({{name|彭以萱}}), 9 yrs   Birth Cert No. {{national_id|T1718844A}}
+Parents: Mrs {{name|Pang}} / Mr {{name|Joel Pang}} — HP {{phone|9302 7781}}
+{{date_other|05 Sept 2026}}: Referred after school vision screening. Complains of squinting at the whiteboard. VA unaided R 6/18, L 6/24. Cycloplegic refraction R -1.75/-0.50 x 180, L -2.25/-0.25 x 10. Axial length R 24.1, L 24.4 mm. Binocular vision normal.
+Started atropine 0.01% nocte (via paediatric ophthalmology). Myopia-control spectacle lenses, frame model RX-220. Advised 2 hours outdoor play daily and 20-20-20 rule for screens.
+Optometrist: {{name|Benedict Lim}} (OOB reg. {{other_id|OPC-0482}}). Recall {{date_other|March 2027}}.
+
+=== v19_n18 | podiatry (diabetic foot) note ===
+Podiatry — Northvale Polyclinic
+{{name|SURESH KUMAR s/o NARAYANAN}}, MRN {{mrn|NVP-0051007}}, seen {{date_other|11/9/2026}}
+High-risk foot: previous R hallux amputation ({{date_other|2023}}). Callus plantar L 1st MTPJ debrided; no ulcer beneath. Monofilament 6/10 L. ABPI 0.9 bilaterally. Nails thickened, trimmed.
+Offloading insoles ordered; footwear education given (no slippers outdoors).
+Pt drives private-hire car {{device|SLA 4471 K}} 10 h/day; advised to check feet after each shift and keep a spare pair of socks in the car.
+Wife {{name|Meena}} present. Social: {{substance_use|smokes 10 sticks/day}}; brief advice given, keen to cut down.
+Next review 6 weeks. Podiatrist: {{name|N. Teo}}
+
+=== v19_n19 | audiology report ===
+Community Audiology Service — Hearing Assessment Report
+Client: {{name|WEE, Swee Kim}}   NRIC (as on referral) {{national_id|S8261160G}}   DOB {{dob|1982-06-30}}
+Test date {{date_other|24/09/2026}}. Shipyard fitter, 20 years of noise exposure; inconsistent use of ear plugs. Tinnitus bilateral, worse at night.
+Otoscopy clear. PTA: bilateral sensorineural hearing loss with 4 kHz notch, R 35 dB HL, L 40 dB HL (4FA). Tympanometry type A bilaterally. Speech discrimination 88% R, 84% L.
+Hearing-aid trial: R serial {{device|RS4-0918836}}, L serial {{device|RS4-0918841}} (model Aria 4 RIC). Counselled on hearing protection.
+Referred by occupational health physician Dr {{name|Anita Kaur}}; employer Tuas Marine Engineering (UEN {{other_id|199804512D}}).
+Audiologist: {{name|Lynette Chan}}
+
+=== v19_n20 | TCM consultation record ===
+仁心中医诊所 — 病历 / Case Record
+姓名 Name: {{name|黄美玲}} ({{name|WONG MEI LING}})   性别: 女   年龄: 56
+IC: {{national_id|S7040993C}}   病历号: {{mrn|RX-TCM-20817}}
+就诊日期: {{date_other|2026年9月18日}}
+主诉: 失眠三月，潮热盗汗，{{mental_health|情绪低落}}。口干，腰膝酸软。
+舌红少苔，脉细数。辨证: 肝肾阴虚。
+处方: 知柏地黄丸加减，七剂，每日一剂，水煎服。针灸: 三阴交、太溪、神门。
+医嘱: 少吃辛辣，晚上避免咖啡和浓茶；如症状加重请看西医。
+医师 Physician: {{name|陈志强}} (TCM reg. {{other_id|T08812F}})
+复诊: {{date_other|25/9}}。联系电话: {{phone|9670 4512}}
+
+=== v19_n21 | vaccination-clinic register ===
+Vaccination Room — Influenza / PCV20 session {{date_other|01 Oct 2026}}
+Vaccinators: SN {{name|Tan Li Ping}} (lead), SEN {{name|Rosmah}}
+No | Name | ID | Vaccine | Batch | Site
+1 | {{name|CHIA BOON HOCK}} | {{national_id|S0318707A}} | Influenza QIV | FLQ2617 | L deltoid
+2 | {{name|Kamala d/o Sinnadurai}} | {{national_id|S2787568H}} | PCV20 | PN0926B | R deltoid
+3 | MDM {{name|YEO SOK HOON}} | {{national_id|S3420310E}} | Influenza QIV | FLQ2617 | L deltoid
+4 | {{name|Dela Cruz, Rowena}} | {{national_id|F6471397M}} | Influenza QIV | FLQ2617 | L deltoid
+5 | {{name|ZHANG Xiaoyu}} | {{national_id|G8967032U}} | Influenza QIV | FLQ2617 | R deltoid
+6 | {{name|Somchai Phromma}} | {{national_id|M7655527X}} | Influenza QIV | FLQ2617 | L deltoid
+7 | {{name|LEONG Wai Kit}} | {{national_id|S7513187I}} | Influenza QIV — DEFERRED, temp 38.1 | — | —
+Observation 15 min: no AEFI. No. 7 seen by Dr {{name|P. Ong}}; rebook when afebrile.
+
+=== v19_n22 | foreign-worker medical examination report ===
+MEDICAL EXAMINATION FOR WORK PERMIT (6-monthly)
+Westlink Medical Centre, {{address|10 Tuas South Avenue 2, #02-05}}, Singapore {{postal_code|637601}} | Tel {{phone|6861 2045}} | Fax {{fax|6861 2046}}
+Name of worker: {{name|MD HOSSAIN MIAH}}
+FIN: {{national_id|G5848484P}}   Passport: {{national_id|EB0471935}}   Work Permit No.: {{other_id|WP 0337 4851}}
+Nationality: Bangladeshi   DOB: {{dob|02 JAN 1994}}
+Employer: Sinar Jaya Construction Pte Ltd (UEN {{other_id|201733208R}})
+Dormitory: {{address|Kranji Lodge 5, 31 Kranji Way, Room 4-17}}, Singapore {{postal_code|739412}}
+Exam date: {{date_other|14/09/2026}}
+Results: {{hiv_sti|HIV screen non-reactive}}; {{hiv_sti|syphilis (TPHA) non-reactive}}; chest X-ray: no active TB. BP 128/76, BMI 22.4, urine dipstick normal.
+Biometric check: {{biometric|R thumb template 4C9E-1A77-B203}} matched.
+Photograph: {{photo|FW_photo_Hossain_140926.jpg}}
+Result: FIT.
+Examining doctor: Dr {{name|Bernard Sim}}, MCR {{other_id|M44107J}}
+
+=== v19_n23 | caregiver-training log ===
+CAREGIVER TRAINING — Session Log
+Trainee: {{name|Maricris Santos Villanueva}} (FDW), FIN {{national_id|M5187690X}}, mobile {{phone|+63 917 555 0142}}
+Employer: Mr {{name|Raymond Seah}}; care recipient his mother Mdm {{name|Seah Ah Moi}} (L hemiplegia after stroke)
+Session 1 {{date_other|03/09/2026}} — bed-to-wheelchair transfers (wheelchair serial {{device|WC-2201-77341}}), brakes and footplates. Trainer: {{name|Kelvin Lau}} (PT). "Dahan-dahan lang po, Lola." Good technique, return demonstration passed.
+Session 2 {{date_other|10/09/2026}} — NG tube feeding: checking position, feeding upright, signs of aspiration. Trainer: SN {{name|Norhayati}}.
+Session 3 {{date_other|17/09/2026}} — skin care and turning. {{name|Maricris}} tearful; says she cannot sleep and feels "napapagod na po ako". PHQ-2 positive, {{mental_health|possible depressive episode}}; referred to counsellor Ms {{name|Ang}}. Employer informed with her permission; agreed to a rest day every week.
+Agency: Sunshine Maids informed of training completion.
+
+=== v19_n24 | advance care planning conversation record ===
+ADVANCE CARE PLANNING — Conversation Record
+Person: Mr {{name|Francis Xavier Rozario}}, 74, NRIC {{national_id|S5256815C}}
+Date: {{date_other|Wednesday, 23 September 2026}}   Facilitator: {{name|Shanti Ramalingam}} (MSW)
+Present: Mr {{name|Rozario}}, wife {{name|Gloria}}, daughter {{name|Natalie Rozario-Heng}} (by phone from Perth, {{phone|+61 412 555 019}}).
+Background: heart failure (EF 25%), CKD stage 4, three admissions this year. Past {{substance_use|alcohol use disorder, abstinent 10 years}}.
+Understanding of illness: knows his heart is "very weak" and may not improve.
+{{name|Francis}} said: "I don't want to be kept alive on machines. Let me go peacefully at home." He would accept antibiotics and drips for comfort, but not CPR, intubation or dialysis.
+Nominated healthcare spokesperson: {{name|Gloria Rozario}}, mobile {{phone|9171 8824}}.
+LPA registered, certificate no. {{other_id|LPA/2025/0081733}}.
+Preferred place of care and death: home, {{address|17 Ceylon Road}}, Singapore {{postal_code|429613}}.
+Copy to cardiologist A/Prof {{name|Leslie Chng}}.
+
+=== v19_n25 | blank intake form (template) ===
+NEW PATIENT REGISTRATION FORM
+Full name (as in NRIC/FIN/Passport): ______________________
+NRIC/FIN No.: ______________   Date of birth: __ / __ / ____   Sex: M / F
+Address: __________________________________   Postal code: ________
+Mobile: ______________   Email: ______________________
+Next-of-kin name & relationship: ______________________   Contact: __________
+Drug allergies: [ ] None  [ ] Yes (specify) ____________
+Chronic conditions: [ ] Diabetes  [ ] Hypertension  [ ] High cholesterol  [ ] Asthma  [ ] Others ________
+Preferred language: [ ] English  [ ] Mandarin  [ ] Malay  [ ] Tamil  [ ] Others ________
+I consent to the clinic collecting, using and disclosing my personal data for my care in accordance with the PDPA.
+Signature: ____________   Date: ____________
+
+=== v19_n26 | care protocol (falls prevention) ===
+FALLS PREVENTION PROTOCOL — Long-term Care (doc LTC-NUR-014, version 3)
+1. Screen every resident on admission and after any fall using the Morse Fall Scale; a score of 45 or more is high risk.
+2. High-risk residents: low bed, bed-exit alarm, hip protectors, non-slip socks, toileting round every 2 hours.
+3. Review sedatives, antihypertensives and diuretics with the visiting doctor; deprescribe where possible.
+4. After a fall: do not move the resident until assessed for injury; vital signs and neuro obs 4-hourly for 24 hours if head strike or on anticoagulant.
+5. Inform next-of-kin within 1 hour and document in the incident system within the shift.
+6. Monthly falls huddle: review trends by ward and time of day.
+Physical restraints are a last resort and need a doctor's order reviewed every 24 hours.
+
+=== v19_n27 | medical social worker letter to employer ===
+Medical Social Work Department, Riverside Community Hospital
+{{address|5 Riverside Crescent}}, Singapore {{postal_code|768934}} | DID {{phone|6550 2271}} | Fax {{fax|6550 2209}} | {{email|msw@riverside-ch.example.org}}
+
+{{date_other|29 September 2026}}
+
+The HR Manager, Brightway Logistics Pte Ltd
+{{address|2 Pioneer Sector Walk}}, Singapore {{postal_code|627890}}
+Attn: Ms {{name|Joanne Lee}}
+
+Dear Ms {{name|Lee}},
+RE: MR {{name|NG CHEE MENG}} (NRIC {{national_id|S6841707-D}}; EMPLOYEE NO. {{other_id|BWL-04417}})
+We write with Mr {{name|Ng}}'s consent. He has been an inpatient since {{date_other|10 Sep 2026}} following a stroke and is expected to need a further 4–6 weeks of rehabilitation, then a graded return to work. He currently has weakness of the right hand and is not yet fit to drive.
+We would be grateful if the company could extend his hospitalisation leave and consider light duties (e.g. dispatch coordination instead of driving the company lorry {{device|YN 8812 D}}). He is the sole breadwinner for a family of four, and his continued employment is important to his recovery.
+His wife, Mdm {{name|Sim Lay Hoon}}, is managing the household; she may be contacted at {{phone|8726 1145}} on his group insurance claim (policy {{other_id|GHS-772019-04}}).
+Yours faithfully,
+{{name|Nadia binte Hassan}}
+Senior Medical Social Worker
+cc: Mr {{name|N.C.M.}} (patient)
+
+=== v19_n28 | WhatsApp transcript (care coordination) ===
+[Exported chat — Northvale CC line]
+[{{date_other|12/9/26}}, 9:14 am] {{name|Jessie Lim}}: Hi, I'm daughter of {{name|Lim Gek Huay}}. Mummy's sugar this morning 14.2 leh, is it ok?
+[12/9/26, 9:20 am] {{name|Syafiqah}} (Northvale CC): Hi {{name|Jessie}}, did aunty take her metformin last night? Any fever or vomiting?
+[12/9/26, 9:22 am] {{name|Jessie Lim}}: she forgot last night. No fever. Btw can update her address? Moved to {{address|Blk 640 Ang Mo Kio Ave 6 #11-2203}} {{postal_code|560640}}
+[12/9/26, 9:31 am] {{name|Syafiqah}} (Northvale CC): Noted, will update. Pls bring her glucometer for download next visit. Serial no. at the back?
+[12/9/26, 9:33 am] {{name|Jessie Lim}}: {{device|GXB 3307 1952}}
+[12/9/26, 9:35 am] {{name|Syafiqah}} (Northvale CC): Thanks! Recheck before lunch. If sugar >20 or she is drowsy, go A&E. Clinic line {{phone|6355 0011}}.
+
+=== v19_n29 | appointment reminder SMS log ===
+OUTBOUND SMS LOG — batch sent {{date_other|30-09-2026}} 18:00
+To {{phone|+6591128834}}: "Dear {{name|TAN K. H.}}, your appt at Northvale Polyclinic (DM review) is on {{date_other|02/10}} 9:40am. Ref {{case_visit|A26-551820}}. Reply Y to confirm."
+To {{phone|+6582250417}}: "Hi {{name|Puspa}}, reminder: dental check-up {{date_other|Fri 2 Oct}} 2:15pm at Harbourfront Dental Surgery. Call {{phone|6271 4408}} to change."
+To {{phone|+6597043371}}: "Dear Parent of {{name|Aarav Menon}}, {{name|Aarav}}'s school-entry vaccination is due on {{date_other|5 Oct 2026}}. Please bring the health booklet."
+FAILED: {{phone|+6590011782}} — number not in service ({{name|Hamidah bte Salleh}}, appt {{date_other|06/10/2026}}). Flag for call-back.
+
+=== v19_n30 | email thread (home-care referral) ===
+From: Silverlink Intake <{{email|intake@silverlink.example.net}}>
+To: {{name|Ho Pei Ling}} <{{email|peiling.ho@northvale-poly.example.com}}>
+Date: {{date_other|Mon, 21 Sep 2026}} 15:15
+Subject: RE: Referral – home nursing for Mr {{name|CHAN}} (MRN {{mrn|NVP-0040873}})
+
+Dear {{name|Pei Ling}}, accepted. Assigned nurse SN {{name|Maricel Dizon}} (mobile {{phone|8890 3317}}). First visit {{date_other|28/9}}, 9 am; she will bring a sharps bin and a new glucometer.
+Regards, {{name|Bryan}} (Intake)
+
+----- Original message -----
+From: Pei Ling (Northvale CC)
+Sent: {{date_other|21/09/2026}} 10:42
+Hi team,
+Referral for Mr {{name|Chan Kwok Leung}} ({{name|陳國良}}), 81, IC {{national_id|S1698797B}}: insulin-requiring T2DM with poor vision (bilateral cataracts awaiting surgery); needs daily insulin supervision and CBG checks. Address {{address|35 Sennett Avenue}} {{postal_code|S466783}}. Wife {{name|Lai Fong}} has {{mental_health|early dementia}}; son overseas.
+Preferred start {{date_other|28 Sep}}.
+Thanks,
+{{name|Pei Ling}}
+Care Coordinator | DID {{phone|6355 0187}}
+
+=== v19_n31 | patient feedback form and reply ===
+FEEDBACK FORM — received {{date_other|17 Sep 2026}} — ref {{other_id|FB/NVP/26/0932}}
+Name: {{name|ismail bin jaafar}}   Contact: {{email|ismail.jaafar77@example.net}} / {{phone|963-71-204}}
+Comments: "I waited 3 hours for my wife's dressing on {{date_other|15/9}}. The nurse (name tag '{{name|Sharon}}') was rude when I asked how much longer. My wife {{name|Zaleha bte Ahmad}}, IC {{national_id|S6129414G}}, has diabetes and a leg wound and cannot sit so long."
+
+Reply:
+Dear Encik {{name|Ismail}},
+Thank you for your feedback and we apologise for the long wait experienced by Puan {{name|Zaleha}}. That afternoon two nurses were redeployed to the vaccination room, which we should have explained to waiting patients. Our Nurse Manager, {{name|Grace Tham}}, has spoken to the staff concerned, and dressing appointments will now be time-slotted.
+Yours sincerely,
+Dr {{name|Priscilla Ong}}, Deputy Head, Northvale Polyclinic
+
+=== v19_n32 | home death certification note ===
+Lumina Home Hospice — Certification of Death at Home
+Deceased: {{name|RAJENDRAN a/l MUTHUSAMY}}, NRIC {{national_id|S6153645J}}
+Died {{date_of_death|28 Sept 2026}}, pronounced at 0315 h at {{address|Blk 307C Punggol Walk #13-77}}.
+Wife, Mdm {{name|Saraswathy}}, called hotline at 0240; on-call Dr {{name|Adrian Koh}} arrived 0305. Family present, prayers in progress; death was peaceful.
+Examination: no heart sounds or breath sounds for 2 minutes, pupils fixed and dilated, no response to stimuli.
+Cause of death: I(a) metastatic adenocarcinoma of pancreas. Expected death; no coroner referral required. Digital death certificate completed.
+Syringe driver {{device|NK-T34-55120}} removed and returned to hospice. Remaining morphine destroyed, witnessed by SN {{name|Aileen Tay}}.
+Family given information on funeral arrangements and registration.
+Bereavement follow-up with son {{name|Vikram}} and wife by MSW {{name|F. Goh}} in 2 weeks.

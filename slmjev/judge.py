@@ -328,6 +328,20 @@ _SAMPLE_LEAD = re.compile(rf"\b[Ss]ample{_ID_TAIL}")
 # hyphens or spaces (``250-03851-0``). The model called these ``none`` with certainty (0005).
 _ACCOUNT_LEAD = re.compile(rf"(?:\b[Aa]ccount|\b[Aa]/[Cc]|\b[Aa]cct){_ID_TAIL}")
 _ACCOUNT_SHAPE = re.compile(r"\d+(?:[- ]\d+){0,4}")
+# The last digits and check letter of an NRIC/FIN behind a mask (``*842H``, ``XXXX055Z``), as a
+# visitor register prints it (notes_v18)
+MASKED_NRIC_TAIL = r"(?:[*#]{1,5}|[Xx]{3,5})\d{3,4}[A-Z]"
+# A key=value export whose key names an ID (``BB_TXN=XM-26-09-3381``, ``PAT_MRN=...``;
+# notes_v18): the key's last part, then ``=``
+_KV_ID_KEY = re.compile(r"(?:^|[^\w.])[A-Za-z][A-Za-z0-9]*(?:[_.][A-Za-z0-9]+)*?[_.]?"
+                        r"(?i:(txn|id|no|num|nbr|ref|mrn|hrn|nric|fin|acc|acct|case|visit|enc|"
+                        r"episode))[ \t]*=[ \t]*$")
+_KV_IDENT = {"mrn": "mrn", "hrn": "mrn", "nric": "national_id", "fin": "national_id",
+             "case": "case_visit", "visit": "case_visit", "enc": "case_visit",
+             "episode": "case_visit"}
+# An ID a line break cut after a hyphen (``MRN 4402-\n118-73``; notes_v16)
+_WRAP = re.compile(r"-[ \t]*\r?\n[ \t]*")
+_HYPHEN_ID = re.compile(r"[A-Z]{0,2}\d+(?:-\d+)+[A-Z]?")
 
 
 def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
@@ -347,7 +361,9 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     or clinician field (``TAN`` in ``PID|...|TAN^MEI LING``), a record reference right after
     ``Lab No`` / ``Reg. No.`` / ``Accession`` / ``claim ref`` / ``policy`` (or a code with a
     letter after a bare ``sample``), an account number right after ``account`` / ``a/c``, or an
-    NRIC/FIN tail after ``NRIC ending`` / ``IC last 4``.
+    NRIC/FIN tail after ``NRIC ending`` / ``IC last 4`` or behind a mask (``*842H``), or the
+    value of a key=value pair whose key names an ID (``BB_TXN=``, ``PAT_MRN=``); an ID a line
+    break cut after a hyphen, after an ID keyword (``MRN 4402-\n118-73``).
     They skip the model; everything else is judged. Accepting is the fail-closed direction, since
     it only ever removes more."""
     m = text[cand.start - 1:cand.end].strip()
@@ -367,6 +383,8 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
         return "other_id", "login_column"
     if len(m) == 9 and re.fullmatch(MASKED_NRIC, m):
         return "national_id", "masked_nric"
+    if re.fullmatch(MASKED_NRIC_TAIL, m):
+        return "national_id", "masked_nric"
     if _EMAIL.fullmatch(m):
         return "email", "email_shape"
     if _URL.fullmatch(m) or _URL_NO_SCHEME.fullmatch(m):
@@ -383,10 +401,15 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
             return "postal_code", "postal_after_address"
     if _POSTAL_WITH_LEAD.fullmatch(m):
         return "postal_code", "postal_keyword"
-    if _ID_SHAPE.fullmatch(m):
+    joined = _WRAP.sub("-", m)
+    if _ID_SHAPE.fullmatch(m) or (joined != m and _HYPHEN_ID.fullmatch(joined)
+                                  and sum(c.isdigit() for c in joined) >= 5):
         for lead, ident in _ID_LEADS:
             if lead.search(left[-24:]):
                 return ident, "id_keyword"
+    if (_REF_SHAPE.fullmatch(m) and sum(c.isdigit() for c in m) >= 4
+            and (kv := _KV_ID_KEY.search(left[-40:]))):
+        return _KV_IDENT.get(kv.group(1).lower(), "other_id"), "kv_id_key"
     if (_REF_SHAPE.fullmatch(m) and sum(c.isdigit() for c in m) >= 4
             and _REF_LEAD.search(left[-24:])):
         return "other_id", "ref_keyword"
@@ -653,8 +676,9 @@ def context_window(text: str, start: int, end: int, width: int = 160) -> str:
 
 
 _TABLE_DELIMS = ("\t", "|", ",", ";")
-# A header cell: a short label, not a sentence (no colon or full stop), no long numbers.
-_HEADER_CELL = re.compile(r"[A-Za-z][\w /#()&'-]{0,29}")
+# A header cell: a short label, not a sentence (no colon), no long numbers. An abbreviation's
+# full stop is allowed (``BC No. | DOB``: without it the DOB column went unseen; notes_v18).
+_HEADER_CELL = re.compile(r"[A-Za-z][\w /#()&'.-]{0,29}")
 
 
 def _cells(line: str, delim: str) -> list[tuple[int, int]]:
@@ -726,7 +750,10 @@ def table_cell(text: str, start: int, end: int, max_rows: int = 60) -> tuple[str
 # notes_v14): a header line of 3+ upper-case labels two or more spaces apart, and rows below it
 # whose cells start under a label.
 _FIXED_CELL = re.compile(r"\S+(?: \S+)*")
-_FIXED_HEAD = re.compile(r"[A-Z][A-Z0-9/#()&'.-]*(?: [A-Z][A-Z0-9/#()&'.-]*)*")
+# A label is upper case, or one lower-case word as a log export writes it (``ts  user
+# user_name``; notes_v18)
+_FIXED_HEAD = re.compile(r"[A-Z][A-Z0-9/#()&'.-]*(?: [A-Z][A-Z0-9/#()&'.-]*)*"
+                         r"|[a-z][a-z0-9_/#().-]*")
 _RULE_LINE = re.compile(r"[ \t]*[-=_*]{3,}[ \t]*")
 
 
@@ -756,7 +783,19 @@ def fixed_width_column(text: str, start: int, max_rows: int = 40,
 # A log-in name (``x_lowsm``, ``lowjm``) under a user or ``BY`` column of such a table: the judge
 # called one an HIV test and never saw the other (notes_v14)
 LOGIN = r"[a-z][a-z0-9_.]{2,19}[a-z0-9]"
-_LOGIN_COLUMN = re.compile(r"\b(?:USER|USER-?ID|USERNAME|LOGIN|BY)\b")
+_LOGIN_COLUMN = re.compile(r"(?<![A-Za-z])(?i:USER(?:[-_ ]?(?:ID|NAME))?|LOGIN|BY)"
+                           r"(?![A-Za-z])")
+
+
+# The proposer sources that put a span in a slot where a person stands
+_PERSON_SLOT = re.compile(r"(?:^|\+)shape:(?:initials|name_column|slot)(?:\+|$)")
+
+
+def shi_term_in(s: str) -> bool:
+    """Whether ``s`` holds a term of the sensitive-health lexicon (``slmjev.propose``)."""
+    from slmjev import propose  # it imports this module
+
+    return any(rx.search(s) for _, rx in propose._SHI_RX)
 
 
 def prefix_for(text: str, cand: Candidate, width: int = 160, column: str | None = None) -> str:
@@ -784,12 +823,22 @@ _DATE_LEAD = re.compile(r"(?:\b(?:on|dated?|since|until|till|DOB|born|birth|deat
                         r"\bD\.O\.B\.?)\s*:?\s*$", re.IGNORECASE)
 
 
+# A year of birth: after a sex marker (``M/1961`` under ``Sex/YOB``) or a YOB word (notes_v18)
+_YOB_LEAD = re.compile(r"(?:(?<![\w/])[MF][ \t]*/[ \t]*|\b(?i:YOB|year[ \t]+of[ \t]+birth|"
+                       r"born(?:[ \t]+in)?)[ \t]*:?[ \t]*)$")
+_YOB_COLUMN = re.compile(r"\b(?i:YOB|year[ \t]+of[ \t]+birth|birth[ \t]*year)\b")
+
+
 def family_in_context(text: str, cand: Candidate, column: str | None = None) -> str:
     """:func:`family_of`, refined by context code can check. An 8-digit compact date after a date
     word, or as a whole cell of a date column, is asked as a date: offered the ID options as
     well, the model called admission dates case numbers (P4)."""
     m = text[cand.start - 1:cand.end].strip()
     fam = family_of(m)
+    if re.fullmatch(r"(?:19|20)\d{2}", m) and (
+            _YOB_LEAD.search(text[max(0, cand.start - 1 - 24):cand.start - 1])
+            or (column and _YOB_COLUMN.search(column))):
+        return "date"
     if fam == "numeric" and re.fullmatch(r"\d{8}", m):
         whole_cell = column is not None and m == text.strip()
         if (whole_cell and _DATE_COLUMN.search(column)) or _DATE_LEAD.search(
@@ -872,7 +921,8 @@ class Judge:
         """One span record. ``column`` is the header when ``text`` is a structured cell;
         ``column_outlier`` says the cell's value stands out from the rest of its column."""
         match = text[cand.start - 1:cand.end]
-        family = cand.family or family_in_context(text, cand, column)
+        family = cand.family or family_in_context(
+            text, cand, column or table_column(text, cand.start, cand.end))
         rec: dict = {"start": cand.start, "end": cand.end, "match": match, "type": cand.type,
                      "identifier": None, "detector": DETECTOR, "confidence": None,
                      "p_identifier": None, "category": None, "category_probs": {},
@@ -886,6 +936,10 @@ class Judge:
         if (self.fast_path and not sure and col and whole and family == "date"
                 and (ident := date_column_identifier(col))):
             sure = ident, "date_column"
+        # a year in a year-of-birth column, a whole cell or after a sex marker (``M/1961``)
+        if (self.fast_path and not sure and col and _YOB_COLUMN.search(col)
+                and re.fullmatch(r"(?:19|20)\d{2}", match.strip())):
+            sure = "dob", "yob_column"
         if sure:
             ident, reason = sure
             rec.update(identifier=ident, category=ident, category_probs={ident: 1.0},
@@ -908,6 +962,15 @@ class Judge:
             return rec
         cat, cat_p = choice.top
         p_id = 1.0 - choice.probs["none"]
+        # A span proposed from a person slot (initials after a sign-off cue, a name column, a
+        # staff slot), with no sensitive term in it, is a person: the model called a midwife's
+        # initials ``other_sensitive`` (``SMN`` under ``Sign``, notes_v16). The name takes the SHI
+        # category's probability. A generic name shape is not enough: headings and abbreviations
+        # (``AUDIT EXPORT``, ``HEP``) get SHI calls too (notes_v18).
+        if (cat in _SHI and cand.type == "name" and _PERSON_SLOT.search(cand.detector or "")
+                and not shi_term_in(match)):
+            cat = "name"
+            info["shi_on_name"] = True
         rec.update(category=cat, category_probs=_round(choice.probs), p_identifier=round(p_id, 6),
                    identifier=None if cat == "none" else cat,
                    type=cand.type or (None if cat == "none" else cat))
