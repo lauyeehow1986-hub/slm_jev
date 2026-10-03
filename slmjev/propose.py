@@ -47,6 +47,7 @@ from slmjev.judge import (
     NRIC_TAIL,
     OCR_DATE,
     SOCIAL_LEAD,
+    SPACED_NRIC,
     SPOKEN_DIGITS,
     SPOKEN_NRIC,
     SPOKEN_REF,
@@ -129,6 +130,7 @@ _INITIALS = re.compile(r"(?i:\b(?:signed|sgd|initials?|countersigned)\b(?:[ \t]+
                        r"((?:[A-Z]\.){1,3}[A-Z]\.?)(?![\w.])")
 # A masked NRIC/FIN (``G****262U``).
 _MASKED_NRIC = re.compile(rf"(?<![\w*#]){MASKED_NRIC}(?![\w*])")
+_SPACED_NRIC = re.compile(rf"(?<![\w-]){SPACED_NRIC}(?![\w-])")
 # An NRIC/FIN tail given on its own (``NRIC ending 412D``), group 1.
 _NRIC_TAIL = re.compile(NRIC_TAIL)
 # The value after an ID field label, which may hold spaces (``MRN: BTC 22 118 406``,
@@ -136,8 +138,9 @@ _NRIC_TAIL = re.compile(NRIC_TAIL)
 _ID_FIELD = re.compile(
     r"(?i:\b(?:MRN|HRN|NRIC|FIN|IC|passport|case|visit|episode|encounter|admission|account|acct|"
     r"policy|claim|member|employee|staff|donation|accession|specimen|sample|lab|serial|record|"
-    r"file|ref|reference|ID)\b(?:[ \t]*(?:nos?\b\.?|numbers?\b|num\b|#))?)[ \t]*[:#.]?[ \t]*"
-    r"(?=[A-Za-z0-9])")
+    r"file|ref|reference|ID)\b(?:[ \t]*(?:nos?\b\.?|numbers?\b|num\b|#))?)[ \t]*"
+    # a colon, a hash, a full stop or a dotted leader (``NRIC ......... S 7709 506 C``; notes_v15)
+    r"(?:[:#]|\.+)?[ \t]*(?=[A-Za-z0-9])")
 # a token of the value; inner dots too (``Accession: CT.26.0914.00382``)
 _FIELD_TOKEN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9/.\-]*[A-Za-z0-9])?")
 # a short upper-case code in a value, maybe in parts (``case no. FC/OSM 1482/2026``)
@@ -170,7 +173,9 @@ _NAME_RUN = re.compile(rf"(?<![\w']){_WORD}(?:(?:{_GAP}{_CONNECTOR})?{_GAP}{_WOR
 _PARTICLE_NAME = re.compile(rf"(?<![\w']){_PARTICLE}[ \t]+{_WORD}(?![\w'])")
 # Role and relation words that are usually followed (``Nurse Lim``, ``SON VIJAY``,
 # ``Caller: Aisyah``) or tagged (``Aisyah (daughter)``) by one person's name.
-_ROLES = (r"nurse|sn|sons?|daughters?|wife|husband|mother|father|brothers?|sisters?|spouse|"
+# (``daughter-in-law Deepa``, notes_v5)
+_ROLES = (r"(?:sons?|daughters?|brothers?|sisters?|mother|father)-in-law|"
+          r"nurse|sn|sons?|daughters?|wife|husband|mother|father|brothers?|sisters?|spouse|"
           r"partner|children|child|grandchildren|siblings?|parents?|relatives?|"
           r"caller|carer|caregiver|helper|maid|guardian|nok|informant|friend|neighbou?r|"
           r"uncle|aunt|aunty|auntie|grandmother|grandfather|grandson|granddaughter|niece|"
@@ -211,10 +216,10 @@ _SIGNOFF = re.compile(r"\b(?:Thanks|Thank you|Many thanks|Regards|Best regards|K
                       rf"Yours faithfully)[,.!]?[ \t]*\n?[ \t]*({_WORD})(?![\w'])")
 # ``Siva's wife``: a possessive before a relation word
 _POSSESSIVE = re.compile(rf"(?<![\w'])({_WORD})['’]s[ \t]+(?i:{_ROLES})\b")
-# a name or nickname in quotes (``known as "Ah Boy"``, ``Supachai ("Jay")``), maybe ending in an
-# initial (``name "ARUMUGAM V"``)
-_QUOTED = re.compile(rf"(?<!\w)[\"“]({_WORD}(?:[ \t]+{_WORD}){{0,2}}(?:[ \t]+[A-Z]\.?)?)[\"”]"
-                     r"(?!\w)")
+# a name or nickname in quotes (``known as "Ah Boy"``, ``Supachai ("Jay")``), maybe ending in one
+# or two initials (``name "ARUMUGAM V"``, ``"TAN B L / S3318204Z"``); a label's ID may follow
+_QUOTED = re.compile(rf"(?<!\w)[\"“]({_WORD}(?:[ \t]+{_WORD}){{0,2}}(?:[ \t]+[A-Z]\.?){{0,2}})"
+                     r"(?:[\"”](?!\w)|[ \t]*/[ \t]*[A-Z]?\d)")
 # initials alone on a line signing a message (``> AP``, ``-- KL``), maybe with a staff role
 # (``-- PN/HO``)
 _INITIALS_LINE = re.compile(rf"^[ \t]*(?:>+|-{{1,2}})?[ \t]*([A-Z]{{2,3}})(?:/(?:{_STAFF}))?"
@@ -283,6 +288,43 @@ _SIGN_DEPT = re.compile(rf"^[ \t]*(?:[-–—][ \t]*)?({_WORD}),[ \t]*(?:[A-Z][a
                         r"(?:Records|Affairs|Office|Department|Dept|Unit|Services|Team|Section|"
                         r"Registry|Pharmacy|Admissions|Billing|Finance|Counter)\b",
                         re.MULTILINE)
+# The name-slot sweep (P22): slots where a person stands, so one word or initials are proposed
+# however they are written. On notes_v15 every silent miss was a person or an ID in such a slot
+# that no shape above proposed.
+_SLOT_TOKEN = rf"(?:(?:[A-Z]\.){{2,4}}|[A-Z]{{2,4}}(?![\w'])|{_WORD})"
+# ... after a staff role written without a colon (``RN AFR``, ``MO Priya``); case-sensitive
+# (not across a fixed-width column gap: ``RN     EDIT``)
+_STAFF_SLOT = re.compile(rf"(?<![\w/])(?:{_STAFF}){_GAP}((?:[A-Z]\.){{2,4}}|[A-Z]{{2,4}}(?![\w'])"
+                         r"|[A-Z][a-z]+(?![\w'])(?![ \t]+[A-Z][a-z]))")
+# ... before an identifier in brackets (``source pt H.K.L. (EG0999812H)``,
+# ``LTS (MRN 71-440-9921)``)
+_BEFORE_BRACKET_ID = re.compile(rf"(?<![\w.'])({_SLOT_TOKEN})[ \t]*\("
+                                r"(?:(?i:MRN|HRN|NRIC|FIN|IC|ID)[ \t]*[:#.]?[ \t]*)?"
+                                r"[A-Za-z]{0,3}\d[\d\- ]{3,}")
+# ... initials in brackets after a bed or room number (``52-01 (KH) after OGD``), not after a
+# phone number (``6225 8814 (DID)``)
+_NUMBER_INITIALS = re.compile(r"(?<![\w-])\d{1,3}(?:-\d{1,3})?[A-Z]?[ \t]*\(([A-Z]{2,3})\)")
+# ... the rest of a name a line break cut after a title (``cc Dr Ananda\n     Ravindran, O&G``)
+_NAME_WRAP = re.compile(rf"\b{_HONORIFIC}[ \t]+{_WORD}[ \t]*\n[ \t]*({_WORD})"
+                        r"(?=[ \t]*(?:[,(]|$))", re.MULTILINE)
+# ... a dash sign-off with a role ending a line, in any case (``next hv 1 oct. -sn fatimah``)
+_DASH_SIGNOFF = re.compile(rf"(?:^|(?<=[ \t.]))-{{1,2}}[ \t]*(?i:{_STAFF}|sn|dr|nurse)\.?[ \t]+"
+                           r"([A-Za-z][a-z]+(?:[ \t][A-Za-z][a-z]+)?)[ \t]*$", re.MULTILINE)
+# ... dotted initials anywhere (``H.K.L.``), less the dotted abbreviations of dosing and prose
+_DOTTED_INITIALS = re.compile(r"(?<![\w.])((?:[A-Z]\.){2,4})(?!\w)")
+_DOTTED_NOT_NAME = {"A.M.", "P.M.", "E.G.", "I.E.", "N.B.", "P.S.", "U.S.", "U.K.", "B.D.", "O.D.",
+                    "O.M.", "O.N.", "P.O.", "P.R.N.", "T.D.S.", "T.I.D.", "Q.I.D.", "Q.D.", "I.V.",
+                    "I.M.", "S.C.", "S.L.", "N.B.M.", "R.I.P.", "D.O.B.", "D.O.D.", "M.D.",
+                    "M.B.B.S.", "A.D.", "B.C.", "C.C.", "N.A.", "N.K.A.", "N.K.D.A.", "Y.O."}
+# a table column with a title-case header line (``No  Name   ID   Mobile``): three or more short
+# labels two or more spaces apart
+_FIXED_TITLE_HEAD = re.compile(r"[A-Z][A-Za-z0-9/#()&'.-]*(?: [A-Za-z][A-Za-z0-9/#()&'.-]*){0,2}")
+# A DNA (STR) profile: two or more loci with their alleles (``D3S1358 15/16, vWA 17/18``)
+_STR_LOCUS = (r"(?:D\d{1,2}S\d{2,4}|vWA|VWA|FGA|TH01|TPOX|CSF1PO|SE33|Penta[ \t]?[DE]|Amelogenin"
+              r"|AMEL)[ \t]*:?[ \t]*"
+              r"(?:\d{1,2}(?:\.\d)?(?:[ \t]*/[ \t]*\d{1,2}(?:\.\d)?)?|X/?Y|X/?X)")
+_STR_PROFILE = re.compile(rf"(?<!\w){_STR_LOCUS}(?:[ \t]*[,;][ \t]*{_STR_LOCUS})+"
+                          r"(?![\w/])")
 # a name in Chinese characters in brackets (``TAN Bee Hwa (陈美华)``) or after a name field
 _HAN_NAME = re.compile(r"(?:(?<=\()|(?<=（)|(?<=[Nn]ame:)[ \t]*|(?<=[Pp]atient:)[ \t]*|"
                        r"(?<=姓名[:：])[ \t]*)"
@@ -690,6 +732,28 @@ def _name_cells(text: str) -> Iterable[tuple[int, int]]:
             break  # the first delimiter that splits the line is the table's, as in table_column
 
 
+def _fixed_name_cells(text: str) -> Iterable[tuple[int, int]]:
+    """1-based spans of name-like cells under a name column of a fixed-width table (cells two or
+    more spaces apart), with a header in upper or title case (``4   Thant   (ID not given)``
+    under ``No  Name  ID``; notes_v15)."""
+    for m in re.finditer(r"[^\n]+", text):
+        line, base = m.group(), m.start()
+        if "\t" in line or "|" in line:
+            continue
+        cells = [(c.start(), c.group()) for c in re.finditer(r"\S+(?: \S+)*", line)]
+        if len(cells) < 3:
+            continue
+        for a, val in cells:
+            if not _NAME_CELL.fullmatch(val) or all(
+                    _is_stop(w) for w in re.split(r"[ _,./-]+", val) if w):
+                continue
+            s = base + a + 1
+            head = fixed_width_column(text, s, head=_FIXED_TITLE_HEAD)
+            words = {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", head or "")}
+            if words & _NAME_HEADER_WORDS:
+                yield s, s + len(val) - 1
+
+
 def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             detectors: dict | None = None) -> list[Proposal]:
     """Candidate spans in ``text``, sorted by position; each interval once."""
@@ -860,6 +924,25 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
         add(s, e, "shape:address", "address")
     for s, e in _name_cells(text):
         add(s, e, "shape:name_column", "name")
+    # the name-slot sweep: a word or initials in a slot where a person stands, unless it is part
+    # of a longer name already proposed
+    runs = [(p.start, p.end) for p in found.values() if p.type == "name"]
+    for rx in (_STAFF_SLOT, _BEFORE_BRACKET_ID, _NUMBER_INITIALS, _NAME_WRAP, _DASH_SIGNOFF,
+               _DOTTED_INITIALS):
+        for s, e in _spans(rx, text, group=1):
+            tok = text[s - 1:e]
+            if (_is_stop(tok) or re.fullmatch(_STAFF, tok) or tok in _DOTTED_NOT_NAME
+                    or _starts_org(text, e)
+                    or any(a <= s and e <= b and (a, b) != (s, e) for a, b in runs)):
+                continue
+            add(s, e, "shape:slot", "name")
+    for s, e in _fixed_name_cells(text):
+        add(s, e, "shape:name_column", "name")
+    for s, e in _spans(_STR_PROFILE, text):
+        add(s, e, "shape:dna", "biometric")
+    for s, e in _spans(_SPACED_NRIC, text):
+        if rules.nric_valid(re.sub(r"[ -]", "", text[s - 1:e])):
+            add(s, e, "shape:id", "national_id")
     for s, e, ident in hl7_people(text):  # ``PID|...|TAN^MEI LING``: by HL7 field position
         add(s, e, "shape:hl7", ident)
     for label, rx in _SHI_RX:

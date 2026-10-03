@@ -1,0 +1,570 @@
+# notes_v17 — held-out Singapore-style clinical/admin notes with gold spans.
+# SYNTHETIC: NOT REAL PATIENT DATA. Every person, name, NRIC/FIN, MRN, phone number, address, email and health detail below is invented for testing; any match to a real person, number or mailbox is coincidental.
+# Writer B set: administrative, legal and community correspondence. Written from general knowledge by an author who did not see the system under test, its rules, or any earlier evaluation sets.
+# FORMAT: each note starts with a header line "=== v17_nNN | <kind> ===". The note text is every line after it up to the next "===" header line.
+# A gold span is written inline as {{label|text}}. Only "text" belongs to the note; the braces and "label|" are markup. Spans are never nested.
+# Anything not inside {{...}} is not an identifier.
+# LABELS (identifiers): name, national_id, mrn, case_visit, address, postal_code, phone, fax, email, dob, date_of_death, device, biometric, photo, other_id
+# LABELS (SHI): hiv_sti, mental_health, substance_use, genetic, reproductive_sexual, other_sensitive
+# LABELS (other): date_other = any date of a specific person's care or events that is not a DOB or date of death.
+# CONVENTIONS:
+# - Honorifics and titles (Dr, Mr, Mrs, Ms, Mdm, SN, EN, SSgt, Cpl, Insp, SI, A/Prof, Encik, Nurse, Auntie, Uncle) are outside name spans. Kinship words (Ah Ma) are not names.
+# - Every mention of a person is labelled name, including repeats, surnames alone, given names alone, nicknames, lower-case names, Chinese-character names and INITIALS.
+# - "Singapore" is outside address spans; the postal code is its own postal_code span and keeps an "S" prefix when written like S730688.
+# - Institution, hospital, clinic, company, school, embassy and ministry NAMES are decoys and never marked. But every phone, fax, email, street address and postal code is marked wherever it appears, including letterheads, footers, switchboards, hotlines, department faxes and generic mailboxes.
+# - Organisation registration numbers (UEN, Co. Reg., GST Reg., charity reg., agency licence) are other_id.
+# - Field captions (NRIC, FIN, MRN, Tel, Fax, HP, DID, UEN) are outside spans; only the value is labelled.
+# - national_id: NRIC/FIN/passport/birth certificate numbers (masked forms included). mrn: hospital record numbers. case_visit: visit/admission/encounter numbers of a hospital episode. device: serial numbers and vehicle plates. photo: identifiable photograph file references. other_id: any other identifying number/code (policy, claim, bill, police report, court, coroner, PPO, work permit, staff/employee, study/screening numbers, practitioner MCR numbers, bank accounts, accession numbers, death certificate, air waybill).
+# - Dates tied to a specific person's case (including dates of letters, emails and chat messages about that person) are date_other. Generic dates (effective dates, protocol version dates) are unmarked.
+# - Decoys left unmarked: ward/bed/room numbers, lab values, doses, times, protocol/form/circular numbers, flight numbers, model numbers.
+# - Negative controls (no spans at all): v17_n04, v17_n10, v17_n16, v17_n21, v17_n27.
+# DELIBERATELY INVALID ID: in v17_n13 the husband mistypes his wife's NRIC as S7702165F (checksum invalid); it is still labelled national_id.
+# Masked IDs (not checksum-testable): S****339B in v17_n28.
+
+=== v17_n01 | medical report for court ===
+KALLANG RIVERSIDE GENERAL HOSPITAL
+{{address|2 Riverside Medical Drive}}, Singapore {{postal_code|339871}}
+Tel: {{phone|+65 6391 2200}}   Fax: {{fax|+65 6391 2299}}   Email: {{email|medreports@krgh.example.org}}
+Co. Reg. No. {{other_id|199804512D}}
+
+Our Ref: {{other_id|MR/26/08817}}
+{{date_other|14 August 2026}}
+
+The Registrar
+Magistrate's Court, State Courts
+
+MEDICAL REPORT: {{name|LIM KAH HOE}} (NRIC {{national_id|S7514028B}}; MRN {{mrn|KR0071543Z}})
+Your ref: {{other_id|MAC-904117-2026}}
+
+1. I am a Consultant in the Department of Neurosurgery and have reviewed Mr {{name|Lim}}'s records at the request of his solicitors.
+2. Mr {{name|Lim}} was conveyed by ambulance to our Emergency Department at 2310h on {{date_other|3.5.26}} after an alleged assault outside a coffeeshop at {{address|Blk 115 Bedok North Road}}. He said he was punched by a man he knew only as "{{name|Ah Seng}}".
+3. CT brain showed a 9 mm left frontal contusion. He was admitted to Ward 43 (visit no. {{case_visit|IP26-0508813}}) and discharged well on {{date_other|9 May 2026}}.
+4. He disclosed drinking about six cans of beer daily and was assessed to have {{substance_use|alcohol use disorder}}; he was referred to the addiction service.
+5. At review on {{date_other|2 July 2026}} he reported residual headaches. His prognosis for full recovery is good.
+
+Dr {{name|FARAH HANIM BINTE YUSOF}}
+Consultant, Neurosurgery
+MCR No. {{other_id|M11873H}}
+
+=== v17_n02 | insurer claim query ===
+STRAITS HARBOUR ASSURANCE LTD
+Claims Department, {{address|8 Marina View, #27-01 Harbour Tower}}, Singapore {{postal_code|018960}}
+Claims hotline {{phone|1800 555 0192}} | Claims fax {{fax|6220 4471}} | {{email|claims@straitsharbour.example.com}}
+UEN {{other_id|197700231M}}
+
+{{date_other|02/09/2026}}
+To: Medical Records Office, Kallang Riverside General Hospital (by fax {{fax|6391 2299}})
+
+REQUEST FOR CLARIFICATION: CRITICAL ILLNESS CLAIM
+Life assured / policyholder: {{name|NG, Pei Shan Joanne}}   NRIC {{national_id|S8236041G}}
+Policy no.: {{other_id|LH 0045 7712 90}} (in force since {{date_other|1 March 2024}})
+
+Item | Our claim ref | Your ref | Query
+1 | {{other_id|CLM-26-0098341}} | {{case_visit|IP26-0611209}} | Date of first consultation for the breast lump?
+2 | {{other_id|CLM-26-0098342}} | {{case_visit|OP-26-338815}} | Was the {{genetic|BRCA2 pathogenic variant}} known before inception?
+3 | {{other_id|CLM-26-0098343}} | Pathology {{other_id|H26-221907}} | Please send the final histology report.
+
+Our medical underwriter notes that Ms {{name|Ng}}'s mother, Mdm {{name|Koh Lay Hoon}}, had ovarian cancer. Please confirm whether this family history was recorded at the clinic visit on {{date_other|18 Jan 2024}}.
+
+Kindly reply to the undersigned.
+{{name|Rachel Oei}}, Senior Claims Executive
+DID {{phone|6220 4418}} | {{email|rachel.oei@straitsharbour.example.com}}
+
+=== v17_n03 | solicitors' letter re deputyship ===
+TAN, RAHMAN & PARTNERS LLP
+Advocates & Solicitors
+{{address|30 Cecil Street, #19-08 Cecil Court}}, Singapore {{postal_code|049712}}
+T {{phone|6538 7120}}  F {{fax|6538 7121}}  E {{email|family@trp-law.example.net}}
+UEN {{other_id|T09LL1234K}}
+
+Our Ref: {{other_id|TRP/DEP/2026/0417}}/{{name|NHR}}
+{{date_other|21 Sep 2026}}
+
+Medical Social Services, Kallang Riverside General Hospital
+Attn: Ms {{name|Chitra}}
+
+Dear Madam
+APPLICATION FOR DEPUTYSHIP: MDM {{name|OOI GEOK LIAN}} ({{name|黄玉莲}}), NRIC {{national_id|S4417820F}}
+1. We act for Mr {{name|Ooi Chee Keong}} and Ms {{name|Ooi Siew Ping}}, the son and daughter of Mdm {{name|Ooi}}, who has been in Ward 72 since her stroke on {{date_other|30/06/2026}}.
+2. Mdm {{name|Ooi}} did not make a Lasting Power of Attorney. Our clients intend to apply to the Family Justice Courts to be appointed her deputies so that they can manage her CPF monies, her POSB account {{other_id|081-23456-7}} and the sale of her flat at {{address|Blk 32 Jalan Bukit Merah, #11-2210}}, Singapore {{postal_code|160032}}.
+3. We should be grateful if Dr {{name|Rajagopal}} could complete the enclosed doctor's report on mental capacity. Our clients will bear the fee.
+4. Please contact Mr {{name|Ooi}} (HP {{phone|9127 4403}}) to arrange a family conference.
+
+Yours faithfully
+{{name|Nurul Huda Rahman}}
+Associate
+
+=== v17_n04 | policy circular ===
+HOSPITAL CIRCULAR 14/2026
+Subject: Revised visiting arrangements for general wards
+Effective date: 1 October 2026 (supersedes Circular 09/2025)
+
+1. Visiting hours for general wards will be 12 noon to 8.30 pm daily.
+2. Each patient may have up to four registered visitors, with no more than two at the bedside at any one time.
+3. Visitors to Wards 41 to 46 (isolation) must wear a surgical mask and perform hand hygiene before and after the visit.
+4. Children under 12 are not permitted in critical care units unless approved by the nurse manager on duty.
+5. Enquiries should be directed to the Patient Relations counter at Level 1, Tower B.
+6. This circular will be reviewed in March 2027.
+Issued by: Office of the Chief Nursing Officer
+
+=== v17_n05 | police request for medical report ===
+SINGAPORE POLICE FORCE
+Bedok Police Division, Investigation Branch
+{{address|2 Bedok North Drive}}, Singapore {{postal_code|469661}}   Tel: {{phone|6243 0911}}
+
+Our Ref: {{other_id|BDDIV/IB/26/004412}}
+Police Report No.: {{other_id|B/20260612/2291}}
+Date: {{date_other|18 June 2026}}
+
+The Director, Medical Records
+Kallang Riverside General Hospital
+
+REQUEST FOR MEDICAL REPORT
+Victim: {{name|MUHAMMAD FIRDAUS BIN ABDUL LATIF}}
+NRIC: {{national_id|T0512874E}}   DOB: {{dob|22/10/2005}}
+Date of attendance: {{date_other|12 June 2026}} (A&E visit {{case_visit|AE26-0612-4471}})
+
+2. The victim alleged that he was slashed on the left forearm near {{address|Blk 216 Bedok North Street 1}} by a male Chinese, subsequently identified as {{name|TEO BOON HUAT}} ({{national_id|S6937715G}}), who has been arrested.
+3. Please state the nature of the injuries, the treatment given, the period of hospitalisation and whether the injuries amount to grievous hurt.
+4. Kindly address the report to the undersigned.
+
+Insp {{name|Koh Jun Wei}}
+Investigation Officer
+HP {{phone|8612 3390}} / {{email|koh.junwei@spf.example.org}}
+
+=== v17_n06 | police statement (question and answer) ===
+STATEMENT OF WITNESS
+Report No.: {{other_id|T/20260605/0877}}
+Name: {{name|SITI NORAINI BINTE JAMAL}}
+ID No.: {{national_id|S9183350F}}   Sex/Age: F/35
+Address: {{address|Blk 506 Tampines Central 1, #08-331}} S({{postal_code|520506}})
+Recorded by: SSgt {{name|Hairul Anuar}} on {{date_other|07-06-2026}} at 1415 hrs
+Language: Malay (interpreted by Cpl {{name|N. Devi}})
+
+Q1: What is your relationship to the suspect?
+A1: {{name|Faizal}} is my ex-husband. We divorced in 2023.
+Q2: What happened on the night of {{date_other|5 June}}?
+A2: About 10 pm he came to my flat drunk. He pushed me against the door and slapped me two times. My neighbour Auntie {{name|Lucy}} from {{address|#08-333}} heard and called police.
+Q3: Were you injured?
+A3: My cheek was swollen. I went to the polyclinic the next day. I am {{reproductive_sexual|14 weeks pregnant}} so I was scared for the baby.
+Q4: Has this happened before?
+A4: Yes, many times. I have a Personal Protection Order, {{other_id|PPO 1182/2024}}, because of {{other_sensitive|family violence}}.
+Q5: Can you describe him?
+A5: His full name is {{name|Mohd Faizal bin Osman}}. He drives a grey Honda, {{device|SKH 7735 T}}. His handphone is {{phone|9001 4526}}.
+Q6: Is there anything else you want to say?
+A6: No.
+
+Statement read back and signed: {{name|S. Noraini}}
+
+=== v17_n07 | coroner's officer request ===
+POLICE CORONER'S UNIT
+{{address|11 Kampong Bahru Rise, Level 2}}, Singapore {{postal_code|169853}}
+Tel {{phone|6435 1908}}  Fax {{fax|6435 1909}}
+
+Coroner's Case No.: {{other_id|CC 0512/2026}}
+{{date_other|29.07.2026}}
+
+To: Medical Records, Kallang Riverside General Hospital
+
+Deceased: {{name|RAMASAMY S/O PERUMAL}}
+NRIC: {{national_id|S2442257G}}   DOB: {{dob|12/11/1951}}
+Date of death: {{date_of_death|28 July 2026}}
+
+The deceased was found unresponsive in his flat at {{address|Blk 7 Everton Park, #03-41}}, Singapore {{postal_code|081007}}, by his son, Mr {{name|Suresh Ramasamy}} ({{phone|+65 9788 1204}}). Opioid tablets not prescribed to him were found at the scene and toxicology has been requested to exclude an {{substance_use|opioid overdose}}.
+Please furnish certified copies of all records under MRN {{mrn|KR0033219C}}, including admissions {{case_visit|IP25-1120034}} and {{case_visit|IP26-0701187}}, and the name of the last attending physician.
+
+SI {{name|Leong Mei Fong}}
+Coroner's Officer
+{{email|leong_mei_fong@coroner-unit.example.org}}
+
+=== v17_n08 | MSW letter to MOM (work injury) ===
+Department of Medical Social Services
+Kallang Riverside General Hospital, Level 2, {{address|2 Riverside Medical Drive}}, Singapore {{postal_code|339871}}
+DID {{phone|6391 2471}} | {{email|mss@krgh.example.org}}
+
+{{date_other|25 August 2026}}
+Work Injury Compensation Department
+Ministry of Manpower
+
+Dear Sir/Madam
+WIC REF {{other_id|WIC-2026-0418772}}: MR {{name|MD ROBIUL ISLAM}}
+FIN {{national_id|G5528104T}} | Work Permit No. {{other_id|0 4471129 3}} | Passport {{national_id|BX0718842}}
+
+Mr {{name|Robiul}}, a 29-year-old Bangladeshi construction worker, fell from a scaffold at the worksite at {{address|12 Tuas South Avenue 9}} on {{date_other|2026-08-11}}. He sustained a right calcaneal fracture and was operated on {{date_other|13/8}}. He has hospitalisation and medical leave from {{date_other|11/8/26}} to {{date_other|9/10/26}}.
+His employer, Hoe Seng Building Contractor Pte Ltd (UEN {{other_id|201523871N}}), represented by Mr {{name|Lee Kok Wah}}, has told us that the work permit will be cancelled and has asked him to vacate his bed at Kranji Crest Dormitory, {{address|5 Kranji Link, Blk C #03-17}}, Singapore {{postal_code|739550}}.
+We seek MOM's help to ensure that he continues to receive MC wages and housing while the claim is processed. His cousin, Mr {{name|Shohel Rana}}, can be reached at {{phone|8844 1307}}; his family in Bangladesh at {{phone|+880 1712 438906}}.
+
+Yours faithfully
+{{name|Chitra Balakrishnan}}
+Senior Medical Social Worker
+
+=== v17_n09 | FSC home-visit report ===
+WOODLANDS HOPE FAMILY SERVICE CENTRE: HOME VISIT REPORT
+Case file: {{other_id|WHF/C/2026/0339}}
+Client: Mdm {{name|GOH SOCK HWA}} (72)
+Address: {{address|Blk 688 Woodlands Drive 75 #12-104}} {{postal_code|S730688}}
+Visit date: {{date_other|15 Sep 2026}} (Tue)
+Present: client; grandson {{name|Jayden}} (15); FDW {{name|Wati}} (Indonesian, FIN {{national_id|G8191982N}})
+
+Observations: The 3-room flat was cluttered, with stacks of newspapers blocking the kitchen window. Mdm {{name|Goh}} was alert and cheerful but could not recall when she last saw the polyclinic doctor. {{name|Wati}} reported that she has not been paid since June.
+{{name|Jayden}}'s father, {{name|Goh Wee Ming}}, is serving a sentence for {{substance_use|methamphetamine consumption}}; his mother's whereabouts are unknown. {{name|Jayden}} told the worker privately that he had been {{mental_health|cutting his forearms}} last month. With his consent, the school counsellor, Mr {{name|Iskandar}}, was informed and a referral to the community mental health team was made.
+Plan: (1) apply for ComCare; (2) arrange declutter volunteers; (3) follow up with MOM on the FDW's salary; (4) revisit on {{date_other|29/9}}.
+
+Worker: {{name|Priya d/o Subramaniam}}, Senior Social Worker
+{{email|priya.s@woodlandshope.example.org}} | {{phone|6363 0521}}
+
+=== v17_n10 | blank release-of-information form ===
+CONSENT FOR RELEASE OF MEDICAL INFORMATION (FORM MR-07, rev. 2025)
+Section A: Patient particulars
+Full name (as in NRIC/passport): ______________________
+NRIC/FIN/Passport No.: ______________   Date of birth: __/__/____
+Contact number: ______________   Email: ______________________
+Mailing address: ___________________________________   Postal code: ______
+Section B: Information to be released
+[ ] Medical report   [ ] Discharge summary   [ ] Laboratory results   [ ] Imaging reports
+Period of treatment: from __/__/____ to __/__/____
+Section C: Recipient
+Name of organisation: ______________________   Ref no.: ______________
+Section D: Declaration
+I authorise the hospital to release the information above. I understand that a fee is payable.
+Signature of patient/authorised representative: ______________   Date: __________
+For office use: received by ________ (staff ID ______) on __________
+
+=== v17_n11 | financial assistance assessment ===
+MEDICAL SOCIAL SERVICES: MEDIFUND ASSESSMENT
+Applicant (patient): {{name|KUMAR, Arjun}}   NRIC: {{national_id|S8631204B}}   MRN: {{mrn|KR 0062 118 K}}
+Address: {{address|Blk 412 Pasir Ris Drive 6, #04-219}}, Singapore {{postal_code|510412}}
+Contact: {{phone|9056 7713}} (self) / {{phone|8190 2247}} (wife)
+Diagnosis: {{hiv_sti|HIV infection}} on antiretroviral therapy; recent admission for pneumonia ({{case_visit|IP26-0802217}}, {{date_other|02-08-2026}} to {{date_other|15-08-2026}}).
+Household:
+- {{name|Kavitha d/o Rajan}}, wife, 40, part-time cashier, $1,100/month, NRIC {{national_id|S8813073A}}
+- {{name|Arvind}}, son, 17, student, {{national_id|T0934016A}}
+- {{name|Anjali}}, daughter, 12, student, {{national_id|T1438207G}}
+Per-capita household income: $275. Savings: DBS account {{other_id|027-904551-3}}, balance about $900.
+Assessment: Mr {{name|Kumar}} lost his job as a lorry driver in May. His wife is not aware of his {{hiv_sti|HIV status}} and he has asked that letters be sent to his sister, Ms {{name|Lakshmi}}, at {{address|Blk 103 Tampines Street 11, #02-45}}, Singapore {{postal_code|521103}}.
+Recommendation: 100% MediFund for bill {{other_id|INV-26-0815532}}.
+Assessor: {{name|Chloe Tay}}, MSW, {{date_other|19/8/2026}}
+
+=== v17_n12 | appeal letter from family member ===
+{{name|Esther Wong Mei Ling}}
+{{address|17 Jalan Kembangan}}
+Singapore {{postal_code|419124}}
+{{email|esther.wml@mail.example.com}} | {{phone|9730 2285}}
+
+{{date_other|7th September 2026}}
+
+The Chief Executive Officer
+Kallang Riverside General Hospital
+
+Dear Sir,
+APPEAL FOR REVIEW OF HOSPITAL BILL {{other_id|INV/26/0073215}}
+PATIENT: {{name|WONG AH BENG}} ({{name|王亚明}}), NRIC {{national_id|S0769603E}}
+
+I am writing on behalf of my father, who was admitted from {{date_other|12 June}} to {{date_other|30 June 2026}} after a fall. He has had {{mental_health|schizophrenia}} for thirty years and has not worked since 1998. My mother, Mdm {{name|Lau Siew Kim}}, is 74 and has no income. My brother {{name|Daniel}} was retrenched in April and I am the sole breadwinner, supporting three children.
+The bill after MediShield Life and Medisave is $8,412.60. The MSW, Mr {{name|Faisal}}, told us our application for assistance was rejected because my husband's income was counted, but we have been separated since 2024.
+I humbly appeal for the bill to be reviewed and for an instalment plan.
+
+Yours sincerely,
+{{name|Esther Wong}}
+(daughter)
+
+=== v17_n13 | complaint email ===
+From: {{name|Kenneth Ho}} <{{email|kenneth.ho88@mail.example.net}}>
+To: {{email|feedback@krgh.example.org}}
+Date: {{date_other|24 Aug 2026}}, 22:41
+Subject: Very disappointed with care of my wife in Ward 57
+
+To whom it may concern,
+My wife, {{name|Ho-Tan Li Wen}} (IC {{national_id|S7702165F}}, case no. {{case_visit|IP26-0820554}}), was admitted through A&E on the night of {{date_other|20/8}} with bleeding. She was {{reproductive_sexual|9 weeks pregnant after two rounds of IVF}}.
+She waited more than 6 hours for a scan. The male nurse on night shift, {{name|Jomel}}, told her to "stop crying, many people have it worse". The doctor, Dr {{name|Aung}}, only came at 4 am. By morning she had {{reproductive_sexual|miscarried}}.
+Her sister {{name|Li Ping}} saw everything and can be contacted at {{phone|+86 139 1022 4478}}.
+I want a written explanation and an apology. Please reply to me at {{phone|8338 0617}} or by email.
+{{name|Kenneth}}
+
+=== v17_n14 | hospital reply to complaint ===
+KALLANG RIVERSIDE GENERAL HOSPITAL | Patient Relations
+{{address|2 Riverside Medical Drive}}, Singapore {{postal_code|339871}} | {{phone|6391 2000}} | {{email|patientrelations@krgh.example.org}}
+
+Our ref: {{other_id|PR/FB/26/1187}}
+{{date_other|11 September 2026}}
+
+Mr {{name|Kenneth HO}}
+{{address|88 Siglap Drive}}
+Singapore {{postal_code|456215}}
+
+Dear Mr {{name|Ho}},
+FEEDBACK ON CARE OF MRS {{name|HO-TAN LI WEN}}
+Thank you for your email of {{date_other|24 August 2026}}. We are deeply sorry for your loss.
+We have reviewed the care provided with the team. Mrs {{name|Ho}} was triaged as Priority 2 at 2250h and the ultrasound was performed at 0515h because the on-call sonographer was attending to another emergency. We accept that this wait was too long and will roster a second on-call sonographer at night from 1 October.
+Staff Nurse {{name|Jomel DELA CRUZ}} has been counselled on communicating with distressed patients, and Dr {{name|Aung Ko Latt}} has met the head of department to review the delay. Both have asked us to convey their apologies.
+If you would like to meet us, please contact Ms {{name|Hazel Fernandez}} at {{phone|6391 2016}}.
+
+Yours sincerely
+{{name|Tham Wai Kit}}
+Director, Patient Relations
+
+=== v17_n15 | occupational health memo ===
+LOYANG MARINE ENGINEERING PTE LTD
+CONFIDENTIAL: OCCUPATIONAL HEALTH MEMO
+To: {{name|Janice Chua}}, HR Business Partner
+From: Dr {{name|Hendrik de Souza}}, Company Occupational Physician (MCR {{other_id|M09422B}})
+Date: {{date_other|28/08/2026}}
+Re: {{name|NAIR, Vijay Kumar}} (Staff No. {{other_id|LME-04417}}, Welding Bay 3)
+
+1. Mr {{name|Nair}} attended the OH clinic on {{date_other|19 Aug}} for annual audiometry. There is a 35 dB notch at 4 kHz bilaterally, consistent with noise-induced hearing loss, which is notifiable.
+2. He also disclosed {{mental_health|panic attacks}} since a near-miss incident in a hull in June and is seeing a private psychologist. With his consent I confirm that he is fit for work but should not be rostered for confined-space entry for three months.
+3. His supervisor, Mr {{name|Tay}}, should not be given clinical details. Please reassign him from forklift duties (licence {{other_id|FL/2019/33871}}) and return the keys of company van {{device|GBD 2210 M}} to the pool.
+{{name|HdS}}
+
+{{address|51 Loyang Way}}, Singapore {{postal_code|508745}} | {{phone|6545 0133}} | {{fax|6545 0134}} | UEN {{other_id|198501347E}}
+
+=== v17_n16 | schedule of fees ===
+SCHEDULE OF ADMINISTRATIVE FEES (with effect from 1 July 2026, inclusive of GST)
+Medical report, standard (up to 2 pages) ........... $128.00
+Medical report, detailed / specialist .............. $385.00
+Medical report for court or tribunal ............... $750.00 to $1,500.00
+Insurance claim form, per form ..................... $85.00
+Copy of discharge summary .......................... $32.00
+Copy of imaging on CD .............................. $45.00
+Mental capacity assessment report .................. $600.00
+Urgent processing (within 3 working days) .......... +50%
+Replacement of appointment card .................... $5.00
+Notes: Fees are payable at the Business Office before release. Reports are normally ready within 15 working days. Fees for reports requested by the Police, MOM or the State Coroner are waived.
+
+=== v17_n17 | school-health referral ===
+SEMBAWANG WEST PRIMARY SCHOOL
+{{address|10 Canberra Crescent}}, Singapore {{postal_code|757712}}
+Tel {{phone|6758 3301}} | Fax {{fax|6758 3302}} | {{email|swps_welfare@schools.example.org}}
+
+CONFIDENTIAL REFERRAL TO SCHOOL HEALTH SERVICE
+Date of referral: {{date_other|16-9-2026}}
+Pupil: {{name|NUR ALYA QISTINA BINTE MOHD RIDHWAN}}   Class: P4 Integrity
+Birth Cert No.: {{national_id|T1623591H}}   DOB: {{dob|03 Mar 2016}}
+Parent/guardian: {{name|Rosnah bte Kassim}} (mother), HP {{phone|8765 2091}}
+
+Reason for referral: {{name|Alya}}'s form teacher, Mdm {{name|Lim}}, noticed linear bruises on the back of both thighs on {{date_other|14 Sept}}. {{name|Alya}} said that Uncle {{name|Zul}} (her mother's partner) hit her with a belt when she lost her spectacles. Suspected {{other_sensitive|physical abuse}}; the school has reported this to the Child Protective Service (ref {{other_id|CPS-26-11873}}).
+She has been absent 11 days this term and appears underweight (BMI 12.9).
+Contact teacher: Mr {{name|Ang Wei Liang}} (Year Head)
+
+=== v17_n18 | funeral parlour repatriation letter ===
+BAN HOCK FUNERAL SERVICES PTE LTD
+{{address|61 Sin Ming Drive, #01-08}}, Singapore {{postal_code|575712}}
+24-hour line {{phone|6456 8800}} / {{phone|9100 8800}} | UEN {{other_id|53218844W}}
+
+{{date_other|18 September 2026}}
+Assistance-to-Nationals Section
+Embassy of the Republic of the Philippines
+Attn: Ms {{name|Maricel Buenaventura}}
+
+REPATRIATION OF HUMAN REMAINS: THE LATE {{name|JOCELYN M. SANTOS}}
+Passport No.: {{national_id|P4471203B}}   FIN: {{national_id|F7901125T}}
+Date of death: {{date_of_death|16.09.2026}}   Death Cert. No.: {{other_id|D 2026 118834}}
+
+We have been engaged by the employer, Mr and Mrs {{name|Chan}}, to repatriate the remains of the above-named foreign domestic worker, who passed away at Kallang Riverside General Hospital. Embalming was completed on {{date_other|17 Sept}} and the coffin has been sealed.
+The remains will be flown to Manila on {{date_other|20 September}} under air waybill {{other_id|618-4412 0973}} and received by her husband, Mr {{name|Rodel Santos}}, of {{address|Purok 3, Barangay San Isidro, Tarlac City}}, Philippines ({{phone|+63 917 552 8841}}).
+Kindly issue the consular certificate and the non-infectious remains clearance.
+
+{{name|ONG Kheng Swee}}
+Director
+
+=== v17_n19 | research consent form (completed) ===
+PARTICIPANT INFORMATION SHEET AND CONSENT FORM
+Study: Gut microbiome in early-onset colorectal cancer (Protocol KRGH-2025-117, version 3.0 dated 1 Feb 2026)
+Principal Investigator: A/Prof {{name|Aishah Kamal}}, Department of Gastroenterology, {{phone|6391 2688}}
+Participant study no.: {{other_id|MICRO-EO-0243}}
+
+Participant name: {{name|Chong Kai Xiang, Marcus}}   NRIC: {{national_id|S9009407F}}
+Contact: {{phone|9651 0082}} / {{email|marcus.ckx@mail.example.com}}
+
+Please tick:
+[x] I agree to provide stool and blood samples.
+[x] I agree to {{genetic|germline testing for Lynch syndrome}} and to be told the result.
+[ ] I agree to be contacted for future studies.
+[x] I agree that tissue from my colonoscopy on {{date_other|22 Aug 2026}} may be used.
+
+Signature of participant: ______   Date: {{date_other|4/9/2026}}
+Witness: {{name|Nguyen Thi Hoa}}, Research Coordinator
+Consent taken by: {{name|A.K.}} on {{date_other|04 Sep 26}}
+
+=== v17_n20 | research screening log ===
+SCREENING AND ENROLMENT LOG: MICRO-EO study, site KRGH (page 3 of 5)
+Scr no. | Initials | Age/Sex | MRN | Screened | Outcome
+{{other_id|SCR-031}} | {{name|T.B.H.}} | 44/M | {{mrn|KR0051127J}} | {{date_other|02/07/26}} | Enrolled ({{other_id|MICRO-EO-0239}})
+{{other_id|SCR-032}} | {{name|N.A.}} | 38/F | {{mrn|KR0048890D}} | {{date_other|02/07/26}} | Not eligible: {{reproductive_sexual|pregnant}}
+{{other_id|SCR-033}} | {{name|R.K.S.}} | 49/M | {{mrn|KR0070132P}} | {{date_other|9 Jul}} | Not eligible: {{hiv_sti|known HIV}}
+{{other_id|SCR-034}} | {{name|L.W.}} | 27/F | {{mrn|KR0066401Q}} | {{date_other|16-07-2026}} | Declined (husband objected)
+{{other_id|SCR-035}} | {{name|C.K.X.M.}} | 33/M | {{mrn|KR0059012V}} | {{date_other|22/08/26}} | Enrolled ({{other_id|MICRO-EO-0243}})
+Log maintained by {{name|NTH}}; verified by {{name|AK}}.
+
+=== v17_n21 | committee terms of reference ===
+CLINICAL ETHICS COMMITTEE: TERMS OF REFERENCE (approved by the Medical Board, rev. 4)
+1. Purpose: to advise on ethical issues arising in patient care, including end-of-life decisions, capacity, confidentiality and resource allocation.
+2. Membership: a chairperson appointed by the Chairman Medical Board; two senior physicians; one surgeon; one intensivist; one senior nurse; one medical social worker; one pharmacist; one lay member; and a legal adviser in attendance.
+3. Quorum: five members, including the chairperson or deputy and the lay member.
+4. Meetings: monthly, and ad hoc within 48 hours for urgent consultations.
+5. Records: case discussions are minuted without patient identifiers and kept for 6 years.
+6. Reporting: an annual report is submitted to the Medical Board each April.
+7. Review: these terms are reviewed every two years.
+
+=== v17_n22 | incident report (wrong-patient labelling) ===
+INCIDENT REPORT No. {{other_id|IR-2026-03318}}   Category: Specimen / transfusion near-miss
+Date/time of incident: {{date_other|30-Aug-2026}} 0530h   Location: Ward 64
+Patients involved:
+(a) {{name|TAN AH KOW}}, MRN {{mrn|KR0019876A}}, Bed 12
+(b) {{name|TAN AH KAU}}, MRN {{mrn|KR0019786A}}, Bed 14
+Description: EN {{name|Mei}} collected the group-and-match sample from patient (b) but labelled it with a pre-printed label of patient (a). The blood bank technologist, {{name|Wendy Lee}}, detected a blood group discrepancy against the historical record (accession {{other_id|BB26-0830-0117}}) and rejected the sample. No blood was transfused.
+Contributing factors: similar names, adjacent beds, labels printed in advance, staffing of 1 RN to 9 patients.
+Immediate actions: both patients re-sampled; SN {{name|Kyaw Zin Htet}} (shift in-charge) informed Dr {{name|Benedict Rozario}}, who spoke to both families. Mr {{name|Tan}}'s daughter, {{name|Tan Hui Min}}, asked for a written explanation.
+Reported by: {{name|Rosalind Pereira}}, Nurse Manager
+
+=== v17_n23 | billing statement ===
+KALLANG RIVERSIDE GENERAL HOSPITAL: STATEMENT OF ACCOUNT
+{{address|2 Riverside Medical Dr}}, S({{postal_code|339871}}) | Billing enquiries {{phone|6391 2233}} | {{email|billing@krgh.example.org}} | GST Reg. No. {{other_id|M2-0081234-5}}
+
+Patient: {{name|SANTIAGO, Maria Luisa P.}}   FIN: {{national_id|M4471063X}}
+Bill no.: {{other_id|B26-0907741}}   Visit: {{case_visit|DS26-0904411}} (Day Surgery)
+Date of service: {{date_other|04-09-2026}}
+
+Description | Qty | Amount (S$)
+Day surgery facility charges | 1 | 312.00
+Excision of breast lump | 1 | 1,840.00
+Anaesthesia | 1 | 620.00
+Laboratory: histology | 1 | 185.00
+Laboratory: {{hiv_sti|chlamydia/gonorrhoea NAAT}} | 1 | 96.00
+Less: insurer letter of guarantee {{other_id|LOG-FW-2026-118823}} | | (2,500.00)
+Balance payable | | 553.00
+
+Balance to be settled by the employer, Chan & Lim Trading, attn Ms {{name|Ivy Lim}}, {{phone|6744 2019}}.
+PayNow to UEN {{other_id|199804512D}}, quoting the bill number.
+
+=== v17_n24 | GP referral letter ===
+BUKIT MERAH FAMILY CLINIC 武吉美拉家庭诊所
+{{address|Blk 163 Bukit Merah Central, #01-3615}}, Singapore {{postal_code|150163}}
+Tel {{phone|6273 9408}} | WhatsApp {{phone|8123 4409}} | Fax {{fax|6273 9410}}
+
+{{date_other|10/09/2026}}
+Dr {{name|Seah}}
+Infectious Disease Clinic, Kallang Riverside General Hospital
+
+Dear Dr {{name|Seah}},
+Re: {{name|CHUA Boon Keat Jeremy}} ({{name|蔡文杰}}), DOB {{dob|19-Jan-1993}}, NRIC {{national_id|S9306218C}}
+Thank you for seeing this 33-year-old man, who had a {{hiv_sti|reactive HIV antigen/antibody test}} at our clinic on {{date_other|8 Sep}}. He is well. He reports {{substance_use|chemsex with methamphetamine}} over the past year and inconsistent PrEP use. His partner, {{name|Ben}}, has not been tested.
+He prefers to be contacted only on his mobile, {{phone|9277 1830}}, and not at home.
+Current medications: nil regular. NKDA.
+
+Yours sincerely,
+Dr {{name|Loh Yi Wen}}
+MBBS (Singapore), MCR {{other_id|M22013J}}
+
+=== v17_n25 | nursing home transfer letter ===
+EVERGREEN GRACE NURSING HOME
+{{address|21 Jalan Bahar}}, Singapore {{postal_code|649417}}
+Tel {{phone|6861 4420}} / Fax {{fax|6861 4421}} / {{email|admin@evergreengrace.example.org}} / Charity Reg. No. {{other_id|01834}}
+
+TRANSFER LETTER TO ACCIDENT & EMERGENCY
+Date: {{date_other|26/9/2026}}   Time: 0240h
+Resident: {{name|SOH Kim Neo}} (Res. No. {{other_id|EGNH-R-0381}}), NRIC {{national_id|S2892339B}}, 91 years
+Photo on file: {{photo|EGNH_R0381_face.jpg}}
+Reason: found on the floor beside her bed at 0215h, unable to bear weight on the left leg, which is shortened and externally rotated. Suspected fractured neck of femur.
+Background: dementia, AF on apixaban, permanent pacemaker (serial {{device|PJN449013S}}), bilateral hearing aids (left serial {{device|7H2201847}}).
+Advance care plan: not for CPR; for hospital transfer and surgery if indicated.
+NOK: nephew, Mr {{name|Soh Jun Hao}}, {{phone|9188 4032}} (informed 0235h). Alternate: Ms {{name|Karen Soh}}, {{phone|+61 412 330 918}} (Perth).
+Attending doctor: Dr {{name|Mathew Kurian}}
+Escorted by: SN {{name|Ma Thandar Aye}}
+
+=== v17_n26 | email thread (MSW and employer) ===
+From: {{name|Serene Koh}} <{{email|serene.koh@sunshine-logistics.example.com}}>
+Sent: Thursday, {{date_other|17 September 2026}} 10:05
+To: {{name|Grace Lim}} <{{email|grace.lim@krgh.example.org}}>
+Subject: RE: {{name|Alvin TEO}} - extended MC
+
+Hi {{name|Grace}},
+Thanks for the call. We will keep {{name|Alvin}}'s position open until end-October. Could you confirm whether he is fit to return in a light-duty role? I'll also loop in {{name|farhan}} from payroll about his pay.
+Regards
+{{name|Serene Koh}} | HR Manager | Sunshine Logistics Pte Ltd
+{{address|9 Changi South Street 3}}, Singapore {{postal_code|486127}} | {{phone|+65 6546 7210 ext 118}}
+
+-----Original Message-----
+From: {{name|Grace Lim}}
+Sent: Wednesday, {{date_other|16 September 2026}} 17:48
+To: {{email|hr@sunshine-logistics.example.com}}
+Subject: {{name|Alvin TEO}} - extended MC
+
+Dear Ms {{name|Koh}},
+With Mr {{name|Teo}}'s written consent, I am writing about your employee {{name|TEO Alvin}} (Employee ID {{other_id|SL-2211}}). He remains under our psychiatry team for {{mental_health|major depressive disorder}} and his MC has been extended to {{date_other|4/10/2026}}. He is worried about losing his job.
+Best regards,
+{{name|Grace}}
+Medical Social Worker | {{phone|6391 2475}}
+
+=== v17_n27 | public health advisory ===
+PUBLIC HEALTH ADVISORY: DENGUE (epidemiological weeks 36 to 38, 2026)
+Dengue cases have risen for three consecutive weeks, and the DENV-3 serotype is now predominant. Most cases are in the north-eastern and eastern regions.
+Members of the public are advised to:
+- remove stagnant water around the home at least once a week, including flowerpot plates, pails and roof gutters;
+- apply insect repellent, particularly in the early morning and late afternoon;
+- seek medical attention early if they develop fever with headache, joint pain or rash;
+- avoid NSAIDs such as ibuprofen when dengue is suspected; paracetamol 1 g up to four times a day may be taken.
+Clinicians are reminded to notify suspected and confirmed cases within 24 hours.
+
+=== v17_n28 | WhatsApp transcript (home-care nurse and family) ===
+[Exported chat: KR Home Care x family]
+[{{date_other|12/09/26}}, 08:02] {{name|Joy V}} (Home Care RN): Good morning! This is Nurse {{name|Joy}} from KR home care. Will reach Ah Ma's place ~10am for wound dressing 🙂
+[{{date_other|12/09/26}}, 08:10] {{name|Mei Mei}}: ok thanks. my hubby will open the door, his no. is {{phone|+60 12-338 4410}}
+[{{date_other|12/09/26}}, 10:47] {{name|Joy V}}: Done! Sacral sore smaller, 3 x 2 cm. Pls bring Ah Ma's polyclinic card next time, the clinic needs her IC {{national_id|S****339B}} to link the record.
+[{{date_other|12/09/26}}, 11:02] {{name|Mei Mei}}: ok. btw Ah Ma keeps saying she wants to die, is that normal?? 😢
+[{{date_other|12/09/26}}, 11:15] {{name|Joy V}}: Thanks for telling me. I'll ask Dr {{name|Wong}} to screen her for {{mental_health|depression}} at the next visit. If she talks about ending her life, call our 24-hr line {{phone|6389 2222}}.
+[{{date_other|13/09/26}}, 19:30] {{name|Mei Mei}}: {{name|Joy}}, this is my cousin {{name|Wei Ling}}'s number {{phone|9022 5619}}, she stays with Ah Ma on weekdays.
+
+=== v17_n29 | medical report on fitness to drive ===
+NOVENA NEURO SPECIALISTS
+{{address|10 Sinaran Drive, #09-14}}, Singapore {{postal_code|307506}} | Tel {{phone|6352 8810}} | {{email|clinic@novenaneuro.example.com}}
+
+{{date_other|3 Sep 2026}}
+Traffic Police, Driver Licensing (Medical)
+
+MEDICAL REPORT: {{name|HARJIT SINGH S/O GURBACHAN SINGH}}
+NRIC {{national_id|S5810394B}} | Driving licence class 3, 4 | Taxi Driver Vocational Licence {{other_id|TDVL 118 334}}
+Vehicle: {{device|SHD 4471 Y}} (taxi)
+
+1. Mr {{name|Harjit}} had a first generalised tonic-clonic seizure at the wheel on {{date_other|14/7/2026}}, causing a minor collision along Thomson Road.
+2. MRI brain was normal; EEG showed left temporal sharp waves. He was started on levetiracetam 500 mg twice daily.
+3. He should not drive for at least 12 months from the seizure, and should not hold a vocational licence until he has been seizure-free off medication for a longer period.
+4. He told me he {{substance_use|drinks heavily}} on his off-days; I have advised abstinence.
+
+Dr {{name|Tan Chee Meng}}, Consultant Neurologist, MCR {{other_id|M05517C}}
+
+=== v17_n30 | employer's letter of guarantee (FDW) ===
+Mrs {{name|Jaswinder}}
+{{name|Kaur}}
+{{address|45 Chestnut Close}}
+Singapore {{postal_code|679145}}
+
+To: Business Office, Kallang Riverside General Hospital
+Date: {{date_other|19.9.2026}}
+
+LETTER OF GUARANTEE
+I, {{name|JASWINDER KAUR D/O MALKIT SINGH}} (NRIC {{national_id|S7128845E}}), employer of Ms {{name|SRI WAHYUNI}} (FIN {{national_id|G0399170P}}; Indonesian passport {{national_id|C 2291044}}), guarantee payment of her hospital charges for the admission from {{date_other|18 September 2026}}, case {{case_visit|IP26-0918337}}, up to S$15,000, under her medical insurance policy {{other_id|FDW/MED/2025/77120}}.
+{{name|Wahyuni}} was placed through Bintang Maid Agency (licence no. {{other_id|18C4471}}). Please update me or my husband, {{name|Manpreet}}, at {{phone|9811 2046}}.
+
+{{name|J. Kaur}}
+
+=== v17_n31 | certification of death (home hospice) ===
+HOME HOSPICE: NOTES FOR CERTIFICATE OF CAUSE OF DEATH
+Deceased: {{name|LOW Choon Seng}} ({{name|刘俊成}})
+NRIC: {{national_id|S6649032G}}   DOB: {{dob|4 Apr 1949}}   Sex: M
+Date and time of death: {{date_of_death|21/09/2026}}, 0412h
+Place of death: home, {{address|Blk 18 Lorong 7 Toa Payoh, #05-236}}, Singapore {{postal_code|310018}}
+Hospice patient ID: {{other_id|HH-24-0917}}
+Cause of death: I(a) metastatic non-small cell carcinoma of the lung; II chronic obstructive pulmonary disease.
+Death was expected and no coroner's referral is required. Pronounced by Dr {{name|Nandini Pillai}} at 0540h.
+Informant: daughter, Ms {{name|Low Pei Qi}}, NRIC {{national_id|T0277419J}}, HP {{phone|8233 7106}}.
+Note: {{name|Pei Qi}} asked for a certified copy for an insurance claim (policy {{other_id|POL-7731-2209-01}}).
+
+=== v17_n32 | call-centre log and appointment reminder ===
+OUTPATIENT CALL CENTRE: CALL LOG (extract) for {{date_other|28 Sep 2026}}
+0912h  Incoming from {{phone|9345 6612}}. Caller: Encik {{name|ABDUL RAHIM}}
+{{name|BIN SALLEH}}, son of Mdm {{name|Zainab bte Hassan}} (MRN {{mrn|KR0044103M}}), asked to move her eye appointment of {{date_other|6 Oct}} to a Saturday. Rescheduled to {{date_other|10/10/2026}} 0900h; SMS sent.
+0931h  Caller declined to give a name; asked about the fee for a medical report. Referred to the schedule of fees.
+0955h  Outgoing to Ms {{name|Pham Thi Lan}} ({{phone|+84 90 441 2873}}), FIN {{national_id|M9034219X}}: reminded to bring her passport ({{national_id|C3318902}}) for the interpreter booking.
+1003h  SMS sent: "KRGH: Appt reminder for {{name|TAN S.H.}}, Eye Clinic, {{date_other|06/10/26}} 1030h. Reply Y to confirm or call {{phone|6391 2300}}."
+Logged by: {{name|Nadia}} (CSO)

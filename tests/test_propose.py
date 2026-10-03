@@ -522,3 +522,45 @@ def test_multilingual_and_heading_engine_spans_are_skipped():
                        ("Proband", "name"))
     assert not {"yang merawat", "saya tinggal", "Beliau", "என்", "NRIC", "Proband"} & got
     assert "RADIOLOGY REQUEST" not in spans(text, "shape:name")
+
+
+# The name-slot sweep (P22); synthetic fragments in the shapes of the notes_v15 misses
+@pytest.mark.parametrize("text, want", [
+    ("27/09 AM  Stoma bag changed. Pain 3/10.     RN AFR\n", "AFR"),
+    ("Needlestick: source pt H.K.L. (EG0999812H) bloods sent.", "H.K.L."),
+    ("Seen with LTS (MRN 71-440-9921) today.", "LTS"),
+    ("Bed 52-01 (KH) after OGD, NBM.", "KH"),
+    (" cc  Dr Ananda\n     Ravindran, Obstetric Medicine (direct fax 6788 0472)", "Ravindran"),
+    ("Wound clean. next hv 1 oct. -sn fatimah", "fatimah"),
+    ("Lives with daughter-in-law Deepa.", "Deepa"),
+    ('CD label reads "TAN B L / S1234567D".', "TAN B L"),
+])
+def test_a_person_slot_is_proposed(text, want):
+    assert want in {text[p.start - 1:p.end] for p in propose.propose(text) if p.type == "name"}
+
+
+@pytest.mark.parametrize("text, bad", [
+    ("SIGNED BY\nRN     EDIT     VIEW\n", "EDIT"),
+    ("Call 6225 8814 (DID) for results.", "DID"),
+    ("Paracetamol 1 g P.O. Q.I.D. for 3 days.", "Q.I.D."),
+    ("Paracetamol 1 g P.O. Q.I.D. for 3 days.", "P.O."),
+])
+def test_a_slot_skips_column_gaps_phone_captions_and_dosing(text, bad):
+    assert bad not in spans(text, "shape:slot")
+
+
+def test_a_name_in_a_title_case_fixed_width_table_is_proposed():
+    text = ("No  Name                   ID               Relation\n"
+            "1   Kyaw Zin Oo            G2550232P        roommate\n"
+            "4   Thant                  (ID not given)   co-worker\n")
+    assert "Thant" in spans(text, "shape:name_column")
+    assert "co-worker" not in {text[p.start - 1:p.end] for p in propose.propose(text)}
+
+
+def test_a_dna_profile_and_a_spaced_nric_are_proposed():
+    text = ("Profile D3S1358 15/16, vWA 17/18, FGA 21/24. "
+            "NRIC ..... S 1234 567 D; S 1234 567 A")
+    assert "D3S1358 15/16, vWA 17/18, FGA 21/24" in spans(text, "shape:dna")
+    ids = spans(text, "shape:id")
+    assert "S 1234 567 D" in ids
+    assert "S 1234 567 A" not in ids

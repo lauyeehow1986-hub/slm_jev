@@ -728,3 +728,14 @@ def test_notes_v14_fast_paths(text, span, want):
 def test_notes_v14_fast_paths_need_their_cue(text, span):
     s = text.index(span) + 1
     assert J.rule_certain(text, J.Candidate(s, s + len(span) - 1)) is None
+
+
+@pytest.mark.parametrize("m, want", [
+    ("S 1234 567 D", ("national_id", "nric_checksum")),
+    ("S-1234-567-D", ("national_id", "nric_checksum")),
+    ("S 1234 567 A", None),  # the checksum fails
+])
+def test_a_spaced_nric_is_certain_only_with_its_checksum(m, want):
+    text = f"NRIC ........ {m}\n"
+    s = text.index(m) + 1
+    assert J.rule_certain(text, J.Candidate(s, s + len(m) - 1)) == want

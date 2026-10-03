@@ -1,4 +1,4 @@
-# Results: slm:jev against structured_deidentification's detectors (P7 to P21, notes_v15)
+# Results: slm:jev against structured_deidentification's detectors (P7 to P22, notes_v16–v18)
 
 Date: 2026-09-26. **Synthetic data only.** Every number here comes from invented notes. None of
 them says how any system does on real clinical text (see *Caveats*).
@@ -238,7 +238,7 @@ rows show what SD users get today.
    already accepts) would propose every gap span on these sets except `VIJAY`; the judge would
    still have to accept them. That is the cheapest next step, not a model change.
 
-## After P7: unseen-set rounds (P8 to P21)
+## After P7: unseen-set rounds (P8 to P22)
 
 Each round fixed the misses on the sets already seen, froze the code (`results/*_freeze.sha256`)
 and ran once on a new set by a separate writer that nobody had read. Decision records:
@@ -248,7 +248,8 @@ and ran once on a new set by a separate writer that nobody had read. Decision re
 `0014-name-mentions-and-fast-paths.md` (P17), `0015-tables-and-dictated-numbers.md` (P18),
 `0016-hl7-ocr-dates-and-dob-columns.md` (P19) and
 `0017-initials-other-scripts-and-multilingual-notes.md` (P20) and
-`0018-pedigrees-spoken-ids-logins-and-letter-feeders.md` (P21).
+`0018-pedigrees-spoken-ids-logins-and-letter-feeders.md` (P21) and
+`0019-name-slot-sweep-calibration-refit-and-pooled-blind.md` (P22).
 Only the blind rows count for the gate.
 
 ### The blind series
@@ -269,6 +270,7 @@ Only the blind rows count for the gate.
 | P20 | P19 + initials, other scripts, dictation, multilingual filters (0017) | notes_v13 | slm:jev + PF + Presidio persons | **0.983** (direct **0.985**) | **0.917** | **0.949** | 5 |
 | P20 (repeat) | P20 unchanged | notes_v14 | slm:jev + PF + Presidio persons | 0.974 (direct 0.978) | 0.870 | **0.919** | 8 |
 | P21 | P20 + pedigree deaths, spoken NRICs, log-in columns, feeder stop words (0018) | notes_v15 | slm:jev + PF + Presidio persons | 0.977 (direct 0.976) | 0.894 | **0.933** | 7 |
+| P22 | P21 + a name-slot sweep, split NRICs, DNA profiles, calibration refit (0019) | notes_v16–v18, pooled | slm:jev + PF + Presidio persons | 0.968 (direct 0.970) | **0.945** | **0.956** | 33 |
 
 The shape-only rounds (P8 to P10) each failed on the next set, because each new writer brought
 shapes nobody had listed. P12 keeps the judge in charge but lets Privacy Filter and Presidio
@@ -315,6 +317,17 @@ checks: direct recall 0.976 (249 of 255; 250 needed), precision 0.894 and ECE 0.
 initials (`H.K.L.`), a lone surname signing a letter, a given name in a table row and an NRIC
 split by spaces after a dotted leader (`S 7709 506 C`). The FPs are again mostly letterhead
 lines this writer left unmarked, headings, Singlish words and equipment or form codes.
+
+P22 changed how a round is judged as well as the code. A name-slot sweep proposes the places a
+name sits instead of the strings last missed, and calibration was refitted on every dev set.
+The gate is now decided on three blind sets by three writers (96 notes, 913 direct identifier
+spans), pooled, under one annotation convention. Pooled, P22 **failed** on direct recall
+only: 0.970 (886 of 913, 95% CI 0.957–0.980; 895 needed).
+- Precision 0.945, ECE 0.014 and F1 0.956 pass with room to spare.
+- notes_v16 and notes_v17 each pass on their own. notes_v18 (messages, forms, tables, machine
+  output) fails at 0.939.
+- The misses are still mostly spans nobody proposed: initials in table cells, log-in names, a
+  Tamil-script name, year-only DOBs, "last 4" NRIC fragments, an OCR-corrupted phone number.
 
 ### notes_v5 (blind for P12): 32 notes, 24,431 characters
 
@@ -905,6 +918,64 @@ matched after the run.
 - **Post-hoc (does not change the row):** counting the two unmarked people as correct would give
   precision 0.8997, still under the gate.
 
+### notes_v16–v18 (pooled blind for P22): 96 notes, 77,466 characters
+
+- **Gold:** 1,033 identifier spans (913 direct; 465 names), 15 negative notes.
+  - notes_v16: clinical documentation;
+  - notes_v17: administrative, legal and community correspondence;
+  - notes_v18: messages, forms, tables and machine output.
+  - Each set had its own writer, working from its own brief. None of them saw the system, its
+    rules or the earlier sets.
+- **One annotation convention:** initials used for a person are names; every phone, fax,
+  e-mail, street address and postal code is marked, letterheads included; UENs are other_id;
+  organisation names are never marked.
+- **Synthetic:** everything is invented and marked synthetic. Only the headers were read before
+  the run.
+- **Frozen:** the P22 code, `models/calibration_p22.json`, `eval/pool.py` and the three sets
+  (`results/notes_v16_v18_blind_freeze.sha256`); intact before the run and after each set.
+- **The gate** was fixed before the run (0019): pooled point estimates against the unchanged
+  thresholds, with each set's row and 95% intervals reported.
+
+| set | recall | direct recall (95% CI) | precision (95% CI) | F1 | ECE (95% CI) |
+|---|---|---|---|---|---|
+| notes_v16 | 0.984 | 0.982 (278 of 283; 0.959–0.992) | 0.953 (0.924–0.971) | 0.968 | 0.017 (0.014–0.046) |
+| notes_v17 | 0.974 | 0.984 (360 of 366; 0.965–0.993) | 0.955 (0.931–0.971) | 0.965 | 0.020 (0.014–0.044) |
+| notes_v18 | 0.943 | 0.939 (248 of 264; 0.904–0.962) | 0.923 (0.888–0.948) | 0.933 | 0.024 (0.018–0.059) |
+| **pooled** | 0.968 | **0.970** (886 of 913; 0.957–0.980) | **0.945** (0.930–0.957) | **0.956** | **0.014** (0.011–0.031) |
+
+F1 of every system on each set:
+
+| system | notes_v16 | notes_v17 | notes_v18 |
+|---|---|---|---|
+| **slm:jev + PF + Presidio persons** | **0.968** | **0.965** | **0.933** |
+| slm:jev alone | 0.955 | 0.956 | 0.913 |
+| rules + Privacy Filter | 0.847 | 0.909 | 0.863 |
+| Privacy Filter | 0.758 | 0.826 | 0.805 |
+| rules + NER | 0.639 | 0.711 | 0.640 |
+| MediPhi-3.8B | 0.462 | 0.488 | 0.278 |
+| Qwen2.5-3B | 0.402 | 0.566 | 0.323 |
+
+- **The gate fails** on direct-identifier recall alone, by 9 spans. Precision, ECE and F1 pass.
+- **33 silent misses** (5, 11, 17). notes_v18 has 16 of the direct ones; 14 of those were never
+  proposed:
+  - year-only DOBs in a trial screening table (4), which this set's convention labels dob;
+  - initials in a table cell and on a pharmacy check line (`CWS`, `WLH`);
+  - log-in names in an audit log (`NG_JIAHUI`, `angkw`);
+  - a name in Tamil script, and two lone given names in a chat (`Sri`, `Agus`);
+  - "last 4" NRIC fragments in a visitor log (`*842H`), and an OCR-corrupted mobile number.
+  - Two full DOBs in an immunisation table were proposed and judged `none`.
+- **notes_v16 and notes_v17 misses:** initials (`BS`, `JA`, `SMN`, `A-M`, `HdS`, `NTH`,
+  `N.A.`), a lower-case `farhan`, an MRN fragment, a free-phone number, a street address and
+  five study screening codes.
+- **59 false positives** (6 on negative notes): headings and captions called names, protocol,
+  form and workstation codes called IDs, Singlish and Malay words, food and place words called
+  addresses. No unmarked letterhead contact line was among them.
+- **Calibration by kind of call, per set:** identifier and fast-path calls 0.006–0.016; SHI
+  lexicon 0.027–0.053; SHI other 0.08–0.12; "none" 0.06–0.13. These last two are the worst kinds.
+- **Latency:** 59.1 s per 1k chars (mean); per-note p95 101.5 s, 106.0 s and 98.7 s.
+- **Post-hoc (does not change the row):** without notes_v18's year-only DOBs and NRIC
+  fragments, pooled direct recall would be 0.977 (886 of 907), still under the gate.
+
 ## Caveats
 
 - **Synthetic.** Every set is invented. notes_v1 was written by the author of the P2 generator,
@@ -914,8 +985,8 @@ matched after the run.
 - **Found on the benchmark.** A fix for an error found on a set must be checked on a new, unseen
   set, or the benchmark becomes a training set. P8 to P12 changed slm_jev in response to sd20 and
   notes_v1 to notes_v4, so those are dev sets now and their numbers are optimistic. Only each
-  round's blind run counts, and notes_v5 to notes_v15 are dev sets from here on.
-- **One writer per set.** Each blind set had one writer (an agent working from a brief). Fifteen
+  round's blind run counts, and notes_v5 to notes_v18 are dev sets from here on.
+- **One writer per set.** Each blind set had one writer (an agent working from a brief). Eighteen
   sets of about 30 notes are still a narrow sample of how people write.
 - **Run variation.** The llama.cpp baselines vary by one to three spans from run to run.
 - **Different outputs.** slm:jev also outputs category, sensitivity and a review flag, which these

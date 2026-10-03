@@ -415,6 +415,22 @@ models/             GGUF / adapters / calibration.json (gitignored)
     table row, a space-split NRIC after a dotted leader. FPs: unmarked letterheads, headings,
     Singlish words, codes; the new assault pattern's `son hits her` was judged a name.
   - notes_v1–v15 and sd20 are all dev sets now. P21 is not a release candidate.
+- [x] P22 (0019, 2026-10-03): a general name-slot sweep in `slmjev/propose.py` (staff role +
+  initials, a token before a bracketed ID, initials after a bed number, wrapped and dash-signed
+  names, dotted initials, title-case name columns, in-laws), space/hyphen-split NRICs (fast path
+  only with the checksum) and DNA profiles. The isotonic lookup now rounds p to 6 places (it
+  sent near-zero "none" scores into the wrong block). `models/calibration_p22.json` is refitted
+  on notes_v1–v15 (held-out pooled ECE 0.042 → 0.038). `eval/pool.py` pools blind reports into
+  one gate verdict with 95% intervals.
+  - Dev (in-sample for calibration), pooled over v12, v13 and v15: direct 0.984, precision 0.922,
+    ECE 0.028; no new FPs.
+  - **notes_v16–v18 pooled blind: FAIL** (synthetic, 96 notes by three writers, one letterhead
+    convention, gate fixed before the run). Direct-identifier recall 0.970 (886 of 913, CI
+    0.957–0.980; 895 needed). Precision 0.945, ECE 0.014 and F1 0.956 pass. v16 and v17 pass on
+    their own; v18 (messages, forms, tables, machine output) fails at 0.939. The misses are mostly
+    never proposed: initials in table cells, log-ins, a Tamil-script name, year-only DOBs,
+    "last 4" NRIC fragments, an OCR-corrupted phone.
+  - notes_v1–v18 and sd20 are all dev sets now. P22 is not a release candidate.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.

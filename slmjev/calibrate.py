@@ -154,6 +154,9 @@ class Isotonic:
     kind = "isotonic"
 
     def __call__(self, p: float) -> float:
+        # p to the 6 places the edges (and the reports it is fitted on) keep: unrounded, a p of
+        # 1e-9 fell past an edge of 0.0 into the next block (0.30 for 0.04 on "none" calls; P22)
+        p = round(p, 6)
         # the first block whose upper edge is at or above p (the last block beyond the data)
         i = min(bisect_left(self.xs, p), len(self.ys) - 1)
         return min(1 - self.floor, max(self.floor, self.ys[i]))

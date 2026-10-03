@@ -196,6 +196,9 @@ SPOKEN_REF = (rf"(?i:{_DW}(?:[ \t]+{_DW})*[ \t]+(?:slash|dash|stroke|hyphen)[ \t
               rf"(?:[ \t]+{_DW})*)")
 # An NRIC/FIN read out with its letters: ``S six seven three two nine six nine D`` (notes_v14)
 SPOKEN_NRIC = rf"[STFGM][ \t]+(?i:{_DW}(?:[ \t,-]+{_DW}){{6}})[ \t]+[A-Z]"
+# An NRIC/FIN split by spaces or hyphens (``S 7709 506 C``, ``T-0312-844-B``; notes_v15); the
+# checksum decides
+SPACED_NRIC = r"[STFGM][ -]?\d{2,5}(?:[ -]\d{2,5}){1,2}[ -]?[A-Z]"
 # A date right after a word saying someone died (``d. 1998``, ``died Mar 2011``, ``DOD:``); a
 # year alone or a month and year too, as a pedigree writes them. The judge called both of those
 # ``none`` (notes_v14).
@@ -330,8 +333,9 @@ _ACCOUNT_SHAPE = re.compile(r"\d+(?:[- ]\d+){0,4}")
 def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     """``(identifier, reason)`` when code alone is sure the span identifies someone, else None.
 
-    Only shapes a rule can confirm qualify: a valid NRIC/FIN checksum or a masked NRIC/FIN
-    (``G****262U``), also spoken with its letters (``S one two ... seven D``); a date or year right
+    Only shapes a rule can confirm qualify: a valid NRIC/FIN checksum, also split by spaces
+    (``S 7709 506 C``), or a masked NRIC/FIN (``G****262U``), also spoken with its letters
+    (``S one two ... seven D``); a date or year right
     after a death word (``d. 1998``, ``died on 3 Mar 2020``); a lower-case login in a fixed-width
     table's ``USER``/``BY`` column; a blood donation number (``W0417 26 318857 K``); a picture file
     name (``IMG_4410.JPG``); a Singapore phone number spelled out in digit words; a whole email or
@@ -350,7 +354,8 @@ def rule_certain(text: str, cand: Candidate) -> tuple[str, str] | None:
     left = text[max(0, cand.start - 1 - 80):cand.start - 1]
     if hl7 := hl7_component(text, cand.start, cand.end):
         return hl7, "hl7_person"
-    if rules.nric_valid(m):
+    if rules.nric_valid(m) or (re.fullmatch(SPACED_NRIC, m)
+                               and rules.nric_valid(re.sub(r"[ -]", "", m))):
         return "national_id", "nric_checksum"
     if re.fullmatch(SPOKEN_NRIC, m):
         spoken = m[0] + spoken_digits(m[1:-1]) + m[-1]
@@ -725,9 +730,11 @@ _FIXED_HEAD = re.compile(r"[A-Z][A-Z0-9/#()&'.-]*(?: [A-Z][A-Z0-9/#()&'.-]*)*")
 _RULE_LINE = re.compile(r"[ \t]*[-=_*]{3,}[ \t]*")
 
 
-def fixed_width_column(text: str, start: int, max_rows: int = 40) -> str | None:
+def fixed_width_column(text: str, start: int, max_rows: int = 40,
+                       head: re.Pattern[str] = _FIXED_HEAD) -> str | None:
     """The label over the column a span starting at ``start`` sits in, for a fixed-width table
-    pasted into the text; None if there is none above it (a blank line ends the search)."""
+    pasted into the text; None if there is none above it (a blank line ends the search). A header
+    line has three or more cells, each matching ``head`` (upper case by default)."""
     s0 = text.rfind("\n", 0, start - 1) + 1
     col, pos = start - 1 - s0, s0
     for _ in range(max_rows):
@@ -739,7 +746,7 @@ def fixed_width_column(text: str, start: int, max_rows: int = 40) -> str | None:
             return None
         cells = [(m.start(), m.group()) for m in _FIXED_CELL.finditer(prev)]
         if (len(cells) >= 3 and not _RULE_LINE.fullmatch(prev)
-                and all(_FIXED_HEAD.fullmatch(c) for _, c in cells)):
+                and all(head.fullmatch(c) for _, c in cells)):
             under = [c for a, c in cells if a <= col]
             return under[-1] if under else None
         pos = p0

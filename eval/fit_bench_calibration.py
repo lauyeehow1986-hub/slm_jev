@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from bisect import bisect_left
 from collections import defaultdict
 from dataclasses import replace
 from pathlib import Path
@@ -76,6 +77,16 @@ def apply(cal: calibrate.Calibrator, r: dict) -> float:
     return cal(r["p_identifier"])
 
 
+def _unrounded(cal: calibrate.Calibrator, call: str, p: float) -> list[float]:
+    """The confidences an unrounded lookup (before P22) could give a raw p that the report
+    rounded to ``p`` (6 places): an isotonic map's blocks at ``p`` and half a unit either side."""
+    m = dict(cal.maps).get(call, cal.default) if isinstance(cal, calibrate.Grouped) else cal
+    if not isinstance(m, calibrate.Isotonic):
+        return []
+    return [min(1 - m.floor, max(m.floor, m.ys[min(bisect_left(m.xs, q), len(m.ys) - 1)]))
+            for q in (p - 5e-7, p, p + 5e-7)]
+
+
 def out_of_fold(kind: str, rows: list[dict], k: int, min_n: int) -> list[float]:
     fold = F.folds(rows, k)
     out = [0.0] * len(rows)
@@ -113,8 +124,11 @@ def replay(docs: list[dict], judged: list[list[dict]], cal, th: J.Thresholds
                 call = calibrate.group_of(c.get("category"), bench.SHI, c.get("sources") or ())
                 conf = apply(cal, {"p_identifier": c["p_identifier"], "call": call})
                 c["confidence"] = round(conf, 4)
-                score = c["p_identifier"] if th.space == "raw" else conf
-                c["decision"] = J.decide(score, max(c["category_probs"].values()), th, [])
+                # in raw space the calibrator cannot move a decision, so keep the recorded one:
+                # it also had the judge's reasons (a cell review, a Noul disagreement), which
+                # the report does not keep
+                if th.space != "raw":
+                    c["decision"] = J.decide(conf, max(c["category_probs"].values()), th, [])
             out.append(c)
         new_judged.append(out)
         preds.append([{**c, "label": _label(c)} for c in out
@@ -170,11 +184,26 @@ def main(argv: list[str] | None = None) -> int:
                              f"{want['recall']}/{want['precision']}")
         # confidence to 1e-4: the report keeps p_identifier to 6 places, so re-rounding can move
         # the 4th place
-        diff = sum(a["decision"] != b["decision"]
-                   or abs(a["confidence"] - b["confidence"]) > 1.01e-4
-                   for x, y in zip(judged, again, strict=True) for a, b in zip(x, y, strict=True))
+        # A report run before P22 looked p up unrounded (``calibrate.Isotonic``), so a p next to
+        # a block edge may carry the next block's confidence. Only the confidence; never the
+        # decision.
+        diff = legacy = 0
+        for x, y in zip(judged, again, strict=True):
+            for a, b in zip(x, y, strict=True):
+                if a["decision"] != b["decision"]:
+                    diff += 1
+                elif (a["confidence"] is not None
+                      and abs(a["confidence"] - b["confidence"]) > 1.01e-4):
+                    call = calibrate.group_of(a.get("category"), bench.SHI, a.get("sources") or ())
+                    if any(abs(a["confidence"] - c) <= 1.01e-4
+                           for c in _unrounded(base_cal, call, a["p_identifier"])):
+                        legacy += 1
+                    else:
+                        diff += 1
         if diff:
             raise SystemExit(f"{p}: replaying the base calibration changed {diff} candidates")
+        if legacy:
+            print(f"{p}: {legacy} confidences at a block edge, recorded with the pre-P22 lookup")
 
     rows = [r for p in args.train for r in model_rows(*reports[p][:3])]
     ys = [r["correct"] for r in rows]
@@ -187,9 +216,10 @@ def main(argv: list[str] | None = None) -> int:
     kind = F.choose_kind({k: v["nll"] for k, v in cv.items()})
     choice = calibrate.choose_thresholds(oof[kind], ys)
     if args.decide_on == "raw":
-        if base.space != "calibrated" or not isinstance(base_cal, calibrate.Identity):
-            raise SystemExit("--decide-on raw needs an identity base calibration, whose "
-                             "thresholds are already in raw space")
+        # an identity base's thresholds are raw already; a raw-space base (P13) keeps its own
+        if base.space != "raw" and not isinstance(base_cal, calibrate.Identity):
+            raise SystemExit("--decide-on raw needs an identity or a raw-space base "
+                             "calibration, whose thresholds are already in raw space")
         th = replace(base, space="raw")
     else:
         th = replace(J.Thresholds(), drop_below=choice.drop_below, accept_at=choice.accept_at)

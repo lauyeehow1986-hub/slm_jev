@@ -152,3 +152,10 @@ def test_choose_thresholds_fails_closed():
     ch = calibrate.choose_thresholds(p, y)
     assert ch.accept_at == 1.0 and ch.precision_at_accept is None
     assert any("precision" in n for n in ch.notes)
+
+
+def test_isotonic_looks_up_p_at_the_precision_it_was_fitted_on():
+    # fitted on report scores rounded to 6 places: a raw 1e-9 is the 0.0 it was fitted as
+    iso = calibrate.Isotonic.fit([0.0] * 9 + [0.5, 0.5], [0] * 8 + [1] + [0, 1])
+    assert iso(1e-9) == iso(0.0) == pytest.approx(1 / 9)
+    assert iso(1e-5) == pytest.approx(0.5)
