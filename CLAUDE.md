@@ -445,6 +445,21 @@ models/             GGUF / adapters / calibration.json (gitignored)
     17 of 18 direct misses were never proposed: bare NRIC tails after "last 4", lower-case
     sign-off initials, names in CSV/XML fields, overseas phones and addresses.
   - notes_v1–v21 and sd20 are all dev sets now. P23 is not a release candidate.
+- [x] P24 (0021, 2026-10-04): win back precision, then propose the v19–v21 shapes. Proposer
+  filters: organisation words, a place or organisation beside a name, eponyms, Malay/Indonesian/
+  Tamil function words, codebook columns, codes named by what they number, engine names widened
+  to whole words, lone clock times. New proposals: bare NRIC tails after "last 4", hyphenated
+  and dash initials, agent and XML person fields, subject/donor/sample IDs, Malay/Indonesian
+  honorifics, masked and area-code phones, Philippine addresses, parts of a capitalised name
+  after a person caption. Calibration unchanged (`calibration_p22.json`).
+  - Dev: FPs on seven sets 207 → 123, no new miss; pooled v19–v21 direct 1.000, precision 0.969.
+  - **notes_v22–v24 pooled blind: FAIL** (synthetic, 96 notes by three new writers, same
+    convention and gate). Direct-identifier recall 0.977 (904 of 925, CI 0.966–0.985; 907
+    needed). Precision 0.951 (up from 0.900), ECE 0.021 and F1 0.963 pass. v24 passes on its
+    own. 14 of 21 direct misses were never proposed (names in new places: a name tag, a quoted
+    "B/O" phrase, group chats, a wrapped fixed-width cell); three MRNs in an MDT table were
+    proposed but judged not identifiers.
+  - notes_v1–v24 and sd20 are all dev sets now. P24 is not a release candidate.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.

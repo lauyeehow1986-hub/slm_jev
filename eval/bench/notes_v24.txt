@@ -1,0 +1,409 @@
+# notes_v24 — held-out Singapore-style clinical/admin notes with gold spans.
+# SYNTHETIC: NOT REAL PATIENT DATA. Every person, name, NRIC/FIN, MRN, phone number, address, email and health detail below is invented for testing; any match to a real person, number or mailbox is coincidental.
+# Author: writer I (public health, pre-hospital, forensic and institutional health). Written from general knowledge only, by an
+#   author who did not see the system under test, its rules, its code, or any earlier evaluation set.
+# FORMAT: a note starts with a line "=== v24_nNN | <kind> ===". The note text is every line after it up to the next "===" line.
+#   A gold span is written inline as {{label|text}}; the note text contains only "text". Spans are never nested and never
+#   contain "{{", "}}" or "|", and have no leading/trailing spaces. Anything outside {{...}} is not an identifier.
+# LABELS (identifiers): name, national_id, mrn, case_visit, address, postal_code, phone, fax, email, dob, date_of_death,
+#   device, biometric, photo, other_id.
+# LABELS (SHI): hiv_sti, mental_health, substance_use, genetic, reproductive_sexual, other_sensitive.
+# LABELS (other): date_other = any date of the patient's/person's care or case events that is not a DOB or date of death.
+# CONVENTIONS:
+#   - Honorifics/titles/ranks (Dr, Mr, Mrs, Ms, Mdm, SN, Sgt, Insp, CPT (Dr), Capt, Sr, Daw, HCA, etc.) are OUTSIDE name spans.
+#     Every person is named and every mention is labelled: repeated mentions, lone surnames/given names, nicknames, lower case,
+#     CAPS, inverted "SURNAME, Given", Chinese characters (own span), and INITIALS used for a person (labelled name).
+#   - "Singapore" is outside address spans; the postal code is its own postal_code span, keeping an "S" prefix if written "S560123".
+#   - Letterheads and institutional contacts: organisation/hospital/clinic/company/ministry NAMES are decoys (unmarked), but EVERY
+#     phone, fax, email, street address and postal code is marked wherever it appears (letterheads, footers, switchboards,
+#     hotlines, department faxes, generic mailboxes). Company/organisation registration numbers (UEN, ROC, licence no.) = other_id.
+#   - Field captions (NRIC, FIN, MRN, Tel, Fax, HP, DID, UEN) are outside spans; only the value is labelled.
+#   - national_id = NRIC/FIN/passport/birth certificate numbers. mrn = hospital/clinic medical record numbers.
+#     case_visit = visit/admission/encounter/episode numbers, including ambulance (SCDF) incident numbers and MCI triage tag numbers.
+#     other_id = police/coroner/court/notification/board references, inmate/detainee/supervision numbers, practitioner
+#     registration (MCR) numbers, service numbers, work-permit numbers, lab accession numbers, donor/donation numbers,
+#     seaman's book numbers, social-media handles and profile URLs, registration numbers.
+#     device = vehicle plates and vessel identifiers (IMO number, call sign), implant serial numbers.
+#     biometric = fingerprint record references.
+#   - Abuse/violence/sexual-assault allegations = other_sensitive. Pregnancy/pregnancy tests = reproductive_sexual.
+#     Alcohol/tobacco/drug use and drug test results = substance_use. Positive and negative HIV/STI results = hiv_sti.
+#   - Decoys left unmarked: institution names, ward/bed/room/cell numbers, lab values, doses, times, ICD codes, form/circular/
+#     guideline numbers and their dates, model numbers, flight numbers, vessel names, ambulance call signs, certificate numbers
+#     of ships/premises, aggregate statistics.
+# DELIBERATELY INVALID / UNCHECKABLE IDs:
+#   - v24_n22: informant NRIC "S3646541H" has a deliberately WRONG check letter (valid would be ...G); still labelled national_id.
+#   - v24_n12: NRIC written partially masked "S****248C" (not checksum-verifiable); still labelled national_id.
+#   - Passport numbers (non-NRIC shapes) have no checksum.
+# Negative controls (no identifiers at all): v24_n04, v24_n07, v24_n14, v24_n19, v24_n24.
+
+=== v24_n01 | notifiable disease notification ===
+INFECTIOUS DISEASES ACT - NOTIFICATION OF CASE (Form MD 131)
+To: Communicable Diseases Division   Fax: {{fax|6221 5528}}   Email: {{email|cdnotify@moh.example.org}}
+Notifying practitioner: Dr {{name|Farhan bin Ismail}}  MCR No. {{other_id|M71234J}}
+Clinic: Sunrise Family Clinic, {{address|Blk 211 Tampines St 23 #01-45}}, Singapore {{postal_code|520211}}  Tel: {{phone|6788 1043}}
+Disease: Measles (clinical diagnosis; IgM pending)
+Patient name: {{name|NGUYEN THI HOA}}     FIN: {{national_id|M5877904T}}     Sex: F     DOB: {{dob|14.02.1994}}
+Nationality: Vietnamese     Occupation: nail technician
+Residential address: {{address|36 Lorong 25 Geylang #03-02}}, Singapore {{postal_code|388270}}
+Contact no.: {{phone|+65 9137 2280}} (WhatsApp only; patient speaks limited English, sister interprets)
+Onset of rash {{date_other|29 Sep 2026}}; fever from {{date_other|26/9}}. Seen at clinic {{date_other|01 Oct 2026}}. Not vaccinated per patient. T 39.4, Koplik spots seen, conjunctivitis; maculopapular rash face to trunk. Advised home isolation until 4 days after rash onset; household of 3 adults, none pregnant, no infants.
+Throat swab and serum sent; lab accession {{other_id|LB26-0918843}}.
+Date of notification: {{date_other|1/10/2026}}     Signature: ______ ({{name|F.I.}})
+
+=== v24_n02 | TB contact-tracing worksheet ===
+TB Control Unit - Contact Investigation Worksheet
+Index case: {{name|RAMASAMY, Selvam}}  (NRIC {{national_id|S2797478C}}), sputum smear-positive pulmonary TB, notified {{date_other|22-09-2026}}, notification ref {{other_id|TBCU/2026/04417}}.
+Household contacts
+ 1. {{name|Kalaivani d/o Perumal}}, wife, 52 - HP {{phone|9823 4106}} - CXR {{date_other|25/9}} normal; IGRA positive -> LTBI, start 3HP
+ 2. son, 24 (lives separately, visits weekly) - casual contact, symptom advice only
+ 3. {{name|S. Arjun}}, grandson, DOB {{dob|11 Jan 2023}} - refer paediatric TB clinic for window prophylaxis
+Index cavitary on CXR; drug-sensitive on GeneXpert; started HRZE, DOT at polyclinic daily.
+Workplace contacts (bus depot; via supervisor Mr {{name|Ong}}, {{phone|6481 2290 ext 317}})
+ 4. {{name|Mohd Rizal Abdullah}} - shares rest room with index - screened {{date_other|26.09.26}}, IGRA indeterminate, repeat
+ 5. {{name|LIEW KAH MENG}} - declined screening; reminder letter posted to {{address|Blk 47 Sims Place #11-160}}, {{postal_code|S380047}}
+Remarks: {{name|Selvam}} says he shares a car to work with "{{name|Kumar}}" (no surname known) - pending.
+Tracer: {{name|Joanne Teo}}  ({{email|joanne_teo@tbcu.example.org}})
+
+=== v24_n03 | dormitory outbreak line list ===
+VARICELLA CLUSTER - LINE LIST (as at {{date_other|30 Sep 2026}})
+Site: Kranji Lodge 2 dormitory, {{address|20 Kranji Loop}}, Singapore {{postal_code|739540}}. Approx. 640 residents, 12-bed rooms.
+No | Name                  | FIN / passport        | Room  | Onset   | Status
+1  | {{name|MD SHAHIDUL ISLAM}}     | {{national_id|G3602148P}}             | B3-07 | {{date_other|19/09}}   | recovered
+2  | {{name|Hossain Md Alamgir}}    | {{national_id|F7729336K}}             | B3-07 | {{date_other|23/09}}   | isolated, sick bay
+3  | {{name|RAJU}} (single name)    | {{national_id|G5759464R}}             | B3-09 | {{date_other|24/09}}   | admitted, adm no. {{case_visit|A26-118204}}
+4  | {{name|Kyaw Zin Htet}}         | passport {{national_id|MD448190}} | C1-12 | {{date_other|28/09}}   | isolated; FIN pending
+Employer: Hwa Seng Builders Pte Ltd (UEN {{other_id|201412345K}}); site coordinator informed, rest days arranged for isolated workers.
+Room-mates of case 4 (C1-12) offered varicella vaccine {{date_other|1 Oct}}.
+
+=== v24_n04 | outbreak advisory ===
+ADVISORY: VARICELLA IN COMMUNAL LIVING SETTINGS (internal guideline v3, March 2025)
+1. Isolate cases until all lesions have crusted (usually 5-7 days after rash onset).
+2. Susceptible close contacts without evidence of immunity: offer varicella vaccine within 3-5 days of exposure.
+3. Immunocompromised or pregnant contacts: refer for VZIG assessment within 10 days.
+4. Report clusters of 2 or more linked cases within one incubation period (21 days).
+5. Cleaning: wipe high-touch surfaces twice daily with 1000 ppm chlorine solution.
+6. ICD-10 B01.9 for uncomplicated varicella. Aciclovir 800 mg five times daily for 7 days if adult presents within 24 h.
+Distribution: dormitory operators, Ward 64 infection control, Clinic B sick bay. Supersedes Circular 12/2024.
+
+=== v24_n05 | ambulance patient care report ===
+EMS PATIENT CARE REPORT
+Incident no.: {{case_visit|20261002-0457}}     Call sign A214     Date: {{date_other|02 Oct 2026}}
+Call 0712h | At scene 0721h | Depart 0744h | At hospital 0756h
+Location: road outside {{address|Blk 405 Sin Ming Ave}}
+Pt: male motorcyclist, approx. 35 years, conscious. Name as per IC: {{name|DARREN JOSEPH PEREIRA}}, NRIC {{national_id|S8890639Z}}. Motorcycle {{device|FBQ 8821 T}}.
+Primary survey: A patent, RR 22, SpO2 96% RA, BP 128/84, HR 104, GCS 14 (E4V4M6). Obvious deformity R forearm, abrasions L knee.
+Tx: splint, methoxyflurane 3 mL inhaled, cervical collar. {{substance_use|Smell of alcohol on breath}}; pt says "only 2 beers".
+Mechanism: skidded on wet road at ~40 km/h, helmet on, no LOC reported by bystander.
+NOK per patient: wife {{name|Melissa}} (informed by crew by phone).
+Handover at ED to SN {{name|Siti Nurhaliza Osman}}; ED registration {{case_visit|ED26-338170}}.
+Paramedic i/c: SGT {{name|Koh J. H.}}
+
+=== v24_n06 | mass-casualty triage tag list ===
+MCI - bus collision, expressway towards Woodlands. Casualty Collection Point log, {{date_other|27/09/2026}}
+Tag no. | Cat | Name / description                              | ID                      | Disposition
+{{case_visit|T-0041}}  | P1  | {{name|LIM, Kok Wah}} (bus captain)                    | {{national_id|S3176445I}}               | resus bay, KTPH
+{{case_visit|T-0043}}  | P3  | {{name|Nur Hidayah bte Kamal}}                        | {{national_id|T0739714Z}}               | treated on site
+{{case_visit|T-0044}}  | P2  | {{name|Ferdinand C. Santos}}                          | PH passport {{national_id|P4419027B}}   | NUH
+{{case_visit|T-0045}}  | P3  | {{name|Zainab}} (mother of {{case_visit|T-0043}})                   | -                       | left with daughter
+{{case_visit|T-0046}}  | P0  | adult male, dead at scene, unidentified         | -                       | mortuary via police
+Triage officer: CPT (Dr) {{name|Aaron Yeo}}   Scribe: {{name|W. K. Ng}}
+
+=== v24_n07 | triage tag template ===
+TRIAGE TAG (blank master copy - do not write on master)
+Tag no.: ______    Date: __/__/____    Time: ____
+Name: ____________________    NRIC/FIN: ____________    Sex: M / F    Approx age: ___
+Walking?  YES -> P3 (green)
+Breathing after airway opened?  NO -> P0 (white/black)
+RR > 30 or < 10 -> P1 (red); capillary refill > 2 s -> P1; otherwise P2 (yellow)
+Interventions: [ ] tourniquet ____h  [ ] airway adjunct  [ ] morphine ___ mg  [ ] TXA 1 g
+Tear-off strip: retain at CCP. Design revision 4, 2019. Stock code TT-04-RED.
+
+=== v24_n08 | autopsy report ===
+FORENSIC MEDICINE - AUTOPSY REPORT
+Coroner's case no.: {{other_id|CC 2026/1187}}     Autopsy no.: {{other_id|A-26-0902}}
+Deceased: {{name|WONG CHEE KEONG}} ({{name|黄志强}}), male, NRIC {{national_id|S6837227E}}, DOB {{dob|3 March 1961}}
+Found at home, {{address|Blk 18 Jalan Membina #12-504}}, Singapore {{postal_code|160018}}; pronounced dead {{date_of_death|28 September 2026}} 0640h.
+Autopsy performed {{date_other|30.09.2026}} by Dr {{name|Priya Menon}}.
+Identification: visual identification by son {{name|Wong Jun Hao}}; fingerprint comparison, record {{biometric|FP-0093-3381}} - match.
+External: well-nourished, 172 cm, 81 kg. No injuries apart from resuscitation marks.
+Internal: heart 520 g; LAD 90% stenosis with fresh thrombus. Lungs congested and oedematous.
+Toxicology: {{substance_use|blood ethanol 212 mg/100 mL}}; sertraline therapeutic level.
+History (per hospital records): {{mental_health|major depressive disorder}}, on sertraline 100 mg.
+Opinion: death due to coronary artery disease with acute thrombosis; alcohol intoxication contributed.
+Cause of death: Ia Ischaemic heart disease; II Acute ethanol intoxication.
+IO: Insp {{name|Shaun Rajan}}, tel {{phone|6391 0442}}.
+Samples retained: blood (femoral), vitreous, urine, liver; histology blocks x14. No further toxicology requested.
+
+=== v24_n09 | police medical examination ===
+REQUEST FOR MEDICAL EXAMINATION (Police Form 44)
+From: Bedok Division HQ, {{address|30 Bedok North Road}}, Singapore {{postal_code|469680}}   Tel {{phone|6243 5017}}
+Purpose: document injuries, if any, and give opinion on consistency with the allegation.
+IO: SSSgt {{name|Muhammad Hafiz Rosli}}    Case ref: {{other_id|BDV/2026/0912/118}}
+Person to be examined: {{name|CHEN, Xiao Li}} ({{name|陈小莉}}), PRC national, FIN {{national_id|G2694662Q}}
+Examined {{date_other|Sat 26/9/26}} at 2310h, Emergency Department, visit {{case_visit|E-26-771204}}.
+History: alleges {{other_sensitive|outrage of modesty}} by a co-worker on the factory bus; she pushed him away and he twisted her right wrist.
+Findings: 3 x 2 cm bruise dorsum R wrist; full ROM; X-ray NAD. No other injuries seen. Chaperone: SN {{name|Lee}}.
+Opinion: injuries consistent with the history given. No genital or other examination requested or consented to. Photographs of the wrist taken by the IO with the examinee's consent and kept by the police.
+Examining doctor: Dr {{name|Benjamin Ho Kah Leong}}
+
+=== v24_n10 | assault injury medical report ===
+MEDICAL REPORT (for Personal Protection Order application)
+Our ref: {{other_id|MR/26/04821}}       Date: {{date_other|21-Sep-2026}}
+Patient: {{name|Kavitha d/o Muniandy}}, 34, NRIC {{national_id|S9670283C}}, MRN {{mrn|SKH-00731982}}
+She attended the Emergency Department on {{date_other|14 September 2026}} and stated that her husband, {{name|Suresh s/o Gopal}}, punched her repeatedly at their flat ({{address|Blk 289C Compassvale Crescent #14-372}}, {{postal_code|S543289}}) on the night of {{date_other|13/9}}. She described this as the {{other_sensitive|third episode of spousal violence}} this year. She is {{reproductive_sexual|14 weeks pregnant}}.
+Findings: L periorbital haematoma 4 x 3 cm; tender L cheek. CT facial bones: undisplaced fracture of L zygomatic arch. Foetal heart rate 152/min.
+Her children {{name|Divya}} (9) and {{name|Karthik}} (6) were present at home. Referred to medical social worker {{name|Ang Pei Shan}}.
+She was admitted overnight for observation and discharged with analgesia (paracetamol 1 g QDS) and an obstetric review. She was advised on safety planning and given details of the family violence helpline. In my opinion her injuries are consistent with blunt trauma such as punches to the face.
+Dr {{name|Natalie Chong}}, Senior Resident, Emergency Medicine
+
+=== v24_n11 | prison medical record ===
+INMATE MEDICAL RECORD
+Inmate no.: {{other_id|2026-11834}}   Name: {{name|MUHAMMAD IQBAL BIN JAMALUDDIN}}   NRIC: {{national_id|T0235079Z}}   Cell: A3-12
+{{date_other|07/09/2026}} Admission screen: {{substance_use|methamphetamine use until 2 days before arrest}}; {{substance_use|smokes 20 cigarettes/day}}. {{hiv_sti|HIV screen non-reactive}}. CXR clear.
+Mood low; {{mental_health|previous suicide attempt (overdose) in 2021}}. Placed on suicide watch level 2 for 72 h. Psychiatry review by Dr {{name|Lim}} on {{date_other|8/9}}.
+{{date_other|15 Sep}}: sleeping better, eating. Wt 58 kg. Watch stepped down. Continue thiamine 100 mg OD, paracetamol PRN. Referred to the in-house addiction programme; first session pending.
+Mother {{name|Rohani binte Salleh}} called the visit centre asking for updates on {{phone|9372 6614}} - not given, consent not on file. {{name|Iqbal}} informed; he will sign consent next review.
+MO: Dr {{name|K. Sivakumar}}
+
+=== v24_n12 | camp medical centre note ===
+CAMP MEDICAL CENTRE - MO NOTE   {{date_other|Tue 29 Sep 26}}
+Serviceman: 3SG {{name|ALOYSIUS TAN WEI JIE}}   NRIC {{national_id|S****248C}}   Bravo Coy
+C/o giddiness and vomiting after 16 km route march; core temp 39.1 at 0930h. Cooled with ice sheets; IV NS 1 L.
+Conveyed to hospital by camp ambulance {{device|MID 10427}}; buddy PTE {{name|Haziq}} accompanied. PC LTA {{name|Jeremy Seah}} informed.
+Past history: {{mental_health|adjustment disorder, seen by unit psychologist 2025}}; nil drug allergy.
+Hospital: rhabdomyolysis excluded (CK 820), Na 136, Cr 98; discharged after 24 h observation.
+Plan: heat injury protocol, excuse RMJ, graded return to training over 2 weeks, review {{date_other|01/10/2026}}.
+MO: CPT (Dr) {{name|Lakshmi Narayanan}}
+
+=== v24_n13 | medical board record ===
+MEDICAL BOARD - RECORD OF PROCEEDINGS
+Board date: {{date_other|18 August 2026}}       Board ref: {{other_id|MB/26/3391-B}}
+Pre-enlistee: {{name|PEREIRA, Gabriel Xavier}}     NRIC: {{national_id|T0921352F}}     DOB: {{dob|2008-05-17}}
+Address: {{address|21 Jalan Kembangan}}, Singapore {{postal_code|419118}}
+Conditions reviewed:
+ 1) Asthma, moderate persistent. Spirometry FEV1 72% predicted, reversibility 14%.
+ 2) {{mental_health|ADHD, on methylphenidate 20 mg}} - specialist memo from Dr {{name|Rachel Ong}} dated {{date_other|02/07/2026}}.
+Board chaired by COL (Dr) {{name|Victor Lam}} with two members.
+Outcome: downgraded; review in 12 months. Vocation restrictions: no live-firing range duties with heavy exertion until asthma control is reviewed; carry reliever inhaler at all times.
+Father, Mr {{name|Joseph Pereira}}, attended and asked about deferment for A-level examinations.
+
+=== v24_n14 | exercise plan ===
+TABLE-TOP EXERCISE PLAN - "NORTHERN SURGE"
+Aim: test hospital surge activation for a 40-casualty road traffic MCI.
+Phase 1 (0900-0930): notification cascade; Ops Room activated; bed state report.
+Phase 2 (0930-1030): 12 P1, 18 P2, 10 P3 simulated casualties; red zone capacity 8 trolleys.
+Phase 3 (1030-1100): blood bank activation - 20 units O-negative, 10 units FFP; massive transfusion protocol MTP-2.
+Phase 4 (1100-1130): stand-down, hot wash-up.
+Observers from two cluster hospitals. All casualty cards use exercise names "CASUALTY 01" to "CASUALTY 40".
+Reference: Emergency Preparedness Manual chapter 7, rev. 2024-11.
+
+=== v24_n15 | FDW six-monthly medical examination ===
+MEDICAL EXAMINATION REPORT - FOREIGN DOMESTIC WORKER (6-monthly)
+Orchid Medical Centre, {{address|1 Rochor Canal Road #02-17}}, Singapore {{postal_code|188504}}  Tel {{phone|6339 0726}}  Fax {{fax|6339 0727}}  UEN {{other_id|53289117C}}
+FDW: {{name|SITI AMINAH}}   Indonesian   FIN {{national_id|F2873901W}}   Passport {{national_id|C 7183302}}   DOB {{dob|09/11/1991}}
+Work permit no.: {{other_id|0 3317 6624}}
+Employer: Mdm {{name|Yeo Swee Hong}}
+Date of examination: {{date_other|23-09-2026}}
+Pregnancy test (urine hCG): {{reproductive_sexual|negative}}
+Syphilis (TPPA): {{hiv_sti|non-reactive}}      HIV Ag/Ab: {{hiv_sti|non-reactive}}
+Chest X-ray: no evidence of active TB.
+Weight 51 kg, BP 112/70. Malaria film not required. Result: FIT.  Examining doctor: Dr {{name|Tay Hui Min}} (MCR {{other_id|M09451A}}).
+
+=== v24_n16 | work pass screening result letter ===
+To: Work Pass Division - medical returns ({{email|wpmed.returns@mom.example.org}})
+Re: MEDICAL SCREENING - {{name|HTET HTET AUNG}}, FIN {{national_id|M3497063N}}, Myanmar passport {{national_id|MH 228 9104}}
+The above worker was screened at our clinic on {{date_other|25 Sep 2026}} (episode {{case_visit|EP-26-090417}}).
+Results: {{hiv_sti|HIV-1/2 antibody repeatedly reactive; confirmatory line immunoassay positive}}. Chest X-ray clear. Urine {{reproductive_sexual|pregnancy test positive (about 9 weeks by dates)}}.
+She was counselled in Burmese with the help of interpreter Daw {{name|Nilar}} and has been referred to the infectious disease clinic for care.
+Employment agency: Golden Lotus Employment Agency, contact person {{name|Kelvin}}.
+Please note that the worker has been informed of her results in private and has requested that her employer not be told the medical details. We will forward the formal result through the usual channel within 2 working days.
+Dr {{name|Aishah Rahim}}, for Harbourfront Medical Clinic
+
+=== v24_n17 | port health inspection record ===
+SHIP SANITATION INSPECTION - PORT HEALTH
+Vessel: MV OCEAN CORAL   IMO {{device|9481726}}   Call sign {{device|9V8213}}   Western Anchorage
+Inspection date: {{date_other|19/09/2026}}   Officer: {{name|Ahmad Zulkifli bin Hassan}}
+Master: Capt {{name|Rolando M. Villanueva}}.  Agent: Straits Maritime Agency, attn {{name|Daniel Kwek}}, {{phone|+65 6227 4108}}
+Findings: galley - cockroach droppings behind dry store; potable water free chlorine 0.1 ppm (low). Ship cert SSCEC/0921 extended 1 month.
+Crew illness log:
+ - 2nd Engineer {{name|Wahyu Prasetyo}}: fever 3 days, NS1 positive; landed to hospital {{date_other|20 Sep}}.
+ - Cook {{name|Jun Dela Rosa}}: diarrhoea x2 days; stool sent for culture.
+Recommendations: professional pest control within 7 days; superchlorinate potable water tanks and record residual chlorine daily; galley hand-wash basin to be fitted with soap dispenser.
+Follow-up boarding {{date_other|3 Oct 2026}}.
+
+=== v24_n18 | school health screening and catch-up list ===
+SCHOOL HEALTH SERVICE - P5 SCREENING & CATCH-UP VACCINATION
+School: Fernvale Ridge Primary, {{address|18 Fernvale Walk}}, {{postal_code|S797538}}; Screening team: 2 nurses, 1 vision technician
+Session date: {{date_other|Wed, 16 Sep 2026}}     Class: 5 Integrity
+Index | Student                     | BC / NRIC        | Screening finding          | Vaccine due
+03    | {{name|ABDUL HAKIM BIN ROSLAN}}       | {{national_id|T1533991D}}        | VA 6/12 both eyes - refer  | Tdap-IPV
+17    | {{name|Dhruv Iyer}}                   | {{national_id|T1026649H}}        | scoliosis screen positive  | MMR dose 2 (missed)
+24    | {{name|Lee-Anderson, Matthew}}        | {{national_id|T1239980J}}        | normal                     | Tdap-IPV - parent declined
+Referral letters for indices 03 and 17 handed to pupils in sealed envelopes for parents. Consent forms outstanding for 6 pupils in the class.
+Parent of index 24, Mr {{name|Anderson}}, emailed objection from {{email|m.anderson@mail.example.com}}.
+School nurse: {{name|Faridah Yusof}}
+
+=== v24_n19 | weekly surveillance summary ===
+WEEKLY INFECTIOUS DISEASE BULLETIN - EPI-WEEK 39
+Dengue: 312 cases (week 38: 287); 4 new clusters, 1 with more than 50 cases.
+HFMD: 498 attendances at polyclinics; 3 childcare centre closures.
+Acute diarrhoeal illness: 1,214 polyclinic attendances (+6%).
+Influenza-like illness: 2,860 attendances; flu A(H3N2) 41% of positive samples.
+Measles: 2 cases (1 imported). Malaria: 1 imported (P. falciparum). Legionellosis: 0.
+TB notifications year-to-date: 1,108. Varicella: 1 dormitory cluster (5 cases).
+Data extracted from the notification database on Monday 0900h; figures provisional.
+
+=== v24_n20 | travel-related infection case note ===
+INFECTIOUS DISEASES CONSULT   {{date_other|2026-09-21}}
+Referral typed by GP clinic as: "{{name|okonkwo emeka}}, 41M, fever"
+Pt {{name|OKONKWO Emeka}}, Nigerian, FIN {{national_id|G3470460R}}, MRN {{mrn|NC0089127}}, case no. {{case_visit|26NCID11893}}
+Returned from Lagos {{date_other|14 Sept}} after visiting family; wife {{name|Adaeze}} remains in Lagos ({{phone|+234 803 555 0192}}). No malaria prophylaxis.
+4 days fever, rigors, headache. Plt 62, bili 34. Blood film: P. falciparum, parasitaemia 3.2%.
+Plan: IV artesunate 2.4 mg/kg at 0, 12, 24 h, then complete oral artemether-lumefantrine; HDU monitoring; repeat film 12-hourly; watch for delayed haemolysis at days 7-28.
+Travel companion, colleague Mr {{name|Tunde Bakare}} (same flight), advised to see a doctor if febrile within 3 months of return.
+Employer informed of admission with patient's consent.
+{{name|Ian Goh}} / ID Registrar
+
+=== v24_n21 | blood donation adverse event record ===
+DONOR ADVERSE EVENT REPORT
+Donor no.: {{other_id|D-0428-5517}}     Donation no.: {{other_id|W0426 26 118930}}
+Donor: {{name|NUR FARHANA BINTE ZULKIFLI}}, F, NRIC {{national_id|T0453067A}}, DOB {{dob|04-07-2007}}, first-time donor
+Date/time: {{date_other|12/09/2026}} 1420h, whole blood 450 mL
+Event: vasovagal reaction with LOC ~10 s, 4 min post-donation; fell from chair - 1.5 cm laceration R eyebrow. Taken to ED by ambulance.
+Donor's mother {{name|Rosnah}} informed by phone.
+Staff on duty: SN {{name|Clara Fernandez}}.
+Post-donation testing: {{hiv_sti|syphilis screen reactive (TPHA 1:640)}}; unit discarded. Donor recalled for counselling on {{date_other|19 Sep}}; attended with mother.
+Deferral: 12 months. Wound cleaned and closed with skin adhesive at ED; head injury advice given. Root-cause review: donor had skipped lunch and drank under 500 mL fluid that day; reminder to staff to check pre-donation intake for first-time donors.
+
+=== v24_n22 | death certificate working note ===
+CERTIFICATE OF CAUSE OF DEATH - working notes before e-certification
+Deceased: {{name|TAN SOH CHOO}} ({{name|陈素珠}}), F, 88. NRIC {{national_id|S0994574A}}. MRN {{mrn|1102 776 541}}. Inpatient no. {{case_visit|IP26/0927/0315}}. Ward 7B bed 22.
+Date and time of death: {{date_of_death|27/09/2026}} 0345h, pronounced by the house officer on call.
+Cause: Ia Aspiration pneumonia; Ib Advanced dementia (Alzheimer type). II Atrial fibrillation.
+Medications at death: apixaban 2.5 mg BD, donepezil 10 mg ON. Advance care plan on file: comfort care, no CPR.
+Not a coroner's case - natural death, no injury, attended in last 14 days.
+Pacemaker in situ, serial {{device|PJN731220S}} - removed by mortuary before cremation.
+Informant: son {{name|Lim Teck Seng}}, NRIC {{national_id|S3646541H}}.
+Certifying doctor: Dr {{name|Hannah Liew}}, MCR {{other_id|M14207Z}}.
+
+=== v24_n23 | next-of-kin notification log ===
+NOK NOTIFICATION - TELEPHONE LOG
+{{date_other|Sun 28 Sep 2026}} 0915h. Officer: Insp {{name|Shaun Rajan}}.
+Deceased: {{name|Wong Chee Keong}}, found at home, died on the morning of {{date_of_death|28 Sep}}.
+0915h  Called son {{name|WONG JUN HAO}} on {{phone|+65 8292 5517}} - no answer, voicemail left.
+0922h  Called ex-wife {{name|Lau Mei Fong}} (home {{phone|6455 0981}}); she gave son's office line {{phone|6870 3326 x 4410}}.
+0940h  Spoke to {{name|Jun Hao}}; informed of death; offered support.
+He asked whether his father had been unwell; advised that the cause of death will be determined at autopsy and that the coroner's office will contact the family.
+Identification at mortuary arranged {{date_other|29/9}} 1000h, {{address|3 Kampong Bahru Close}}, Singapore {{postal_code|169872}}.
+Bereavement leaflet and police contact card handed over at mortuary.
+
+=== v24_n24 | training slide outline ===
+TRAINING: DEATH IN THE COMMUNITY - WHAT THE GP SHOULD DO
+Slide 1  Learning objectives (3)
+Slide 2  Natural vs reportable deaths - list of reportable categories
+Slide 3  Pronouncing death: absent pulse and breath sounds for 1 min, fixed dilated pupils
+Slide 4  Completing the certificate: Part I sequence (Ia-Ic), Part II contributory
+Slide 5  Common errors: "cardiac arrest" as cause; abbreviations; mode instead of cause
+Slide 6  Implanted devices: pacemakers must be removed before cremation
+Slide 7  Case vignette: 80-year-old found at home, known IHD - discuss
+Slide 8  Quiz (10 questions) and references (practice guide 2023 edition)
+
+=== v24_n25 | care home outbreak email ===
+From: {{name|Yvonne Tham}} <{{email|yvonne.tham@sunvillenh.example.com}}>
+To: {{email|outbreak.reporting@cdo.example.org}}
+Date: {{date_other|Thu, 24 Sep 2026}} 16:02
+Subject: Influenza A cluster - Sunville Nursing Home, Level 3
+
+Hi Dr {{name|Pang}},
+As discussed, line list of residents with ILI on Level 3:
+- Mdm {{name|GOH AH LAN}}, 91, bed 3-14, onset {{date_other|20/9}}, flu A PCR positive, transferred to hospital on day 2 with SpO2 89%
+- Sr {{name|Agnes Fernandez}}, 84, bed 3-09, onset {{date_other|22/9}}
+- Mdm {{name|Krishnaveni}}, 80, bed 3-11, onset {{date_other|22/9}}; {{mental_health|known schizophrenia}}, stable on clozapine
+Actions taken: Level 3 cohorted, visitors restricted, oseltamivir prophylaxis offered to all Level 3 residents (32 of 35 accepted), staff flu vaccination status being checked.
+Staff: HCA {{name|Thida Win}}, onset {{date_other|21/9}}, on MC until {{date_other|26/9}}.
+Our address is {{address|61 Yio Chu Kang Road}}, Singapore {{postal_code|545558}}; DID {{phone|6481 7702}}, fax {{fax|6481 7790}}.
+Regards,
+{{name|Yvonne}}
+Nurse Manager
+
+=== v24_n26 | contact-tracing chat transcript ===
+Chat export - group "Measles tracing" - {{date_other|02/10/2026}}
+[09:14] {{name|Hui Min}} CDD: index {{name|NTH}} worked at the nail salon {{date_other|28-30/9}}. owner is {{name|Mandy}}, {{phone|9338 7104}}
+[09:16] {{name|Rahul}}: ok calling her now
+[09:29] {{name|Rahul}}: salon is at {{address|Blk 4 Rochor Rd #02-511}} ({{postal_code|S180004}})
+[09:31] {{name|Rahul}}: {{name|Mandy}} says 3 staff - {{name|Linh}}, {{name|Thu}} and {{name|Jenny Ow}}. {{name|Linh}} {{reproductive_sexual|preg abt 20 wks}}!! needs IG assessment
+[09:33] {{name|Hui Min}} CDD: pls send me {{name|Linh}}'s FIN
+[09:40] {{name|Rahul}}: {{national_id|G0920150K}}. customer list from booking app = 41 pax, will email to {{email|cdd.tracing@moh.example.org}}
+[09:41] {{name|Hui Min}} CDD: ok thx
+
+=== v24_n27 | coroner correspondence ===
+STATE CORONER - REQUEST FOR RECORDS
+Our ref: {{other_id|CR/2026/1187}}          Date: {{date_other|5 October 2026}}
+To: Medical Records Office (fax {{fax|6326 5501}})
+In the matter of the death of {{name|WONG CHEE KEONG}} (NRIC {{national_id|S6837227E}}), deceased on {{date_of_death|28.09.2026}}.
+Please furnish within 14 days:
+ (a) ED records for visit {{case_visit|26-ED-0715531}} on {{date_other|14 Aug 2026}};
+ (b) psychiatric clinic notes by Dr {{name|Farah Ismail}}, including any risk assessment;
+ (c) the discharge summary and medication list from the last admission.
+Records may be sent by secure file transfer or by registered post. Kindly quote our reference in all correspondence.
+{{name|Rachel Kang}}
+Coroner's Officer, for State Coroner
+{{address|10 Kallang Terrace}}, Singapore {{postal_code|339201}} | Tel {{phone|6435 5820}} | {{email|coroner.registry@courts.example.org}}
+
+=== v24_n28 | work injury occupational health note ===
+WORK INJURY - OCCUPATIONAL HEALTH NOTE
+Injured worker: {{name|Mohammad Abul Kalam}}, Bangladeshi, FIN {{national_id|F0615223Q}}, WP no. {{other_id|WP-2209-48113}}
+Employer: Kian Hock Scaffolding Pte Ltd (UEN {{other_id|200907713N}}), {{address|15 Tuas Avenue 8}}, Singapore {{postal_code|639231}}; safety officer Mr {{name|Lionel Chia}}
+Accident {{date_other|8 Sep 2026}}: fall from 2.4 m scaffold; L calcaneal fracture, ORIF {{date_other|10/9}}; non-weight-bearing 6 weeks, crutches, review in orthopaedic clinic. MC {{date_other|08/09}} to {{date_other|07/10/26}}.
+Lodging: {{address|9 Neo Tiew Crescent}}, room 05-11.
+Friend/interpreter: {{name|Rahim Uddin}} (same dormitory).
+Returned to dormitory with a ground-floor bed; employer to provide meals and transport for appointments.
+Screening: {{mental_health|moderate depressive symptoms (PHQ-9 14)}}; worried about unpaid salary and repatriation.
+MSW {{name|Nadia}} has written to the work injury section ({{email|occ.injury@mom.example.org}}).
+Signed: {{name|ABK}} (acknowledged by thumbprint).
+
+=== v24_n29 | partner notification note ===
+STI CLINIC - PARTNER NOTIFICATION RECORD
+Clinic no.: {{mrn|C26-031877}}    Index: {{name|LEE Kok Ann, Jason}}    NRIC: {{national_id|S4806017Z}}
+Diagnosis {{date_other|10/09/2026}}: {{hiv_sti|HIV-1 infection, recent}}; also {{hiv_sti|early latent syphilis}}.
+Partners named (index consented to provider referral):
+ a) "{{name|Wei}}", dating-app handle {{other_id|@wei_bt_88}}, no phone number
+ b) {{name|Hafiz}}, {{phone|9187 3360}}
+ c) ex-partner {{name|Cheryl Lim}}, {{phone|8122 6408}} - {{reproductive_sexual|pregnant, about 28 weeks}}; urgent antenatal HIV test
+Outcome: b) contacted {{date_other|12/9}}, tested {{date_other|13/9}} {{hiv_sti|non-reactive}}, PrEP started. c) contacted {{date_other|12/9}}, referred to antenatal clinic. a) message sent via app, no reply.
+Risk reduction counselling done; condoms provided. Baseline CD4 410, viral load pending; ART start planned at next visit.
+Counsellor: {{name|Shirley Chan}}     Doctor: Dr {{name|Sanjay Rao}}
+
+=== v24_n30 | immigration detention medical record ===
+DETENTION DEPOT - HEALTH SCREENING ON ADMISSION
+Detainee no.: {{other_id|ICAD/26/7719}}
+Surname: {{name|PHROMMA}}
+Given name(s): {{name|SOMCHAI}}
+Nationality: Thai   Passport: {{national_id|AA9133820}}   DOB: {{dob|1 Jan 1979}} (as per passport)   Overstayer
+Admitted {{date_other|30-Sep-2026}}. BP 168/102; hypertension, no medication for 2 months. {{substance_use|Drinks rice whisky ~1 bottle/day}}.
+CXR: fibrotic change R apex; sputum AFB x3 sent, lab acc. {{other_id|26M-552031}}. Isolated pending results.
+Embassy liaison: Mr {{name|Anan}} (via depot welfare desk). Wife {{name|Mali Phromma}}, Udon Thani, {{phone|+66 81 442 7093}}.
+Plan: start amlodipine 5 mg OM; monitor for alcohol withdrawal (CIWA-Ar 4-hourly x 72 h); thiamine 100 mg OD.
+Seen by Dr {{name|Low}}.
+
+=== v24_n31 | urine test supervision log ===
+DRUG SUPERVISION - URINE TEST LOG
+Supervisee: {{name|SHAHRUL NIZAM B. ABDUL KADIR}}   NRIC {{national_id|S7783523G}}   Supervision no. {{other_id|SUP-0915-26}}
+History: {{substance_use|heroin and methamphetamine use, 2 previous rehabilitation admissions}}.
+Date       | Result                          | Officer
+{{date_other|01.09.26}}   | {{substance_use|negative}}                        | Sgt {{name|Nadiah}}
+{{date_other|15.09.26}}   | {{substance_use|negative}}                        | Sgt {{name|Nadiah}}
+{{date_other|29.09.26}}   | {{substance_use|positive - methamphetamine}}      | SI {{name|Gan Chee Wei}}
+Change of address reported {{date_other|15.09.26}}: {{address|Blk 163 Bukit Batok St 11 #05-88}}, Singapore {{postal_code|650163}}.
+Emergency contact: sister {{name|Shahidah}}.
+Action on positive result: case referred to supervising officer; confirmatory GC-MS requested; supervisee counselled and reminded of reporting conditions. Next test within 72 h.
+
+=== v24_n32 | telephone case interview ===
+TELEPHONE INTERVIEW - NOTIFIED CASE OF LEPTOSPIROSIS
+Interviewer: {{name|Kwek Li Ting}}, Epidemiology Officer. {{date_other|30/09/2026}} 1430h.
+Case: {{name|Haris Fadzli}} (prefers "{{name|Harry}}"), 27 M, NRIC {{national_id|S2845516Z}}, reached on {{phone|8180 2276}}.
+Admitted {{date_other|24 Sep}}, MRN {{mrn|KTP 6019 2884}}; now on ward, improving on IV penicillin.
+Exposure: kayaking at a reservoir on {{date_other|12/9}} with three friends including {{name|Keith Ng}}; capsized twice. {{name|Keith}} also had fever, advised to see GP.
+Works as a food delivery rider (motorcycle {{device|FBN 5530 E}}). Logs trips on a fitness app, profile {{other_id|https://social.example.org/u/harisf_paddles}}.
+Symptom onset 5 days after exposure: fever, myalgia, calf pain, conjunctival suffusion. MAT titre pending; PCR positive.
+Advice given on leptospirosis symptoms for contacts. Next call {{date_other|7/10}}.

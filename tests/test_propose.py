@@ -630,3 +630,95 @@ def test_a_lower_case_log_column_holds_names_but_not_staff_roles():
          "2026-09-24T09:13:10  u47813  MO               MO    VIEW\n")
     got = spans(t, "shape:name_column")
     assert "TAN_MEILING" in got and "MO" not in got
+
+
+def engine(text, piece, type_, detector="pf"):
+    """The proposed strings with one engine span over the first ``piece`` in ``text``."""
+    s = text.index(piece) + 1
+    props = propose.propose(text, extra=[Candidate(s, s + len(piece) - 1, type=type_,
+                                                   detector=detector)])
+    return [text[p.start - 1:p.end] for p in props]
+
+
+@pytest.mark.parametrize("text, want", [
+    ("Subject no.: 101-0042   Initials: K-L-T   Age: 52", "K-L-T"),
+    ("Office use: received 02/03/25 - WX. Consent filed.", "WX"),
+    ('["call back tmr - rbk"]', "rbk"),
+    ("[copied as written - dl]", "dl"),
+    ("Husband: Tn. Darmawan, HP +62 812 0000 1111", "Darmawan"),
+    ("Pt: Hjh Salmah binte Omar, 79F", "Salmah"),
+    ("pls WA me 9xxx 4417, tq", "9xxx 4417"),
+    ("Jl. Contoh No. 1, Medan. Telp (061) 555 0199", "(061) 555 0199"),
+    ("of Purok 2, Brgy. Mabini, Sample City", "Purok 2, Brgy. Mabini"),
+    ("Sample City, Cebu 6000. Tel. none", "6000"),
+    ("withdrawal of consent by donor D-1234 (request received)", "D-1234"),
+    ("Morning! Pt 0457 cfm V4 tmr 9am?", "0457"),
+])
+def test_p24_shapes_are_proposed(text, want):
+    assert want.lstrip("(") in [s.lstrip("(") for s in spans(text)]
+
+
+def test_an_agent_column_and_an_xml_person_element_hold_names():
+    csv = ("scr_no,initials,yob,outcome,screener\nS01-101,AKT,1957,FAIL,meiling\n"
+           "S01-102,BLW,1966,PASS,meiling\n")
+    assert "meiling" in spans(csv, "shape:name_column")
+    xml = "<Case>\n  <Abstractor>Q. Example</Abstractor>\n  <SiteType>Polyclinic</SiteType>\n"
+    got = spans(xml, "shape:name_column")
+    assert "Q. Example" in got and "Polyclinic" not in got
+
+
+def test_a_subject_column_and_a_fixed_header_with_an_arrow():
+    log = ("No    | Subj     | Category\nPD-01 | SITE-017 | Visit window\n"
+           "PD-02 | SITE-022 | ICF\n")
+    got = spans(log, "shape:id_column")
+    assert "SITE-017" in got and "PD-01" not in got
+    fixed = ("Time  Name                 FIN          Complaint -> action\n"
+             "0840  Example R.           G0000000X    cut -> dressing\n")
+    assert "Example R." in spans(fixed, "shape:name_column")
+
+
+@pytest.mark.parametrize("text", [
+    "Take 1 tab - bd.\n",  # dosing
+    "Reviewed - ok.\n",
+    "Wound clean - nil.\n",
+])
+def test_dash_initials_skip_short_words(text):
+    assert spans(text, "shape:slot") == []
+
+
+@pytest.mark.parametrize("text, piece, type_", [
+    ("Seen at 9:20 am today", "9:20 am", "case_visit"),
+    ("Approved under CIRB 2025/0001 last week", "CIRB 2025/0001", "case_visit"),
+    ("Protocol no. AB-2025-0001 amended", "AB-2025-0001", "case_visit"),
+])
+def test_engine_times_and_approval_codes_are_dropped(text, piece, type_):
+    assert piece not in engine(text, piece, type_)
+
+
+@pytest.mark.parametrize("text, piece", [
+    ("Referred to Northvale Optometrist for review", "Northvale"),
+    ("Positive Murphy sign on exam", "Murphy"),
+    ("Admitted to RSUD Sukamaju last week", "Sukamaju"),
+])
+def test_engine_names_of_places_and_eponyms_are_dropped(text, piece):
+    assert piece not in engine(text, piece, "name")
+
+
+def test_an_engine_name_cut_mid_word_is_widened():
+    text = "Seen by Dr Ong Kexin on ward"
+    assert "Kexin" in engine(text, "Kex", "name")
+
+
+@pytest.mark.parametrize("text, want", [
+    ("Verified NRIC (last 4): 417B on call", "417B"),
+    ("caller's IC last 4 is 552K, matched", "552K"),
+])
+def test_bare_nric_tails_after_last_4_are_proposed(text, want):
+    assert want in spans(text, "shape:id")
+
+
+def test_a_part_of_a_capitalised_name_after_a_person_caption_is_repeated():
+    t = "Child: NUR ALYA BINTE HASSAN   DOB 1 Jan 2021\n\nAlya fell at play. No injury."
+    got = spans(t, "shape:repeat")
+    assert "Alya" in got and "Binte" not in got
+    assert spans("STUDENT IMMUNISATION RECORD\nStudent: Ng Wei\n", "shape:repeat") == []

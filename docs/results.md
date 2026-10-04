@@ -1,4 +1,4 @@
-# Results: slm:jev against structured_deidentification's detectors (P7 to P23, notes_v19–v21)
+# Results: slm:jev against structured_deidentification's detectors (P7 to P24, notes_v22–v24)
 
 Date: 2026-09-26. **Synthetic data only.** Every number here comes from invented notes. None of
 them says how any system does on real clinical text (see *Caveats*).
@@ -272,6 +272,7 @@ Only the blind rows count for the gate.
 | P21 | P20 + pedigree deaths, spoken NRICs, log-in columns, feeder stop words (0018) | notes_v15 | slm:jev + PF + Presidio persons | 0.977 (direct 0.976) | 0.894 | **0.933** | 7 |
 | P22 | P21 + a name-slot sweep, split NRICs, DNA profiles, calibration refit (0019) | notes_v16–v18, pooled | slm:jev + PF + Presidio persons | 0.968 (direct 0.970) | **0.945** | **0.956** | 33 |
 | P23 | P22 + more sign-off slots, log and ID columns, masked and wrapped IDs, OCR swaps, years of birth (0020) | notes_v19–v21, pooled | slm:jev + PF + Presidio persons | 0.968 (direct 0.979) | **0.900** | **0.933** | 31 |
+| P24 | P23 + precision filters (organisations, places, eponyms, codes named by what they number) and the v19–v21 shapes (0021) | notes_v22–v24, pooled | slm:jev + PF + Presidio persons | 0.975 (direct 0.977) | **0.951** | **0.963** | 27 |
 
 The shape-only rounds (P8 to P10) each failed on the next set, because each new writer brought
 shapes nobody had listed. P12 keeps the judge in charge but lets Privacy Filter and Presidio
@@ -339,6 +340,16 @@ recall alone, now by 2 spans: 0.979 (826 of 844, 95% CI 0.967–0.987; 828 neede
   cross-border text) brought new places again: bare NRIC tails, lower-case sign-off initials,
   names in CSV and XML fields, overseas phones and addresses.
 - Precision fell to 0.900, exactly at the gate: organisation names, overseas places and codes.
+
+P24 won precision back with filters in the proposer: organisation names, places beside a name,
+eponyms, and codes named by what they number. It also proposed the notes_v19–v21 shapes in
+general form. On seven dev sets, false positives fell from 207 to 123 with no new miss. On three
+new blind sets by three new writers precision rose to **0.951**, but the gate **failed** again on
+direct recall alone, by 3 spans: 0.977 (904 of 925, 95% CI 0.966–0.985; 907 needed).
+- notes_v24 (public health, pre-hospital, forensic) passed on its own, at 0.985.
+- Most misses were again spans nobody proposed. The names were in new places: a name tag, a
+  quoted "B/O" phrase, a group chat, initials engraved on a ring, a wrapped fixed-width cell.
+- Three MRNs in an MDT table were proposed by the MRN rule but judged not identifiers.
 
 ### notes_v5 (blind for P12): 32 notes, 24,431 characters
 
@@ -1040,6 +1051,63 @@ F1 of every system on each set:
   0.007–0.198; SHI lexicon 0.16–0.21; SHI other 0.03–0.08.
 - **Latency:** 61.4 s per 1k chars (mean); per-note p95 108.7 s, 139.9 s and 95.5 s.
 
+### notes_v22–v24 (pooled blind for P24): 96 notes, 78,029 characters
+
+- **Gold:** 1,067 identifier spans (925 direct; 456 names), 15 negative notes.
+  - notes_v22: specialist and sensitive services;
+  - notes_v23: hospital operations and support services;
+  - notes_v24: public health, pre-hospital, forensic and institutional health.
+  - Each set had a new writer, working from its own brief. None of them saw the system, its
+    rules or the earlier sets.
+- **The annotation convention** is the one fixed for notes_v16–v18.
+- **Synthetic:** everything is invented and marked synthetic. Only the headers were read before
+  the run.
+- **Frozen:** the P24 code, `models/calibration_p22.json`, `eval/pool.py` and the three sets
+  (`results/notes_v22_v24_blind_freeze.sha256`); intact before the run and after each set.
+- **The gate** is unchanged from 0019.
+
+| set | recall | direct recall (95% CI) | precision (95% CI) | F1 | ECE (95% CI) |
+|---|---|---|---|---|---|
+| notes_v22 | 0.970 | 0.974 (260 of 267; 0.947–0.987) | 0.966 (0.939–0.982) | 0.968 | 0.037 (0.022–0.073) |
+| notes_v23 | 0.972 | 0.974 (377 of 387; 0.953–0.986) | 0.942 (0.918–0.960) | 0.957 | 0.035 (0.024–0.060) |
+| notes_v24 | 0.983 | 0.985 (267 of 271; 0.963–0.994) | 0.948 (0.917–0.968) | 0.965 | 0.032 (0.022–0.070) |
+| **pooled** | 0.975 | **0.977** (904 of 925; 0.966–0.985) | **0.951** (0.936–0.962) | **0.963** | **0.021** (0.015–0.040) |
+
+F1 of every system on each set:
+
+| system | notes_v22 | notes_v23 | notes_v24 |
+|---|---|---|---|
+| **slm:jev + PF + Presidio persons** | **0.968** | **0.957** | **0.965** |
+| slm:jev alone | 0.963 | 0.930 | 0.932 |
+| rules + Privacy Filter | 0.929 | 0.889 | 0.907 |
+| Privacy Filter | 0.869 | 0.834 | 0.858 |
+| rules + NER | 0.646 | 0.750 | 0.678 |
+| MediPhi-3.8B | 0.507 | 0.314 | 0.385 |
+| Qwen2.5-3B | 0.567 | 0.470 | 0.502 |
+
+- **The gate fails** on direct-identifier recall alone, by 3 spans. Precision, ECE and F1 pass
+  with room to spare.
+- **27 silent misses** (9, 13, 5). 21 are direct:
+  - **14 never proposed:**
+    - names in new places: a quoted "B/O" phrase, a name tag, a sentence-initial given name, a
+      wrapped fixed-width cell, an employer's rep before "of" and a company, a mortuary
+      attendant before a staff code, a single name in a table cell, and given names and
+      initials in group chats;
+    - initials engraved on a ring;
+    - a "Verified last-4" NRIC tail;
+    - a triage tag number in "mother of …".
+  - **6 judged not an identifier:** three 7-digit MRNs in an MDT table, a year of death, an NRIC
+    with a transposed checksum letter, sign-off initials.
+  - **1 sent to review** with an SHI label.
+- **53 false positives** (7 on negative notes), half of P23's 104:
+  - headings and captions;
+  - unit and military words, a ship's name, an overseas town;
+  - product codes caught by the vehicle-plate shape;
+  - lost-property and procurement references called case numbers;
+  - PF fragments.
+- **Latency:** 66.5 s per 1k chars (mean); per-note p95 87.1 s, 161.0 s and 102.9 s.
+  notes_v23, the densest set, ran at 83.7 s per 1k chars; the other two at 57–58.
+
 ## Caveats
 
 - **Synthetic.** Every set is invented. notes_v1 was written by the author of the P2 generator,
@@ -1049,8 +1117,8 @@ F1 of every system on each set:
 - **Found on the benchmark.** A fix for an error found on a set must be checked on a new, unseen
   set, or the benchmark becomes a training set. P8 to P12 changed slm_jev in response to sd20 and
   notes_v1 to notes_v4, so those are dev sets now and their numbers are optimistic. Only each
-  round's blind run counts, and notes_v5 to notes_v21 are dev sets from here on.
-- **One writer per set.** Each blind set had one writer (an agent working from a brief). Twenty-one
+  round's blind run counts, and notes_v5 to notes_v24 are dev sets from here on.
+- **One writer per set.** Each blind set had one writer (an agent working from a brief). Twenty-four
   sets of about 30 notes are still a narrow sample of how people write.
 - **Run variation.** The llama.cpp baselines vary by one to three spans from run to run.
 - **Different outputs.** slm:jev also outputs category, sensitivity and a review flag, which these

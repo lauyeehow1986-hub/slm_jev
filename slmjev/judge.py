@@ -181,7 +181,10 @@ DONATION_NO = r"[A-Z]\d{4} ?\d{2} ?\d{6}(?: [A-Z0-9](?![\w-]))?"
 # the gap before "ending" holds no digits or clause breaks (a full NRIC, "; bed").
 NRIC_TAIL = (r"\b(?:NRIC|IC|I/C|I C|FIN)\b[^\n\d;,]{0,24}?\b(?i:ending(?:[ \t]+(?:in|with))?|"
              r"ends?[ \t]+(?:in|with)|last[ \t]+(?:4|four|3|three)(?:[ \t]+(?:digits?|"
-             r"char(?:acter)?s?))?)(?i:[ \t]+of)?[ \t]*[:\-]?[ \t]*([A-Z]?\d{3,4}[A-Z])(?!\w)")
+             r"char(?:acter)?s?))?)(?i:[ \t]+of)?[ \t]*\)?[ \t]*[:\-]?[ \t]*"
+             # a bracketed lead or a verb before the tail (``NRIC (last 4): 962E``, ``IC last 4
+             # is 815J``; notes_v20)
+             r"(?:(?i:is|was|=)[ \t]+)?([A-Z]?\d{3,4}[A-Z])(?!\w)")
 _NRIC_TAIL_RX = re.compile(NRIC_TAIL)
 # A number spelled out digit by digit, as dictation software writes it (``nine one seven seven
 # zero four two six``, notes_v10): 7 or more digit words, ``double``/``triple`` allowed.
