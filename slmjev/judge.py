@@ -793,6 +793,23 @@ _LOGIN_COLUMN = re.compile(r"(?<![A-Za-z])(?i:USER(?:[-_ ]?(?:ID|NAME))?|LOGIN|B
 # The proposer sources that put a span in a slot where a person stands
 _PERSON_SLOT = re.compile(r"(?:^|\+)shape:(?:initials|name_column|slot)(?:\+|$)")
 
+# Sources whose find the judge may send to review but never drop (P25, fail closed): an ID-shaped
+# rule hit, or a span in a person or ID slot. The judge dropped three 7-digit MRNs in a tumour-
+# board table (p 0), a transposed NRIC and a pair of initials on the notes_v22-v24 blind sets.
+FAIL_CLOSED_SOURCES = frozenset({
+    "rule:nric", "rule:temp_ic", "rule:mrn", "rule:phone", "rule:email", "rule:case",
+    "rule:passport", "rule:postal", "shape:slot", "shape:initials", "shape:name_column",
+    "shape:id_column"})
+
+
+# what a word from the proposer's token sweep (``shape:token``) may be kept as
+TOKEN_CATEGORIES = frozenset({"name", "address"})
+
+
+def fail_closed_source(cand: Candidate) -> str | None:
+    """The first source of ``cand`` in :data:`FAIL_CLOSED_SOURCES`, else None."""
+    return next((s for s in (cand.detector or "").split("+") if s in FAIL_CLOSED_SOURCES), None)
+
 
 def shi_term_in(s: str) -> bool:
     """Whether ``s`` holds a term of the sensitive-health lexicon (``slmjev.propose``)."""
@@ -1038,6 +1055,18 @@ class Judge:
                 else cell_review(text, cand, family, tcol, whole=twhole))):
             decision = "review"
             reasons.append(cell_reason)
+        # a rule-found ID or a span in a person slot may be accepted, never dropped
+        if decision == "not_identifier" and (src := fail_closed_source(cand)):
+            decision = "review"
+            reasons.append(f"fail_closed:{src}")
+        # a word only the token sweep proposed is kept as a name or a place, nothing else: SHI
+        # terms come from the lexicon, IDs have digits. On notes_v1-v24 the judge kept 820 swept
+        # non-identifiers for 24 identifier words, most as SHI (``Apgar``, ``ICSI``, ``CPAP``),
+        # acronyms (``UEN``) or unsure ``none``; this drops 575 of them and no identifier.
+        if (decision != "not_identifier" and cand.detector == "shape:token"
+                and cat not in TOKEN_CATEGORIES):
+            decision = "not_identifier"
+            reasons.append("token_not_name")
         rec["decision"] = decision
         rec["needs_review"] = decision == "review"
         info["reasons"] = reasons

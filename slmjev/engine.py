@@ -16,11 +16,13 @@ Request (every field but ``texts`` is optional)::
 
 Response: a JSON list of span records (``schemas/span.v1.json``), each with the 1-based ``row``.
 
-Per row: ``propose.propose`` proposes candidates (rules, shapes, lexicon, plus the request's);
-the calibrated judge (``Judge.calibrated``) decides each one. Spans inside one the rules already
-accepted are not asked. Fail closed: a judgment that fails or is unsure is returned with
-``needs_review`` true, never dropped. A review span whose top category is ``none`` still gets the
-most likely identifier or SHI label, so the caller has an action to apply.
+Per row: ``propose.propose`` proposes candidates (rules, shapes, lexicon, the request's, and
+each capitalised word the judge model's vocabulary does not hold in lower case); the calibrated
+judge (``Judge.calibrated``) decides each one. Spans inside one the rules already accepted are not
+asked. Fail closed: a judgment that fails or is unsure is returned with ``needs_review`` true,
+never dropped, and so is a rule-found ID the judge would drop. A review span whose top category
+is ``none`` still gets the most likely identifier or SHI label, so the caller has an action to
+apply.
 
 The engine starts its own llama-server on loopback (``slmjev.server``), or uses a running one
 (``SLMJEV_LLM_URL`` + ``SLMJEV_LLM_KEY``), and forbids every non-loopback connection first.
@@ -38,13 +40,14 @@ from __future__ import annotations
 import json
 import os
 import sys
-from collections.abc import Iterable, Sequence
+from collections.abc import Collection, Iterable, Sequence
 from pathlib import Path
 
 from slmjev import column as col
 from slmjev import judge as J
 from slmjev import netguard, propose, server
 from slmjev.labels import load_labels
+from slmjev.vocab import model_words
 
 ENV_CALIBRATION = "SLMJEV_CALIBRATION"
 ENV_URL = "SLMJEV_LLM_URL"
@@ -106,12 +109,20 @@ def _extra(cands: Iterable[dict] | None, text: str) -> list[J.Candidate]:
     return out
 
 
+def model_vocab(model: str | None) -> frozenset[str]:
+    """The judge model's lower-case single-token words, for the proposer's token sweep; empty
+    (so the sweep proposes more, never less) if the model file cannot be read."""
+    return model_words(model) or frozenset()
+
+
 def scan_text(judge: J.Judge, text: str, *, row: int = 1, column: str | None = None,
               column_outlier: bool = False, extra: Iterable[J.Candidate] = (),
-              include_dropped: bool = False, labels: Sequence[str] | None = None) -> list[dict]:
-    """Propose and judge the spans of one text; ``column`` marks it as a structured cell."""
+              include_dropped: bool = False, labels: Sequence[str] | None = None,
+              vocab: Collection[str] | None = None) -> list[dict]:
+    """Propose and judge the spans of one text; ``column`` marks it as a structured cell.
+    ``vocab`` (:func:`model_vocab`) turns on the proposer's token sweep."""
     labels = labels if labels is not None else _labels()
-    props = propose.propose(text, extra=extra)
+    props = propose.propose(text, extra=extra, vocab=vocab)
     # rule-certain spans first: a candidate inside one of them need not be asked
     sure = [p for p in props if J.rule_certain(text, p.candidate())]
     rest = [p for p in props if p not in sure]
@@ -139,7 +150,7 @@ def check(request: dict) -> None:
         raise ValueError("'candidates' must have one entry per text")
 
 
-def run(request: dict, judge: J.Judge) -> list[dict]:
+def run(request: dict, judge: J.Judge, vocab: Collection[str] | None = None) -> list[dict]:
     """All span records for a request (see the module docstring)."""
     check(request)
     texts = request["texts"]
@@ -154,7 +165,8 @@ def run(request: dict, judge: J.Judge) -> list[dict]:
             continue
         out += scan_text(judge, text, row=i, column=column, column_outlier=outliers[i - 1],
                          extra=_extra(cands[i - 1], text),
-                         include_dropped=bool(request.get("include_dropped")), labels=labels)
+                         include_dropped=bool(request.get("include_dropped")), labels=labels,
+                         vocab=vocab)
     return out
 
 
@@ -197,7 +209,7 @@ def scan(request: dict) -> list[dict]:
             url, key, model = srv.url, srv.key, cfg["model"]
         judge = J.Judge.calibrated(J.LlamaServer(url, key), cfg["calibration"], model=model,
                                    **PROD)
-        return run(request, judge)
+        return run(request, judge, model_vocab(cfg["model"]))
     finally:
         if srv:
             srv.stop()

@@ -722,3 +722,50 @@ def test_a_part_of_a_capitalised_name_after_a_person_caption_is_repeated():
     got = spans(t, "shape:repeat")
     assert "Alya" in got and "Binte" not in got
     assert spans("STUDENT IMMUNISATION RECORD\nStudent: Ng Wei\n", "shape:repeat") == []
+
+
+TOKEN_NOTE = ("B/O Sharmila delivered at 0412h. Ramli brought the baby to NICU. "
+              "Kallang ward. Plan: review Perth results. BP stable.")
+
+
+def test_the_token_sweep_is_off_without_a_vocabulary():
+    assert not any("shape:token" in p.sources for p in propose.propose(TOKEN_NOTE))
+
+
+def test_the_token_sweep_proposes_capitalised_words_the_judge_does_not_know():
+    voc = {"perth", "stable"}
+    got = [p for p in propose.propose(TOKEN_NOTE, vocab=voc) if "shape:token" in p.sources]
+    words = {TOKEN_NOTE[p.start - 1:p.end] for p in got}
+    assert {"Sharmila", "Ramli", "Kallang", "NICU"} <= words
+    assert "Perth" not in words  # a word of the vocabulary
+    assert "Plan" not in words and "BP" not in words  # known words of the proposer
+    assert all(p.type == "name" and p.sources == ["shape:token"] for p in got)
+    # with an empty vocabulary more is proposed, never less
+    assert "Perth" in {TOKEN_NOTE[p.start - 1:p.end]
+                       for p in propose.propose(TOKEN_NOTE, vocab=set())}
+
+
+def test_the_token_sweep_skips_proposed_and_lower_case_words():
+    text = "Seen by Dr Halim. Rasa was good; the rasa of food improved. Jalil: OK"
+    words = [text[p.start - 1:p.end] for p in propose.name_tokens(
+        text, [p for p in propose.propose(text)], set())]
+    assert "Halim" not in words  # inside a proposed name
+    assert "Rasa" not in words  # also written in lower case
+    assert "Jalil" in words
+    # not part of a path, a handle or a code, nor of an e-mail the rules proposed
+    assert propose.name_tokens("see /srv/Halim or @Siti or MRN-Kumar", []) == []
+    mail = "mail Ahmad.T@example.com today"
+    assert propose.name_tokens(mail, propose.propose(mail)) == []
+
+
+def test_the_token_sweep_skips_organisations_and_derived_words():
+    text = ("Employer: Hoe Seng Construction Pte Ltd. Applicant: Chandra & Lim LLC. "
+            "Seen by Pharmacists. Pt Meena d/o Krishnan   Centre ID TKC-00917")
+    words = {text[p.start - 1:p.end] for p in propose.name_tokens(text, [], {"other"})}
+    assert not {"Hoe", "Seng", "Chandra"} & words  # the rest is an organisation's name
+    assert "Pharmacists" in words  # no vocabulary word under it here
+    assert "Krishnan" in words  # a wide gap is a table's next field, not more of a name
+    words = {text[p.start - 1:p.end] for p in propose.name_tokens(text, [], {"pharmacist"})}
+    assert "Pharmacists" not in words
+    assert propose._derived("detainee", {"detain"}) and propose._derived("certifying", {"certify"})
+    assert not propose._derived("ramli", {"ram"})  # a stem needs 4+ letters

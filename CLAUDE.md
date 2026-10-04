@@ -460,6 +460,15 @@ models/             GGUF / adapters / calibration.json (gitignored)
     "B/O" phrase, group chats, a wrapped fixed-width cell); three MRNs in an MDT table were
     proposed but judged not identifiers.
   - notes_v1–v24 and sd20 are all dev sets now. P24 is not a release candidate.
+- [ ] P25 (0022, 2026-10-04): structural changes instead of more shapes. A span found by an ID
+  rule or an ID/person-slot shape is never dropped, only sent to review (fail closed). A token
+  sweep proposes capitalised words outside the judge model's vocabulary (`slmjev/vocab.py` reads
+  it from the GGUF header); a swept word is kept only as a name or an address. Calibration
+  unchanged (`calibration_p22.json`).
+  - Dev replay (merged, in-sample) on notes_v22–v24 pooled: direct recall 0.977 → 0.989,
+    precision 0.951 → 0.929, ECE 0.030, F1 0.957. All 25 sets: direct misses 40 → 26, FPs
+    380 → 636; no gold lost.
+  - Fourth pooled blind gate on notes_v25–v27: pending.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.

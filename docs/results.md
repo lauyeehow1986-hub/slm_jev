@@ -1108,6 +1108,26 @@ F1 of every system on each set:
 - **Latency:** 66.5 s per 1k chars (mean); per-note p95 87.1 s, 161.0 s and 102.9 s.
   notes_v23, the densest set, ran at 83.7 s per 1k chars; the other two at 57–58.
 
+### P25 dev replay: fail-closed rule-found IDs and a token sweep (0022)
+
+P25 changes structure instead of adding shapes:
+- a span found by an ID rule or an ID or person-slot shape is never dropped, only sent to review;
+- capitalised words outside the judge model's vocabulary are proposed, and kept only as a name or
+  an address.
+
+A merged replay on all 25 dev sets (each set's latest judged run, the P25 rules, and token-only
+model runs for the swept words) gives these in-sample numbers:
+
+| | P24 latest runs | P25 replay |
+|---|---|---|
+| notes_v22–v24 pooled direct recall | 0.977 (904 of 925) | 0.989 (915 of 925) |
+| notes_v22–v24 pooled precision | 0.951 | 0.929 |
+| notes_v22–v24 pooled ECE / F1 | 0.021 / 0.963 | 0.030 / 0.957 |
+| all 25 sets: direct misses / false positives | 40 / 380 | 26 / 636 |
+
+No gold is lost on any set. The price is precision: rule-found spans the judge used to drop now
+reach a reviewer. These are dev numbers; the blind gate on notes_v25–v27 decides.
+
 ## Caveats
 
 - **Synthetic.** Every set is invented. notes_v1 was written by the author of the P2 generator,

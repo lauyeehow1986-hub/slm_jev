@@ -175,10 +175,12 @@ def run_jev(docs: list[dict], args, extra: list[list[dict]] | None = None
         judge = J.Judge.calibrated(J.LlamaServer(srv.url, srv.key), cfg["calibration"],
                                    model=cfg["model"], **engine.PROD)
         preds, secs, judged = [], [], []
+        words = engine.model_vocab(cfg["model"])
         for i, d in enumerate(docs, 1):
             t0 = time.perf_counter()
             ex = engine._extra(extra[i - 1], d["text"]) if extra else ()
-            recs = engine.scan_text(judge, d["text"], extra=ex, include_dropped=True)
+            recs = engine.scan_text(judge, d["text"], extra=ex, include_dropped=True,
+                                    vocab=words)
             secs.append(time.perf_counter() - t0)
             judged.append([{k: r.get(k) for k in _JUDGED} for r in recs])
             preds.append([{**r, "label": r["identifier"]} for r in recs

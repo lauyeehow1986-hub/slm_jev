@@ -55,6 +55,15 @@ def test_scan_accepts_drops_and_fast_paths():
     assert NOTE[name["start"] - 1:name["end"]] == "Tan Ah Kow"  # 1-based, end inclusive
 
 
+
+def test_the_model_vocabulary_turns_on_the_token_sweep(tmp_path):
+    text = "B/O Sharmila delivered at 0412h."
+    fake = SpanFake({"Sharmila": {"name": 0.99}})
+    assert engine.scan_text(judge(fake), text) == []
+    got = engine.run({"texts": [text]}, judge(fake), vocab=engine.model_vocab(None))
+    assert [(r["match"], r["sources"]) for r in got] == [("Sharmila", ["shape:token"])]
+    assert engine.model_vocab(str(tmp_path / "none.gguf")) == frozenset()
+
 def test_candidates_inside_a_rule_certain_span_are_not_asked():
     text = "Email tan.ah.kow@example.com today"
     s = text.index("tan") + 1

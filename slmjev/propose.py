@@ -29,7 +29,7 @@ kept once, with every source that proposed it.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass, field
 
 from slmjev import rules
@@ -929,8 +929,11 @@ def _fixed_name_cells(text: str) -> Iterable[tuple[int, int]]:
 
 
 def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
-            detectors: dict | None = None) -> list[Proposal]:
-    """Candidate spans in ``text``, sorted by position; each interval once."""
+            detectors: dict | None = None,
+            vocab: Collection[str] | None = None) -> list[Proposal]:
+    """Candidate spans in ``text``, sorted by position; each interval once. ``vocab`` (the
+    judge's lower-case single-token words; may be empty) turns on the token sweep,
+    :func:`name_tokens`."""
     found: dict[tuple[int, int], Proposal] = {}
 
     def add(s: int, e: int, source: str, type_: str | None = None) -> None:
@@ -1258,8 +1261,64 @@ def propose(text: str, *, extra: Iterable[Candidate] = (), postal6: bool = True,
             if set(p.sources) <= _GUESS_SOURCES and p.type not in _PERSON_TYPES
             and (_NOT_ID_LEAD.search(text[max(0, p.start - 1 - 32):p.start - 1])
                  or _NOT_ID_HEAD.match(text, p.start - 1))}
-    return sorted((p for p in found.values() if (p.start, p.end) not in kin),
-                  key=lambda p: (p.start, -p.end))
+    out = [p for p in found.values() if (p.start, p.end) not in kin]
+    if vocab is not None:
+        out += name_tokens(text, out, vocab)
+    return sorted(out, key=lambda p: (p.start, -p.end))
+
+
+# A capitalised word or 2-4 capitals standing alone (not part of an e-mail, a path, a code)
+_NAME_TOKEN = re.compile(r"(?<![\w@./#-])([A-Z][a-z]{2,}|[A-Z]{2,4})(?![\w@/#-])")
+
+
+# the words this module already knows to be no name
+_KNOWN_WORDS = frozenset(
+    _STOP | _FUNCTION | _ORG_WORDS | _KIN_WORDS | _FOREIGN_FUNCTION | _LOWER_NOT_NAME
+    | _CAPTION_WORDS | _NAME_HEADER_WORDS | _META_HEADER_WORDS | _ID_HEADER_WORDS
+    | {w.lower() for w in _DASH_NOT_NAME})
+
+
+# capitalised words joined by single spaces or ``&``: the rest of an organisation's name
+# (``Hoe Seng Construction Pte Ltd``, ``Chandra & Lim LLC``); a wider gap is a table's next field
+# (``d/o Krishnan   Centre ID``)
+_ORG_REST = re.compile(rf"(?: (?:{_WORD}['’]?|&))+")
+# English endings on a vocabulary word (``Pharmacists``, ``Complainant``, ``Detainee``)
+_SUFFIXES = ("s", "es", "ed", "ing", "er", "ers", "or", "ors", "ant", "ants", "ent", "ents", "ee",
+             "ees", "ist", "ists", "man", "men", "ment", "ments", "ion", "ions", "ary", "ly", "al",
+             "ity", "ness", "able", "ive", "ism", "ology", "ise", "ize", "ised", "ized", "ising",
+             "izing", "ic", "ics")
+
+
+def _derived(word: str, vocab: Collection[str]) -> bool:
+    """Whether ``word`` (lower case) is a vocabulary word of 4+ letters with an English ending."""
+    return any(word.endswith(x) and len(word) - len(x) >= 4
+               and (word[:-len(x)] in vocab or word[:-len(x)] + "e" in vocab) for x in _SUFFIXES)
+
+
+def name_tokens(text: str, proposed: Iterable[Proposal],
+                vocab: Collection[str] = ()) -> list[Proposal]:
+    """The token sweep (P25, ``shape:token``): every capitalised word or 2-4 capitals that no
+    other proposal touches, unless it is a known word of this module, a word ``text`` also writes
+    in lower case, a lower-case single token of the judge's vocabulary (``vocab``; see
+    ``slmjev.vocab``) or such a word with an English ending, or it starts the rest of an
+    organisation's name. The cue-bound name shapes missed names with no cue on the notes_v22-v24
+    blind sets (``B/O Sharmila``, ``Ramli`` starting a sentence, ``RAJU`` in a table cell); the
+    judge decides each token in its context, as a name or a place only
+    (``judge.TOKEN_CATEGORIES``). With no ``vocab`` more is proposed, never less. On
+    notes_v1-v24 the vocabulary and organisation filters lost no identifier word."""
+    spans = [(p.start, p.end) for p in proposed]
+    lower = set(re.findall(r"\b[a-z]{3,}\b", text))
+    out = []
+    for m in _NAME_TOKEN.finditer(text):
+        s, e, wl = m.start(1) + 1, m.end(1), m.group(1).lower()
+        if (wl in _KNOWN_WORDS or wl in lower or wl in vocab or _derived(wl, vocab)
+                or any(a <= e and s <= b for a, b in spans)):
+            continue
+        if (org := _ORG_REST.match(text, e)) and any(
+                w.lower().strip(".,") in _ORG_WORDS for w in org.group().split()):
+            continue
+        out.append(Proposal(s, e, ["shape:token"], "name"))
+    return out
 
 
 def contained(inner: Proposal, outer: Proposal) -> bool:

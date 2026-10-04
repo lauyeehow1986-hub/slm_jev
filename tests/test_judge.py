@@ -508,6 +508,45 @@ def test_context_free_cells_are_never_dropped(value, column, reason):
     assert r["decision"] == "not_identifier"
 
 
+
+@pytest.mark.parametrize(("detector", "reason"), [
+    ("rule:mrn", "fail_closed:rule:mrn"),
+    ("pf+rule:nric", "fail_closed:rule:nric"),
+    ("shape:initials", "fail_closed:shape:initials"),
+    ("shape:id_column+ner", "fail_closed:shape:id_column"),
+    ("shape:id", None),  # a guess from an ID shape may be dropped
+    ("rule:mrnx", None),  # a source is matched whole
+    (None, None),
+])
+def test_rule_found_ids_are_never_dropped(detector, reason):
+    t = "MDT list: 4417203 reviewed today"
+    c = J.Candidate(11, 17, detector=detector)
+    r = J.Judge(Fake(script({"none": 0.99})), fast_path=False).judge(t, c)
+    assert r["decision"] == ("review" if reason else "not_identifier")
+    assert (reason in r["judge"]["reasons"]) if reason else not r["judge"]["reasons"]
+    # the rule only blocks a drop: a confident identifier is still accepted
+    sure = Fake(script({"mrn": 0.97, "none": 0.0}))
+    assert J.Judge(sure, fast_path=False).judge(t, c)["decision"] == "identifier"
+
+
+@pytest.mark.parametrize(("answer", "kept"), [
+    ({"name": 0.97, "none": 0.0}, "identifier"),
+    ({"address": 0.97, "none": 0.0}, "identifier"),
+    ({"name": 0.5, "none": 0.3}, "review"),
+    ({"reproductive_sexual": 0.97, "none": 0.0}, None),
+    ({"none": 0.5, "name": 0.2}, None),  # unsure: a swept word was never proposed before
+])
+def test_a_swept_token_is_kept_only_as_a_name_or_a_place(answer, kept):
+    t = "Apgar 9 at 5 min, baby to Ward 5 with mother"
+    c = J.Candidate(1, 5, type="name", detector="shape:token")
+    r = J.Judge(Fake(script(answer)), fast_path=False).judge(t, c)
+    assert r["decision"] == (kept or "not_identifier")
+    assert ("token_not_name" in r["judge"]["reasons"]) is (kept is None)
+    shi = Fake(script({"reproductive_sexual": 0.97, "none": 0.0}))
+    # the lexicon's SHI find is kept as before
+    lex = J.Candidate(1, 5, type="reproductive_sexual", detector="lexicon:reproductive_sexual")
+    assert J.Judge(shi, fast_path=False).judge(t, lex)["decision"] == "identifier"
+
 def test_column_outliers_are_never_dropped():
     # a DOB in a procedure-date column: the model may drop a date there, the column check may not
     fake = Fake(script({"none": 0.99}))
