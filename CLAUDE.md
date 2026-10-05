@@ -280,6 +280,8 @@ models/             GGUF / adapters / calibration.json (gitignored)
   - SD side: branch `claude/slm-jev-backend` in structured_deidentification (mode `jev` in
     `run_engine.py`, `se_jev_scan`, opt-in checkbox and `--jev`, `smoke5_jev.R`). Unsure spans
     bypass SD's confidence floor, and a failed scan stops the export.
+  - Refreshed 2026-10-06 (0023): merged with SD's base branch (PR #1); smoke 5 of 5 suites,
+    `smoke5_jev.R` live 22 of 22. Not yet in SD's default branch.
 - [x] P7: benchmark against rules, Presidio, Privacy Filter, MediPhi and Qwen2.5-3B (2026-09-26;
   see `docs/results.md`). Synthetic only: SD's 20-note A/B set and 22 hand-written notes.
   - slm:jev leads on the realistic-style notes (identifier F1 0.964; MediPhi 0.890, Privacy
@@ -474,6 +476,12 @@ models/             GGUF / adapters / calibration.json (gitignored)
     such as eponyms, job titles, demonyms). Post hoc without the sweep: precision 0.913, ECE
     0.034, direct 0.979 (fails by one span).
   - notes_v1–v27 and sd20 are all dev sets now. P25 is not a release candidate.
+- [x] Stop the synthetic blind rounds (0023, 2026-10-06). One default configuration: the P5
+  judge, `calibration_p22.json`, `jev+pf+ner.person`, fail closed on, the token sweep **off**
+  (opt-in: request `token_sweep`, `SLMJEV_TOKEN_SWEEP=1`, or `--token-sweep`). No configuration
+  has passed the gate, and the gate is unchanged.
+- [ ] Validate on governed real data, on the target machine only, with the data controller's
+  approval (0023). Record counts only; commit nothing from the sample.
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.

@@ -64,6 +64,19 @@ def test_the_model_vocabulary_turns_on_the_token_sweep(tmp_path):
     assert [(r["match"], r["sources"]) for r in got] == [("Sharmila", ["shape:token"])]
     assert engine.model_vocab(str(tmp_path / "none.gguf")) == frozenset()
 
+
+@pytest.mark.parametrize(("request_", "env", "on"), [
+    ({}, None, False), ({"token_sweep": True}, None, True), ({}, "1", True),
+    ({"token_sweep": False}, "1", False), ({}, "0", False)])
+def test_the_token_sweep_is_off_unless_asked_for(monkeypatch, request_, env, on):
+    if env is None:
+        monkeypatch.delenv(engine.ENV_TOKEN_SWEEP, raising=False)
+    else:
+        monkeypatch.setenv(engine.ENV_TOKEN_SWEEP, env)
+    cfg = engine.settings({"model": "no-such.gguf", **request_})
+    assert cfg["token_sweep"] is on
+    assert (engine.sweep_vocab(cfg) is not None) is on
+
 def test_candidates_inside_a_rule_certain_span_are_not_asked():
     text = "Email tan.ah.kow@example.com today"
     s = text.index("tan") + 1

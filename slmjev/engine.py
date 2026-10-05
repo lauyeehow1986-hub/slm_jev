@@ -12,17 +12,22 @@ Request (every field but ``texts`` is optional)::
      "column": "diagnosis",        the column header (shown to the judge for cells only)
      "candidates": [[{start, end, type, detector}], ...],   per row: extra spans to judge
                                     (e.g. Privacy Filter's), 1-based, end inclusive
-     "include_dropped": false}     also return spans the judge dropped
+     "include_dropped": false,     also return spans the judge dropped
+     "token_sweep": false}         also propose rare capitalised words (off by default)
 
 Response: a JSON list of span records (``schemas/span.v1.json``), each with the 1-based ``row``.
 
-Per row: ``propose.propose`` proposes candidates (rules, shapes, lexicon, the request's, and
-each capitalised word the judge model's vocabulary does not hold in lower case); the calibrated
-judge (``Judge.calibrated``) decides each one. Spans inside one the rules already accepted are not
-asked. Fail closed: a judgment that fails or is unsure is returned with ``needs_review`` true,
-never dropped, and so is a rule-found ID the judge would drop. A review span whose top category
-is ``none`` still gets the most likely identifier or SHI label, so the caller has an action to
-apply.
+Per row: ``propose.propose`` proposes candidates (rules, shapes, lexicon and the request's); the
+calibrated judge (``Judge.calibrated``) decides each one. Spans inside one the rules already
+accepted are not asked. Fail closed: a judgment that fails or is unsure is returned with
+``needs_review`` true, never dropped, and so is a rule-found ID the judge would drop. A review
+span whose top category is ``none`` still gets the most likely identifier or SHI label, so the
+caller has an action to apply.
+
+The token sweep (P25, decision 0022) also proposes each capitalised word the judge model's
+vocabulary does not hold in lower case. It is off unless the request sets ``token_sweep`` or the
+environment sets ``SLMJEV_TOKEN_SWEEP=1``: on the notes_v25–v27 blind run the judge was badly
+calibrated on swept words (ECE 0.29) and they cost the precision gate.
 
 The engine starts its own llama-server on loopback (``slmjev.server``), or uses a running one
 (``SLMJEV_LLM_URL`` + ``SLMJEV_LLM_KEY``), and forbids every non-loopback connection first.
@@ -53,6 +58,7 @@ ENV_CALIBRATION = "SLMJEV_CALIBRATION"
 ENV_URL = "SLMJEV_LLM_URL"
 ENV_KEY = "SLMJEV_LLM_KEY"
 ENV_THREADS = "SLMJEV_THREADS"
+ENV_TOKEN_SWEEP = "SLMJEV_TOKEN_SWEEP"
 DEFAULT_CALIBRATION = Path("models/calibration.json")
 PROD = {"choice_rotations": 4, "ask_noul": False, "ask_score": False, "fast_path": True}
 
@@ -170,9 +176,18 @@ def run(request: dict, judge: J.Judge, vocab: Collection[str] | None = None) -> 
     return out
 
 
+def _flag(v) -> bool:
+    return v is True or str(v).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def sweep_vocab(cfg: dict) -> frozenset[str] | None:
+    """The vocabulary that turns on the token sweep, or None (the default) to leave it off."""
+    return model_vocab(cfg["model"]) if cfg.get("token_sweep") else None
+
+
 def settings(request: dict | None = None) -> dict:
     """Paths and options: the request's ``llama_server`` / ``model`` / ``calibration`` /
-    ``threads``, else the environment, else the defaults."""
+    ``threads`` / ``token_sweep``, else the environment, else the defaults."""
     request = request or {}
     threads = request.get("threads") or os.environ.get(ENV_THREADS)
     return {"llama_server": request.get("llama_server") or os.environ.get(server.ENV_BIN),
@@ -180,6 +195,7 @@ def settings(request: dict | None = None) -> dict:
             "calibration": str(request.get("calibration") or os.environ.get(ENV_CALIBRATION)
                                or DEFAULT_CALIBRATION),
             "threads": int(threads) if threads else None,
+            "token_sweep": _flag(request.get("token_sweep", os.environ.get(ENV_TOKEN_SWEEP))),
             "url": os.environ.get(ENV_URL)}
 
 
@@ -209,7 +225,7 @@ def scan(request: dict) -> list[dict]:
             url, key, model = srv.url, srv.key, cfg["model"]
         judge = J.Judge.calibrated(J.LlamaServer(url, key), cfg["calibration"], model=model,
                                    **PROD)
-        return run(request, judge, model_vocab(cfg["model"]))
+        return run(request, judge, sweep_vocab(cfg))
     finally:
         if srv:
             srv.stop()

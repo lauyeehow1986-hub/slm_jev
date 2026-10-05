@@ -169,13 +169,14 @@ def run_jev(docs: list[dict], args, extra: list[list[dict]] | None = None
     """slm:jev over all notes; ``extra`` holds per-note spans from other systems, which the
     engine judges as additional candidates (``jev+pf+ner``). Also returns every judged
     candidate, dropped ones included, for the calibration check."""
-    cfg = engine.settings({"calibration": args.calibration})
+    cfg = engine.settings({"calibration": args.calibration,
+                           "token_sweep": getattr(args, "token_sweep", False)})
     srv = server.start(cfg["llama_server"], cfg["model"], threads=cfg["threads"])
     try:
         judge = J.Judge.calibrated(J.LlamaServer(srv.url, srv.key), cfg["calibration"],
                                    model=cfg["model"], **engine.PROD)
         preds, secs, judged = [], [], []
-        words = engine.model_vocab(cfg["model"])
+        words = engine.sweep_vocab(cfg)
         for i, d in enumerate(docs, 1):
             t0 = time.perf_counter()
             ex = engine._extra(extra[i - 1], d["text"]) if extra else ()
@@ -329,6 +330,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--ctx", type=int, default=4096)
     ap.add_argument("--timeout", type=int, default=7200)
     ap.add_argument("--calibration", default=None)
+    ap.add_argument("--token-sweep", action="store_true",
+                    help="propose rare capitalised words too (P25; off by default)")
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--reuse", type=Path, default=None,
                     help="earlier report on the same set: keep its systems not re-run here")
