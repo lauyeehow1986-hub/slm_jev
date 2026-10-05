@@ -87,10 +87,15 @@ under it.
 ### 3. Draw the sample
 - **Stratify** by note type (discharge, referral, ED, letters, forms, messages), department and
   year. Include notes with no PII.
-- **Size:** aim for **600–800 direct-identifier spans in the held-out part**, so one span moves
-  recall by about 0.15 points or less.
+- **Size:** aim for **600–800 direct-identifier spans in part B**, the held-out part.
+  - At that size one span moves recall by 0.13–0.17 points, and the 95% interval around 0.98
+    is about ±1 point. Below about 400 spans a verdict turns on one or two spans; above about
+    1,000, more spans add little.
   - Annotate about 10 notes first, and run `3_check_set.bat` on them to see the density.
-  - At 3–5 direct spans per note, that is roughly 200–300 notes.
+  - At 3–5 direct spans per note, part B is about **120–270 notes**, and part A is half that
+    (about 60–135). Add notes with no identifiers (10–15%) so false positives are tested.
+  - Rare categories (fax, date of death, device) will have only a few spans: their recall is
+    reported, but not conclusive.
 - **Split by patient with a fixed seed, before any run:**
   - part A (about a third) is for diagnosis and, if needed, recalibration;
   - part B (about two thirds) is held out for the gate.
