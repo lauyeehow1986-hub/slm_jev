@@ -482,6 +482,8 @@ models/             GGUF / adapters / calibration.json (gitignored)
   has passed the gate, and the gate is unchanged.
 - [ ] Validate on governed real data, on the target machine only, with the data controller's
   approval (0023). Record counts only; commit nothing from the sample.
+  - Procedure and portable kit: `docs/real_data_validation.md`, `eval/realval.py` (pack,
+    check, hash, verify, guard; prints counts only, refuses git trees and synced folders).
 - [x] DAFA: mapped locally in `docs/private/` (2026-09-25). The committed side is the
   policy-agnostic loader and resolver, `slmjev/policy.py`. Open interpretations are listed in
   `docs/private/dafa_mapping.md`.

@@ -19,7 +19,8 @@ offline, and this repository holds only code, docs and synthetic data.
   ≥ 0.98, precision ≥ 0.90, ECE ≤ 0.05, F1 > 0.889. The synthetic blind rounds are now stopped
   ([0023](docs/decisions/0023-release-configuration-and-the-sd-backend.md)).
 - **Next:** validation on governed real data, on the target machine, with the data controller's
-  approval.
+  approval. The procedure and a portable, no-install kit (`eval/realval.py pack`) are in
+  [docs/real_data_validation.md](docs/real_data_validation.md).
 
 See [CLAUDE.md](CLAUDE.md) for the design, constraints and phase history,
 [docs/results.md](docs/results.md) for every benchmark, and
