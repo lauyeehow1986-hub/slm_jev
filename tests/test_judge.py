@@ -678,6 +678,47 @@ def test_llamaserver_unreachable_is_a_judge_error():
         b.first_token("", "Q")
 
 
+_OK = json.dumps({"choices": [{"logprobs": {"content": [
+    {"top_logprobs": [{"token": "A", "logprob": -0.1}]}]}}]}).encode("utf-8")
+
+
+def _replies(monkeypatch, *replies):
+    it = iter(replies)
+
+    def fake(*a, **k):
+        r = next(it)
+        if isinstance(r, Exception):
+            raise r
+        return r
+    monkeypatch.setattr(J, "loopback_request", fake)
+
+
+def test_a_frozen_backend_stops_the_scan_after_failures_in_a_row(monkeypatch):
+    _replies(monkeypatch, TimeoutError("timed out"), (503, b""), TimeoutError("timed out"))
+    b = J.LlamaServer("http://127.0.0.1:8089", max_failures=3)
+    for _ in range(2):
+        with pytest.raises(J.JudgeError):
+            b.first_token("", "Q")
+    with pytest.raises(J.BackendDown, match="3 calls in a row"):
+        b.first_token("", "Q")
+    assert not issubclass(J.BackendDown, J.JudgeError)  # the judge's per-span catch skips it
+
+
+def test_a_good_call_resets_the_failure_count(monkeypatch):
+    _replies(monkeypatch, OSError("refused"), OSError("refused"), (200, _OK),
+             OSError("refused"), OSError("refused"), (200, b"not json"))
+    b = J.LlamaServer("http://127.0.0.1:8089", max_failures=3)
+    for _ in range(2):
+        with pytest.raises(J.JudgeError):
+            b.first_token("", "Q")
+    assert b.first_token("", "Q") == {"A": pytest.approx(0.9048, abs=1e-3)}
+    for _ in range(2):
+        with pytest.raises(J.JudgeError):
+            b.first_token("", "Q")
+    with pytest.raises(J.JudgeError):  # off-format is the span's problem, not a dead backend
+        b.first_token("", "Q")
+
+
 # synthetic HL7 v2 segments pasted into a note
 HL7 = ("Interface dump:\nMSH|^~&|ADT|KRGH|||202609261015||ADT^A01|MSG0001|P|2.5\n"
        "PID|1||KR1234567^^^KRGH^MR||LOW^HUI MIN^^^MS||19790301|F\n"

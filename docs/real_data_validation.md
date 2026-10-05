@@ -66,7 +66,16 @@ under it.
 - Copy the kit folder, then run `1_verify_kit.bat`. It checks every file against the manifest
   and probes the judge's files.
 - Run `2_smoke.bat D:\realval\smoke`, which runs four synthetic notes end to end in a few
-  minutes. If antivirus quarantines `llama\llama-server.exe`, ask IT to allow the kit folder.
+  minutes.
+- **Antivirus.** Ask IT to allow the kit folder in the endpoint protection *before* the smoke
+  test. Security software can quarantine `llama\llama-server.exe`, or freeze it silently.
+  - On the development laptop, AVG/McAfee-class protection suspended every thread of a copied
+    `llama-server.exe` 10–30 s into judging. The original build folder was not affected, and
+    neither were short test prompts.
+  - The symptom is a run that stops with `judge backend down: 3 calls in a row failed`. The judge
+    gives up after three failed calls (about 6 minutes) rather than sending every span to review
+    at two minutes each.
+  - In Task Manager, a frozen `llama-server.exe` shows 0% CPU while the run waits.
 - Optionally, reproduce a full synthetic set to check this CPU gives the same answers:
   ```
   5_run_set.bat <kit>\slm_jev\eval\bench\notes_v27.txt D:\realval\smoke\notes_v27.json

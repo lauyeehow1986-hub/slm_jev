@@ -308,7 +308,10 @@ Contents: slm_jev\\ (code), sd\\ (structured_deidentification's engines), python
 Python {pyver} with Privacy Filter, Presidio and spaCy), pf\\ (Privacy Filter model), llama\\
 (llama.cpp, CPU, with the Visual C++ runtime DLLs beside it), models\\ (the judge and its
 calibration), smoke\\ (synthetic notes only).
-If antivirus quarantines llama\\llama-server.exe, ask IT to allow this folder.
+Antivirus: if llama\\llama-server.exe is quarantined, or a run stops with "judge backend
+down", ask IT to allow this folder in the endpoint protection. On the development laptop the
+security software froze a copied llama-server.exe (every thread suspended) 10-30 s into its
+first run; the judge then stops the run after 3 failed calls instead of crawling for hours.
 """
 
 

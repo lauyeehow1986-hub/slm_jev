@@ -41,6 +41,16 @@ def judge(fake, drop=0.05, accept=0.9):
 NOTE = "Pt Tan Ah Kow, NRIC S1234567D, seen for cough. BP 120/80."
 
 
+class DownFake:
+    def first_token(self, prefix, question):
+        raise J.BackendDown("judge backend down")
+
+
+def test_a_dead_backend_fails_the_whole_scan_not_each_span():
+    with pytest.raises(J.BackendDown):
+        engine.run({"texts": [NOTE]}, judge(DownFake()))
+
+
 def test_scan_accepts_drops_and_fast_paths():
     fake = SpanFake({"Tan Ah Kow": {"name": 0.99}})
     out = engine.run({"texts": [NOTE]}, judge(fake))

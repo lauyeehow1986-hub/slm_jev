@@ -44,7 +44,7 @@ import statistics
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from typing import Protocol
+from typing import NoReturn, Protocol
 
 from slmjev import calibrate, rules
 from slmjev.netguard import check_loopback_url, loopback_request
@@ -484,6 +484,12 @@ class JudgeError(RuntimeError):
     """The backend failed or answered off-format; the judgment must go to review."""
 
 
+class BackendDown(RuntimeError):
+    """The backend failed several calls in a row: crashed, frozen or blocked (antivirus has
+    suspended a copied ``llama-server.exe``). Not a :class:`JudgeError`, so the whole scan
+    stops with an error instead of sending every span to review at one timeout each."""
+
+
 class Backend(Protocol):
     def first_token(self, prefix: str, question: str) -> Mapping[str, float]:
         """Top probabilities of the first answer token for ``prefix + question``."""
@@ -500,7 +506,9 @@ class LlamaServer:
     timeout: float = 120
     top_logprobs: int = 20
     cache_prompt: bool = True
+    max_failures: int = 3  # transport failures in a row before the backend counts as down
     calls: list[dict] = field(default_factory=list)
+    failures: int = field(default=0, repr=False)
 
     def __post_init__(self) -> None:
         check_loopback_url(self.url)
@@ -524,10 +532,14 @@ class LlamaServer:
             status, data = loopback_request(self.url + "/v1/chat/completions", method="POST",
                                             body=json.dumps(body).encode("utf-8"),
                                             headers=headers, timeout=self.timeout)
-            if status != 200:
-                raise JudgeError(f"backend call failed: HTTP {status}")
+        except (http.client.HTTPException, OSError) as e:  # TimeoutError is an OSError
+            self._failed(f"{type(e).__name__}: {e}", e)
+        if status != 200:
+            self._failed(f"HTTP {status}")
+        self.failures = 0
+        try:
             resp = json.loads(data.decode("utf-8"))
-        except (http.client.HTTPException, TimeoutError, json.JSONDecodeError, OSError) as e:
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
             raise JudgeError(f"backend call failed: {type(e).__name__}: {e}") from e
         secs = time.perf_counter() - t0
         t = resp.get("timings") or {}
@@ -538,6 +550,14 @@ class LlamaServer:
         except (KeyError, IndexError, TypeError) as e:
             raise JudgeError("backend returned no first-token logprobs") from e
         return {t["token"]: math.exp(t["logprob"]) for t in top}
+
+    def _failed(self, why: str, cause: BaseException | None = None) -> NoReturn:
+        self.failures += 1
+        if self.failures >= self.max_failures:
+            raise BackendDown(f"judge backend down: {self.failures} calls in a row failed "
+                              f"(last: {why}). Is llama-server running, or is antivirus "
+                              "suspending it?") from cause
+        raise JudgeError(f"backend call failed: {why}") from cause
 
 
 # --- probability readout -------------------------------------------------------------------
