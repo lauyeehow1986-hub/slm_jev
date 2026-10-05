@@ -108,9 +108,9 @@ def parse_markup(src: str) -> list[dict]:
 
 def load_set(path: Path) -> list[dict]:
     if path.suffix == ".json":
-        docs = json.loads(path.read_text(encoding="utf-8"))["docs"]
-    else:
-        docs = parse_markup(path.read_text(encoding="utf-8"))
+        docs = json.loads(path.read_text(encoding="utf-8-sig"))["docs"]
+    else:  # utf-8-sig: a byte-order mark would hide the first note's header
+        docs = parse_markup(path.read_text(encoding="utf-8-sig"))
     for d in docs:
         for g in d["spans"]:
             if d["text"][g["start"] - 1:g["end"]] != g["match"]:

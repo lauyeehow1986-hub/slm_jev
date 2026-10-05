@@ -92,6 +92,14 @@ def test_check_warns_about_lines_that_would_be_dropped_as_comments(tmp_path, cap
     assert "WARNING 2 line(s)" in capsys.readouterr().out
 
 
+def test_a_byte_order_mark_does_not_drop_the_first_note(tmp_path):
+    s = tmp_path / "bom.txt"
+    s.write_bytes(b"ï»¿" + SET.split("
+", 1)[1].encode("utf-8"))  # no comment line
+    assert realval.check_set(s)["notes"] == 3
+    assert [d["id"] for d in realval.bench.load_set(s)] == ["t_n001", "t_n002", "t_n003"]
+
+
 def test_check_flags_duplicate_note_ids(tmp_path):
     s = tmp_path / "d.txt"
     s.write_text("=== t_n001 | a ===\nx\n=== t_n001 | b ===\ny\n", encoding="utf-8")

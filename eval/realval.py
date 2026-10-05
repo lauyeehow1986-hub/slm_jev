@@ -146,7 +146,7 @@ def _comment_lines(src: str) -> int:
 
 def check_set(path: Path) -> dict:
     """Counts for one annotated set. Errors name the note and offsets, never the text."""
-    src = path.read_text(encoding="utf-8")
+    src = path.read_text(encoding="utf-8-sig")
     try:
         docs = bench.parse_markup(src)
     except ValueError as e:
