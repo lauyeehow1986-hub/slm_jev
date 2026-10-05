@@ -1,0 +1,367 @@
+# notes_v26 — held-out Singapore-style clinical/admin notes with gold spans.
+# SYNTHETIC: NOT REAL PATIENT DATA. Every person, name, NRIC/FIN, MRN, phone number, address, email and health detail below is invented for testing; any match to a real person, number or mailbox is coincidental.
+# Author: writer K (theme: digital health and data exchange). Written from general knowledge only, by an author who did not see the system under test, its rules, or earlier evaluation sets.
+# FORMAT: a note starts with a header line "=== v26_nNN | <kind> ==="; the note text is every line after it up to the next "===" header line.
+# Gold spans are inline as {{label|text}}; the note text contains only "text". Spans are never nested, contain no "{{", "}}" or "|", and have no leading/trailing spaces. Anything outside {{...}} is not an identifier.
+# LABELS (identifiers): name, national_id, mrn, case_visit, address, postal_code, phone, fax, email, dob, date_of_death, device, biometric, photo, other_id
+# LABELS (SHI): hiv_sti, mental_health, substance_use, genetic, reproductive_sexual, other_sensitive
+# LABEL (other): date_other = a date of a patient's care, events or communications about that patient that is not a DOB or date of death (only the date part; clock times stay outside).
+# CONVENTIONS:
+# - Honorifics/titles (Dr, DR, Mr, Mrs, Ms, Mdm, SN, RN, Sgt, Prof, A/Prof) are outside name spans. Every mention of a person is labelled name: patients, relatives, carers, staff, clinicians, employers, callers; repeats, lone surnames or given names, nicknames, CAPS, inverted "SURNAME, Given", lower case, Chinese characters, masked names. Role words used as speaker labels (DOCTOR, PATIENT, CAREGIVER, BOT, USER) are not names.
+# - INITIALS used for a person (any form, e.g. "MG", "W.S.L.", "K.P.") are labelled name.
+# - "Singapore"/"S'pore"/"SINGAPORE" is outside address spans; the postal code is its own postal_code span (an "S" prefix stays inside, e.g. S436891).
+# - LETTERHEADS AND INSTITUTIONAL CONTACTS: institution, hospital, clinic, company and ministry NAMES are decoys and never marked. Every phone, fax, email, street address and postal code is marked wherever it appears (letterheads, footers, switchboards, hotlines, emergency numbers, department faxes, generic mailboxes). Organisation registration numbers (UEN, HCI licence code) are other_id.
+# - Field captions (NRIC, FIN, MRN, Tel, Fax, HP, DID, UEN, WP, MCR ...) are outside spans; only the value is labelled.
+# - national_id = NRIC/FIN/passport/foreign national ID (including masked or partial forms); mrn = hospital record number; case_visit = visit/admission/encounter/session numbers of a care episode; device = serials/IMEI/vehicle plates of devices tied to the person; photo = face/full-body images or ID-card captures and their file references; biometric = biometric template references; other_id = other identifying numbers, codes, handles, URLs, IP addresses, employee/practitioner numbers, accession numbers, resource ids, referral/order/case refs tied to a person.
+# - Decoys left unmarked: organisation names, ward/bed/room numbers, lab values, doses, times, ICD/LOINC codes, device model numbers, firmware versions, protocol/IRB/document/incident/change-request numbers, interface message-control and batch IDs, vaccine lot numbers, chatbot names, wound photos, and dates not about a specific patient (release/version dates, cohort ranges, incident-log times, form-signing dates in non-patient documents).
+# - Emails/URLs use only example.com / example.org / example.net subdomains; IP addresses use documentation ranges.
+# - Negative controls (no spans at all): v26_n06, v26_n13, v26_n19, v26_n22, v26_n28.
+# DELIBERATELY INVALID / NON-STANDARD IDs (still labelled national_id): v26_n08 "S94B234OD" is an OCR-corrupted NRIC (letters B/O in place of digits; not checksum-valid as written). Masked/partial forms "S****366D", "S****711D", "F****628W", "TXXXX096C", "G547****Q" and "423A" are intentional; the spoken NRIC in v26_n09 is valid once spaces are removed; v26_n26 "880412-14-5527" is a Malaysian MyKad number (no NRIC checksum); "P4417902B" and "K4471902P" are passport numbers.
+=== v26_n01 | video-teleconsult transcript ===
+CareLink Video v4.2 | session {{case_visit|VC-2026-0914-08812}} | start {{date_other|14/09/2026}} 09:32 SGT
+Clinician: Dr {{name|Melissa Goh Wei Ling}} (MCR {{other_id|M71245Z}}), Kallang Polyclinic
+Patient: {{name|TAN BOON HOCK}}, NRIC {{national_id|S1478932D}}; daughter dialled in from {{phone|+65 9172 4408}}
+[09:32:05] DOCTOR: Morning uncle, can you see me? Is your daughter on the line also?
+[09:32:14] CAREGIVER: Yes doc. Papa's camera quite dark. His BP machine showed 168/94 this morning, last week mostly 160 plus.
+[09:33:02] DOCTOR: Any chest pain, breathlessness or giddiness? Still taking amlodipine 10 mg every morning? Please also hold your IC up to the camera for verification.
+[09:33:20] PATIENT: No pain. The night one sometimes forget lah. Ankle a bit swollen.
+[09:34:58] [system] ID card shown; still captured as {{photo|vc0914_idcard_face.png}}; face-match 0.97 vs enrolled template {{biometric|FT-3391-0A8E}}
+[09:35:40] DOCTOR: The ankle swelling can be from amlodipine. I'll add losartan 50 mg and reduce amlodipine to 5 mg. Bloods (renal panel, potassium, HbA1c) at the polyclinic on {{date_other|5 Oct}}, video review on {{date_other|12 Oct 2026}}. Medicine delivery still to {{address|Blk 418 Hougang Ave 8 #11-1032}}, Singapore {{postal_code|530418}}?
+[09:36:22] CAREGIVER: Same address. Please call me, not him, he cannot hear well. I'm {{name|Hui Min}}.
+[09:37:03] [system] Session ended. Recording OFF. Transcript auto-generated, reviewed by {{name|MG}}.
+=== v26_n02 | patient-portal secure messages ===
+MyCare Inbox | thread {{other_id|TH-558201}} | Diabetes Nurse Clinic
+--- message 1 ---
+From: {{name|Farah Nadia binte Ismail}} <{{email|farah.nadia88@mail.example.com}}>
+Sent: Mon {{date_other|03 Aug 2026}} 22:41
+Subject: sugar readings + pregnant?
+Hi nurse, my sugar after meals is 9 to 11. I just found out I am {{reproductive_sexual|7 weeks pregnant}} (home test). Can I still take metformin?? MRN {{mrn|6107-334-82}} if you need.
+--- message 2 ---
+From: SN {{name|Kavitha d/o Rajendran}}, Nurse Educator
+Sent: Tue {{date_other|04-08-2026}} 09:15
+Dear {{name|Farah}}, congratulations. Please do not stop metformin on your own; it is generally continued in early pregnancy until the doctor reviews you, and insulin may be added later. Start folic acid 5 mg daily. I have booked you into the diabetes-in-pregnancy clinic on {{date_other|11/08/26}} 2.30 pm. Bring your glucometer (serial {{device|GM7-4410985}}) so we can download the readings. If any bleeding or vomiting, call {{phone|6321 7790}} or go to the Emergency Department.
+--- message 3 ---
+From: (patient)
+Sent: Tue {{date_other|04 Aug}} 09:40
+OK thank you. My husband {{name|Hafiz}} will come along. Pls change my HP to {{phone|8256 3017}}, the old one lost already. Also I had a {{reproductive_sexual|miscarriage last year}}, is that in my record?
+=== v26_n03 | wearable data export (CSV) ===
+export_source,PulseBand Pro (model PB-300; firmware 3.8.1)
+user_display_name,{{name|Ong Jia Hui Rachel}}
+account_email,{{email|rachel.ojh@fit.example.net}}
+device_serial,{{device|PB3-0A77C2914}}
+paired_phone_imei,{{device|356938035643809}}
+birth_date,{{dob|1991-02-17}}
+local_time,hr_bpm,spo2_pct,steps,flag,user_note
+{{date_other|2026-09-20}}T01:58:00+08:00,96,97,12,,
+{{date_other|2026-09-20}}T02:14:00+08:00,148,93,0,AF_SUSPECT,"after party, took {{substance_use|2 pills of ecstasy}}"
+{{date_other|2026-09-20}}T02:29:00+08:00,151,92,0,AF_SUSPECT,
+{{date_other|2026-09-20}}T03:05:00+08:00,118,95,40,,"calling {{name|Bryan}} to fetch me"
+{{date_other|2026-09-21}}T09:00:00+08:00,72,98,1022,,
+share_link,{{other_id|https://share.fit.example.net/r/9QX27LMA}}
+shared_with,Dr {{name|S. Pillai}} (cardiology) on {{date_other|21 Sep 2026}}
+summary,AF_SUSPECT episodes: 2; total 31 min; max HR 151; resting HR 7-day mean 68
+=== v26_n04 | HL7 v2 message fragments ===
+MSH|^~\&|PAS|NORTHGATE_HOSP|LIS|NORTHGATE_LAB|{{date_other|20260914}}0816||ADT^A01|MSG00045812|P|2.5
+EVN|A01|{{date_other|20260914}}0815
+PID|1||{{mrn|C4471902}}^^^NGH^MR~{{national_id|S1880407G}}^^^SG^NNSGP||{{name|LEE}}^{{name|KAH MENG}}^^^MR||{{dob|19580306}}|M|||{{address|Blk 23 Jalan Bukit Merah #04-117}}^^SINGAPORE^^{{postal_code|160023}}||^PRN^PH^^65^{{phone|62754410}}
+PV1|1|I|W12^05^B|E|||{{other_id|D2231}}|||MED||||||||{{case_visit|V26091400733}}
+AL1|1|DA|PCN^Penicillin^L|MO|Rash
+DG1|1||A41.9^Sepsis, unspecified organism^I10||A
+OBX|1|NM|2160-0^Creatinine^LN||142|umol/L|62-106|H|||F
+OBX|2|ST|HIVAG^HIV-1/2 Ag/Ab||Reactive||||||F
+NTE|1||{{hiv_sti|HIV-1 infection confirmed on line immunoassay}}; ID team informed
+MSH|^~\&|PAS|NORTHGATE_HOSP|EMR|NORTHGATE|{{date_other|20260921}}2340||ADT^A03|MSG00046907|P|2.5
+PID|1||{{mrn|C4471902}}^^^NGH^MR||||||M|||||||||||||||||||||{{date_of_death|20260921}}2305|Y
+=== v26_n05 | FHIR R4 Patient resource (JSON) ===
+{
+  "resourceType": "Patient",
+  "id": "{{other_id|pat-7f3c21e9}}",
+  "meta": {"lastUpdated": "{{date_other|2026-09-18}}T11:04:52+08:00", "source": "ehr-gateway"},
+  "identifier": [
+    {"system": "http://ids.example.org/sg/nric", "value": "{{national_id|T0285283C}}"},
+    {"system": "http://ehr.example.org/mrn", "value": "{{mrn|MRN-00918264}}"}
+  ],
+  "name": [{"use": "official", "family": "{{name|de Souza}}", "given": ["{{name|Marcus Anthony}}"], "text": "{{name|MARCUS ANTHONY DE SOUZA}}"}],
+  "telecom": [{"system": "phone", "value": "{{phone|+6581047723}}", "use": "mobile", "rank": 1}],
+  "gender": "male",
+  "birthDate": "{{dob|2002-11-05}}",
+  "address": [{"use": "home", "line": ["{{address|27 Jalan Kembangan}}"], "city": "Singapore", "postalCode": "{{postal_code|419127}}", "country": "SG"}],
+  "contact": [{"relationship": [{"text": "mother"}], "name": {"text": "{{name|Theresa Marie de Souza}}", "use": "official"} }],
+  "communication": [{"language": {"coding": [{"system": "urn:ietf:bcp:47", "code": "en-SG"}]}, "preferred": true}],
+  "generalPractitioner": [{"display": "Dr {{name|Lionel Pereira}}"}],
+  "deceasedBoolean": false
+}
+=== v26_n06 | interface specification excerpt ===
+Interface: PAS to LIS ADT feed, specification v3.1 (approved 02 Mar 2026)
+Transport: MLLP over TLS 1.2, port 2575; original acknowledgement mode.
+Segment PID:
+ PID-3 Patient identifier list, CX, repeating. Component 4 = assigning authority (e.g. NGH). Type code MR for record number, NNSGP for national ID.
+ PID-5 Patient name, XPN, family^given, uppercase, max 60 characters.
+ PID-7 Date/time of birth, format YYYYMMDD.
+ PID-11 Address, XAD; postal code in component 5, must match ^[0-9]{6}$.
+ PID-13 Home phone, XTN; component 6 = country code, component 7 = local number (8 digits).
+ PID-29 Date of death; PID-30 death indicator Y/N.
+Validation: national ID must match ^[STFGM][0-9]{7}[A-Z]$ and pass the checksum; otherwise reply AR with error code 102.
+Test harness uses dummy values only (family name TESTPATIENT, record number 0000000); production data must never be loaded into the test environment.
+Queries go to the integration team via service-desk queue INT-HL7.
+=== v26_n07 | e-referral form ===
+eReferral Gateway | Ref {{other_id|ER-26-0091377}} | created {{date_other|08 Sep 2026}} 17:20
+Referring clinic: Sunrise Family Clinic, {{address|Blk 115 Rivervale Drive #01-22}}, Singapore {{postal_code|540115}} | Fax {{fax|6385 2209}}
+Referring doctor: Dr {{name|Abdul Karim bin Yusof}}
+To: O&G Reproductive Medicine Clinic, Seletar General Hospital
+Patient: {{name|NARAYANAN, Priya}}   NRIC {{national_id|S****366D}}   DOB {{dob|04/07/1983}}   Sex F
+Address: {{address|8 Tanjong Rhu Road #14-03, Rhu Cove Residences}} Singapore {{postal_code|S436891}}
+Mobile {{phone|9781 0352}} (SMS only, please do not call)
+NOK: husband {{name|Arjun Menon}}
+Reason: G3P1, {{reproductive_sexual|two first-trimester miscarriages}} ({{date_other|Nov 2025}}, {{date_other|Jun 2026}}). Please assess for recurrent pregnancy loss. {{mental_health|Low mood and poor sleep since second loss}}; PHQ-9 = 14 today, no suicidal ideation. Declined counselling for now.
+Investigations so far: TSH 2.1 mIU/L, HbA1c 5.4%, pelvic ultrasound normal. Antiphospholipid screen not done.
+Urgency: routine (within 4 weeks). Attachments: menstrual chart, ultrasound report.
+=== v26_n08 | OCR text of faxed referral ===
+FROM: {{fax|6475 1180}}      {{date_other|14/O9/2026}} 16:22      P.O1/O2
+REFERRAL - SPECIALIST OUTPATIENT CLlNIC (ORTHOPAEDlCS)
+Fr: Dr {{name|Wonq Siew Lan}}, Bukit Panjanq Medica1 Centre
+{{address|Blk 258 Bangkit Rd #O1-41}}, S'pore {{postal_code|67O258}}   Te1: {{phone|6S38 2O14}}
+Pt name: {{name|RAJAKUMAR S/0 VEERAPPAN}}    NRlC: {{national_id|S94B234OD}}
+D.0.B: {{dob|2l-O3-1949}}
+Pls see this 77 yo man with R knee OA, fai1ed physio x 6 sessions and intra-artlcu1ar steroid x2. X-ray {{date_other|O2/O9/26}}: severe medial joint space 1oss, varus deformity. Hx: DM (HbAlc 7.2%), HTN, {{substance_use|ex-heavy drinker (quit 2O19)}}.
+Son {{name|Ganesh}} wi11 accompany. Kind1y fax rep1y.
+Thank you, {{name|W.S.L.}}
+=== v26_n09 | speech-to-text dictation (unedited) ===
+this is doctor {{name|rama krishnan}} dictating a discharge summary for patient {{name|cheryl yeo}} I see number {{national_id|s 7 2 2 3 3 5 1 d}} hospital number {{mrn|2 0 4 5 1 7 7 k}} period new paragraph
+date of birth {{dob|fifth of may nineteen seventy eight}} admitted on the {{date_other|twelfth of september}} with {{substance_use|alcohol with drool seizures}} comma on a background of {{substance_use|alcohol use disorder}} and {{mental_health|generalised anxiety}} period she was loaded with diazepam per the c. i. w. a. protocol and given thigh a mean sorry thiamine two hundred milligrams period seen by the addictions team doctor {{name|lee on hwee}} period new paragraph
+discharged on the {{date_other|eighteenth}} to her husband {{name|jeff rey}} contact number {{phone|nine four zero two seven seven one six}} period fall low up addiction medicine clinic in four weeks comma GP letter to doctor {{name|anne tan}} at {{address|forty two jalan pari burong}} period end of dictation
+=== v26_n10 | EMR audit-trail extract ===
+Report: patient record access log | Patient MRN {{mrn|NG-7731042}} ({{name|KOH, Lay Choo}}) | Range {{date_other|01/09/2026}} to {{date_other|20/09/2026}} | run by Privacy Office
+timestamp,user_id,user_name,role,action,module,workstation,reason
+{{date_other|2026-09-03}} 10:14:22,{{other_id|E104471}},{{name|LIM SEOK HUAY}},Staff Nurse,VIEW,Vitals,WS-W45-03,
+{{date_other|2026-09-03}} 10:20:05,{{other_id|E098812}},DR {{name|NG JUN KAI}},Registrar,EDIT,Progress note,WS-W45-01,
+{{date_other|2026-09-12}} 02:07:13,{{other_id|E077260}},{{name|ABDULLAH Hairul}},Radiographer,VIEW,Psychiatry notes,WS-RAD-07,"BREAK-GLASS: pt is my neighbour, checking"
+{{date_other|2026-09-12}} 02:09:55,{{other_id|E077260}},{{name|ABDULLAH Hairul}},Radiographer,PRINT,Discharge summary,WS-RAD-07,
+{{date_other|2026-09-19}} 16:40:00,SYSTEM,-,-,FLAG,Deceased status set (DOD {{date_of_death|19/09/2026}}),-,
+Privacy Office review: the radiographer's access was unrelated to care; the psychiatry notes hold her {{mental_health|schizoaffective disorder}} history. Break-glass justification judged inadequate. Referred to HR and the Data Protection Officer.
+=== v26_n11 | appointment list (spreadsheet export) ===
+Clinic: STI Clinic, evening session; Date: {{date_other|Thu 17-Sep-2026}}; Room 3; exported 16:05
+Slot;Patient;NRIC/FIN (masked);Contact;Remarks
+18:00;{{name|NGUYEN THI HOA}};{{national_id|F****628W}};{{phone|+84 912 448 017}};Vietnamese interpreter; {{hiv_sti|syphilis}} RPR follow-up
+18:15;{{name|BAHARUDDIN, Muhd Irfan}};{{national_id|S****711D}};{{phone|9330 1876}};{{hiv_sti|HIV PrEP}} 3-monthly review, creatinine due
+18:30;{{name|LOW K. M.}} ({{name|Kenneth}});{{national_id|TXXXX096C}};{{phone|8102 5534}};{{hiv_sti|gonorrhoea}} test of cure
+18:45;{{name|SIRIPORN Kaewmanee}};{{national_id|G547****Q}};{{phone|+66 81 552 7046}};Thai; partner notification pending
+19:00;(walk-in, no ID);-;-;{{hiv_sti|anonymous HIV test}} requested
+Totals: 5 booked, 1 walk-in; 2 interpreters requested; doctor-in-charge to sign off list by 21:30.
+=== v26_n12 | e-mail chain (forwarded) ===
+From: Medical Records Unit <{{email|mru@records.example.org}}>
+Sent: Thursday, {{date_other|17 September 2026}} 3:12 PM
+To: {{name|Siti Rahmah binte Jaafar}} <{{email|siti.rahmah@hr.example.com}}>
+Subject: RE: Fwd: MC verification
+Dear Madam,
+We cannot confirm diagnosis details to an employer without the patient's written consent. We can only confirm that MC no. {{other_id|MC-0911-55827}} was issued by our Emergency Department. Please ask Mr {{name|Fernandez}} to submit the consent form.
+Regards,
+{{name|Hazel Teo}} | Medical Records Unit | DID {{phone|6890 4412}}
+
+-----Original Message-----
+From: {{name|Siti Rahmah binte Jaafar}}
+Sent: Wed, {{date_other|16 Sep 2026}} 10:02
+To: Medical Records Unit
+Subject: Fwd: MC verification - {{name|Joel Fernandez}}
+Attachments: MC_{{name|JFernandez}}_{{date_other|20260911}}.pdf; {{name|Joel}}_passport_scan.pdf; {{photo|IMG_20260912_selfie_ward.jpg}}
+Hi, our staff {{name|Joel}} (passport {{national_id|P4417902B}}) submitted the attached MC for {{date_other|11-13 Sep}}. He posted a ward selfie on Instagram ({{other_id|@joelf_sg}}) while on MC. Pls verify the MC is genuine.
+Thanks
+Brightline Logistics Pte Ltd (UEN {{other_id|201733419K}})
+
+---------- Forwarded message ---------
+From: {{name|Joel Fernandez}} <{{email|joelf.ph@mail.example.net}}>
+Date: Sat, {{date_other|12 Sep 2026}}, 08:15
+Subject: MC
+Ma'am attached my MC. {{other_sensitive|I was assaulted outside the dorm}}, ED said rib fracture. Pls don't tell supervisor {{name|Ah Huat}}.
+=== v26_n13 | data field dictionary (research extract) ===
+field_name;type;description;example
+age_band;char(5);age at index date in 5-year bands;45-49
+sex;char(1);M / F / U;F
+ethnic_group;varchar;Chinese / Malay / Indian / Others;Malay
+postal_sector;char(2);first two digits of postal code, suppressed when cell count below 10;(suppressed)
+index_offset_days;int;days from the shifted index date;0
+af_flag;bool;atrial fibrillation recorded in any source;1
+stroke_icd;varchar;ICD-10 code of first stroke;I63.9
+egfr;numeric;mL/min/1.73m2 closest to index;62
+death_12m;bool;died within 12 months of index;0
+Rules: no free-text fields; dates shifted by a per-patient random offset within plus or minus 30 days; cells below 10 suppressed. Dictionary version 1.4, 15 Jul 2026.
+=== v26_n14 | remote-monitoring alert log ===
+Programme: HF@Home telemonitoring | Patient: Mdm {{name|WEE AH LIAN}}, MRN {{mrn|0091-22814-6}}, enrolment {{case_visit|HFH-2026-0417}}
+Hub CellHub-2 IMEI {{device|861234045512399}}; scale SN {{device|WS-88C-001273}}; dry weight 61.0 kg; target BP below 130/80
+{{date_other|2026-09-14}} 07:12 | WEIGHT_GAIN_2KG_48H | 63.4 kg (+2.3) | AMBER | ack RN {{name|Joanne Lim}} 07:40
+{{date_other|2026-09-14}} 07:45 | CALL | RN called daughter-in-law {{name|Mary}} at {{phone|8734 2290}}; pt breathless on 2 pillows; furosemide increased 40 mg to 80 mg x 3 days per HF physician (phone order)
+{{date_other|2026-09-15}} 07:05 | WEIGHT 62.1 kg | GREEN
+{{date_other|2026-09-16}} 21:30 | NO_DATA_24H | hub offline | auto-SMS sent to NOK
+{{date_other|2026-09-17}} 08:02 | SPO2_LOW 88% | RED | escalated; ambulance called by helper {{name|Maricel}}; conveyed to ED, visit {{case_visit|ED26-091702-3318}}
+=== v26_n15 | e-prescription ===
+e-Rx no. {{other_id|RX2609-118830}} | issued {{date_other|19 Sep 2026}} 14:05 | Prescriber: Dr {{name|Tay Kok Wee}} (MCR {{other_id|M44190F}}), Infectious Disease Clinic
+Patient: {{name|ZHANG Weiling}} {{name|张伟玲}} | FIN {{national_id|M8669617N}} | DOB {{dob|1996-04-23}} | Wt 52 kg
+Allergies: sulfonamides (rash)
+Indication: {{hiv_sti|HIV pre-exposure prophylaxis}}
+1. Tenofovir disoproxil/emtricitabine 300/200 mg tab, 1 tab OD x 90 days
+2. Paracetamol 500 mg, 2 tabs QID PRN; SMS {{phone|8823 0941}} when ready (not WeChat {{other_id|zwl_0423}})
+Before next supply: creatinine, HIV Ag/Ab, {{hiv_sti|STI screen}}.
+Dispense: home delivery in plain packaging (flatmate not aware).
+Signed electronically: {{name|TKW}}
+=== v26_n16 | pharmacy delivery record ===
+Delivery order {{other_id|DO-77-2609-0412}} | Outpatient Pharmacy | Courier: SwiftMed Logistics Pte Ltd
+Recipient: {{name|MD RAHIM UDDIN}}, FIN {{national_id|G1184595P}}
+Address: {{address|Westwind Dormitory Blk C3 #05-14, 18 Tuas South Street 12}}, Singapore {{postal_code|637559}}
+Contact: {{phone|+880 1711 482 905}} (WhatsApp)
+Items: amlodipine 5 mg x 30; metformin 500 mg x 60 (2 bags, no cold chain)
+Slot: {{date_other|21/09/2026}} 18:00-21:00 | Driver D07 | Vehicle {{device|GBL 8172 E}}
+18:42 out for delivery
+19:55 recipient not at gate; called; roommate {{name|Sumon}} came down. Recipient then verified by thumbprint on courier app (template ref {{biometric|FPT-5521-90AB}}); proof-of-delivery photo {{photo|POD_0412_recipient_face.jpg}}
+20:03 delivered. Remark: {{name|Rahim}} works night shift, next time deliver on Sunday.
+=== v26_n17 | symptom-checker chatbot log ===
+Session {{other_id|cb-2026-09-22-a71f}} | channel web | IP {{other_id|203.0.113.47}} | started {{date_other|22 Sep 2026}} 01:13
+BOT: Hi, I'm Kaya, the virtual health assistant. What should I call you?
+USER: {{name|ahmad}}
+BOT: Thanks {{name|Ahmad}}. What symptoms are you having?
+USER: cant sleep 5 days, heart pounding. been {{substance_use|taking my brother's xanax n drinking}}. honestly {{mental_health|thinking of ending it}}
+BOT: I'm sorry you are feeling this way. Are you safe right now?
+USER: idk. alone at home {{address|blk 6 telok blangah cres #09-88}}
+BOT: Would you like a counsellor to call you now?
+USER: ok my number {{phone|97-55-13-04}}
+BOT: A counsellor will call within 15 minutes. Your reference is {{other_id|ESC-55102}}.
+[system 01:19] escalated to duty counsellor {{name|Nadia Kurniawan}}; callback completed 01:24 by {{name|N.K.}}
+=== v26_n18 | research data extract request form ===
+Request no. DRF-2026-031 | IRB ref 2026/00412
+Study: Wearable-detected atrial fibrillation and 12-month stroke outcomes
+Principal investigator: A/Prof {{name|Hamid Siddiqui}}, Department of Cardiology
+Requestor: {{name|Chloe Ang}} (research coordinator) | {{email|chloe.ang@research.example.org}} | DID {{phone|6772 0158}}
+Data custodian: Mr {{name|Peter Yong}}, Health Informatics Office
+Fields requested: age band; sex; ethnic group; shifted index date; AF flag; CHA2DS2-VASc; stroke ICD-10 I63.x; death within 12 months
+Fields excluded: name, NRIC/FIN, MRN, full DOB, address, postal code, phone, free-text notes
+Linkage: salted SHA-256 of national ID; salt held by custodian only
+Cohort: 4,812 patients admitted 01 Jan 2023 to 31 Dec 2025
+Requestor remark: "please also include pt {{mrn|NG-5520913}} ({{name|R. Balakrishnan}}), our pilot participant"
+Custodian decision: remark rejected (identified request); remainder approved for release in the secure enclave only.
+Signed: PI {{name|H. Siddiqui}} 23/09/2026; custodian {{name|P. Yong}} 24/09/2026
+=== v26_n19 | system release note ===
+CareLink EMR release 26.3, go-live Sunday 27 Sep 2026, planned downtime 04:00-06:00
+New: FHIR Patient export omits telecom when the consent flag is N; nursing handover template v5; barcode scanning of blood bags in ward 7B pilot.
+Fixed: NRIC field accepted a lowercase prefix; HL7 ADT^A08 duplicates suppressed; appointment SMS template truncated at 160 characters.
+Known issues: PACS viewer may open twice on dual monitors; workaround is to close the second window.
+Support: raise a ticket in the IT self-service portal, category EMR > Release 26.3.
+=== v26_n20 | medical social worker e-letter to MOM ===
+Medical Social Services, Seletar General Hospital | {{address|3 Yio Chu Kang Medical Drive}}, Singapore {{postal_code|768829}} | Tel {{phone|6555 0140}} | Fax {{fax|6555 0149}}
+{{date_other|24 September 2026}}
+To: Work Injury Compensation Department, Ministry of Manpower
+Attn: Mr {{name|Faizal Rahmat}} (case officer), MOM ref {{other_id|WIC/2026/088172}}
+Dear Sir,
+RE: {{name|AUNG KO KO}} (FIN {{national_id|F9721675N}}), Myanmar national
+Mr {{name|Aung}} was admitted on {{date_other|02/09/2026}} (case {{case_visit|SGS2609020117}}) after a fall from height at a worksite. He sustained an L1 burst fracture, underwent posterior fixation and remains on our ward for rehabilitation; he is expected to need at least three months of medical leave. His employer, Kyaw Lin Engineering Pte Ltd, contact Mr {{name|Teo Chin Huat}}, has not paid medical-leave wages since {{date_other|09 Sep}}. He also reports {{mental_health|flashbacks and low mood}} and fear of repatriation. His cousin {{name|Min Thu}} is assisting him.
+We seek MOM's assistance in reviewing the wage arrears and his upkeep while the claim is assessed.
+Yours faithfully,
+{{name|Lim Xin Yi}}
+Senior Medical Social Worker
+=== v26_n21 | patient feedback and reply (record access) ===
+Online feedback form, submitted {{date_other|10/09/2026}}
+Name: Ms {{name|Chua Li Ping}} | NRIC {{national_id|S8718799C}} | Contact {{phone|9663 2810}}
+Feedback: My ex-husband {{name|Benjamin Koh}} is a nurse in your hospital. During our divorce his lawyer quoted my {{reproductive_sexual|termination of pregnancy in 2024}} and my {{other_sensitive|police report for family violence}}. Only someone who opened my records would know this. I want to know who accessed my file.
+Reply from Patient Relations (ref {{other_id|PR-26-0917-114}}), {{date_other|25 September 2026}}:
+Dear Ms {{name|Chua}},
+Thank you for writing to us. Our audit of your record (MRN {{mrn|NG-6630158}}) found that a staff member accessed your clinical notes on {{date_other|3 March 2026}} and {{date_other|14 March 2026}} without a care relationship. The matter has been referred for disciplinary action. We cannot disclose the outcome, but you may contact our Data Protection Officer, Ms {{name|Anita Ramasamy}}, at {{email|dpo@northgate.example.org}}.
+Yours sincerely,
+{{name|Gerald Seah}}, Manager, Patient Relations
+=== v26_n22 | monthly uptime report ===
+Service availability, September 2026
+EMR 99.96% | PACS 99.81% | LIS 100.00% | patient portal 99.42% | telemonitoring gateway 99.88%
+Major incident: patient portal unavailable 02:10-04:55 on 14 Sep (expired TLS certificate on the load balancer).
+HL7 engine queue peaked at 1,842 messages at 08:15 on 14 Sep; no messages lost.
+Mean time to restore 41 min. Changes this month: CR-2026-0911, CR-2026-0915. Servers affected: emr-app-03, hl7-int-01.
+Prepared by Infrastructure Operations.
+=== v26_n23 | WhatsApp chat export (home-care nurse) ===
+[{{date_other|15/09/26}}, 8:02:11 PM] {{name|Lim Siew Kim}}: Sister {{name|Rosnah}}, my mother leg very swollen today, the wound smell
+[{{date_other|15/09/26}}, 8:03:40 PM] {{name|Lim Siew Kim}}: <attached: IMG-0041.jpg>
+[{{date_other|15/09/26}}, 8:10:02 PM] {{phone|+65 9671 2204}}: Hi this is {{name|Yuni}} ({{name|Sri Wahyuni}}) the helper. Mdm {{name|Chia}} cannot walk to toilet, very pain
+[{{date_other|15/09/26}}, 8:15:27 PM] SN {{name|Rosnah}} (HomeCare): Pls check temperature. If more than 38 bring her to A&E.
+[{{date_other|15/09/26}}, 8:23:50 PM] SN {{name|Rosnah}} (HomeCare): Temp 38.6 means call {{phone|995}} ambulance now. Bring her med list and IC.
+[{{date_other|15/09/26}}, 8:24:31 PM] {{phone|+65 9671 2204}}: ok sister. her IC {{national_id|S0453331C}} correct?
+[{{date_other|16/09/26}}, 7:30:18 AM] SN {{name|Rosnah}} (HomeCare): Noted, home visits suspended until discharge. Key for {{address|Blk 52 Lorong 6 Toa Payoh #03-208}} with the neighbour.
+=== v26_n24 | histopathology report (e-copy) ===
+Northgate Laboratory Services | {{address|5 Lower Kent Ridge Medical Park}}, Singapore {{postal_code|119085}} | Tel {{phone|6779 3401}}
+Accession: {{other_id|SP26-0049187}}   Received: {{date_other|16.09.2026}}   Reported: {{date_other|19.09.2026}}
+Patient: {{name|HASSAN, Nurul Huda}}   ID: {{national_id|S9859479E}}   DOB: {{dob|30.06.1998}}   Age 28 F
+Ordering clinician: Dr {{name|Yvonne Kwek}}, Women's Clinic
+Specimen: cervix, LLETZ, 22 x 18 x 8 mm, received intact, inked and serially sliced.
+Clinical: abnormal smear, {{hiv_sti|HPV 16 positive}}; {{reproductive_sexual|G2P1, one previous TOP}}.
+Diagnosis: CIN 3 (HSIL) involving endocervical glands, margins clear (closest 2 mm). p16 block-positive. No invasive carcinoma.
+Reported by Dr {{name|Jasmine Tan-Rodrigues}}, Consultant Pathologist; verified electronically {{date_other|19 Sep 2026}} 16:41.
+Copy to: ordering clinician; patient portal.
+=== v26_n25 | teleradiology report ===
+Remote read via partner hub (Manila). Study: CT brain, non-contrast
+Accession {{other_id|ACC-NG-26091833}}
+Patient (DICOM): {{name|KUMARASAMY}}^{{name|RAVI}} | PatientID {{mrn|NG-3318840}} | DOB {{dob|19670219}} | Sex M
+Performed {{date_other|2026-09-18}} 23:47 | Referrer: ED, Dr {{name|Hannah Liew}}
+Clinical: fall at home, {{substance_use|intoxicated with alcohol}}, GCS 14, on warfarin (INR 3.4). Dual-chamber pacemaker (SN {{device|PJN882104S}}), so MRI not done.
+Findings: 6 mm acute left frontal subdural haematoma, no midline shift. Old lacunar infarcts in both basal ganglia. No skull fracture.
+Impression: small acute SDH. Discussed with Dr {{name|Liew}} by phone at 00:21 on {{date_other|19/9}}; neurosurgical review and anticoagulation reversal advised.
+Reported by Dr {{name|Maria Cristina Dela Cruz}}, teleradiologist.
+=== v26_n26 | tele-psychiatry follow-up note ===
+Mode: video, patient at home; verbal consent. Date {{date_other|Tue, 22 Sep 2026}}. Encounter {{case_visit|ENC-PSY-0922-0048}}
+Pt: {{name|SURESH A/L MUNIANDY}}, 38M, Malaysian; MyKad {{national_id|880412-14-5527}}; FIN {{national_id|G6418598K}}; MRN {{mrn|BRH 771 042}}
+Dx: {{mental_health|bipolar I disorder}}; {{substance_use|methamphetamine use disorder, early remission}}.
+S: mood "ok", sleeping 6 h. Admits {{substance_use|used ice once}} on {{date_other|12/9}} with ex-colleague {{name|Kelvin}} ("{{name|Botak}}"). Wife {{name|Meena}} reports irritability, no violence; {{other_sensitive|past PPO for family violence (2023)}}.
+O: well kempt, speech normal rate, no psychotic features, no suicidal or homicidal ideation. Lithium 0.7 mmol/L on {{date_other|15/09}}.
+P: lithium 800 mg ON, quetiapine 100 mg ON. Urine drug test as per supervision order {{other_id|DS-2025-11873}}. Next tele-review {{date_other|20 Oct 2026}}. Crisis plan reviewed with wife.
+Dr {{name|Aisha Mohd Noor}}, psychiatrist
+=== v26_n27 | tele-rehabilitation (physiotherapy) note ===
+App: MoveWell Home v2 | user handle {{other_id|@kopi_auntie62}}
+Patient: {{name|Bernadette Oliveiro}} ("{{name|Bern}}"), NRIC last 4 {{national_id|423A}}, DOB {{dob|2 Jan 1962}}; R total knee replacement {{date_other|28 Aug 2026}}
+Session {{date_other|23/09/2026}} 10:00 with PT {{name|Chan Wai Kit}} and an OT student.
+App adherence 11 of 14 sessions over 2 weeks; flexion 95 degrees, extension lag 5 degrees (camera estimate); pain 3/10 after exercise; wound healed.
+Husband {{name|Gilbert}} helps on stairs at {{address|14 Lorong Melayu}}, Singapore {{postal_code|416925}}.
+Gait video uploaded: {{photo|gait_0923_fullbody_BO.mp4}}
+Plan: progress to step-ups and stationary bike; wean walking stick indoors; next review {{date_other|07.10.2026}}.
+=== v26_n28 | blank e-form template ===
+CONSENT FOR TELECONSULTATION (e-form TC-01, rev 3)
+Patient name: ______________________
+NRIC / FIN / Passport no.: [ ][ ][ ][ ][ ][ ][ ][ ][ ]
+Date of birth: DD / MM / YYYY
+Mobile: +65 ________   Email: __________@__________
+Address: Blk ____ Street ______________ #___-_____ Singapore ______
+I understand that a video consultation cannot replace a physical examination.  [ ] Yes  [ ] No
+I consent to the session being recorded for quality purposes.  [ ] Yes  [ ] No
+Signature: ______________   Date: ___ / ___ / ______
+For office use: MRN __________  Visit no. __________  Verified by (staff ID) ________
+=== v26_n29 | data incident report (misdirected e-mail) ===
+Incident no. DPO-INC-2026-019 | Category: misdirected e-mail
+Reported by: {{name|Shirley Neo}}, clinic coordinator | {{email|shirley.neo@clinics.example.com}} | {{phone|6411 5502 ext 31}}
+At 17:05 on 28 Sep 2026 an e-mail meant for {{email|ops-team@clinics.example.com}} was sent to {{email|opsteam.vendor@mail.example.net}} (external). Attachment "Clinic_list_0928.xlsx" held 14 patients' names, masked NRICs and phone numbers. Sample rows include {{name|TEO Ah Bee}} and {{name|Rohani bte Salleh}}.
+Actions: recall failed at 17:20; external recipient Mr {{name|D. Ferraro}} confirmed deletion by e-mail at 18:02. Patients to be informed by the DPO, Ms {{name|Anita Ramasamy}}.
+Root cause: address autocomplete. Fix: autocomplete disabled for external domains.
+=== v26_n30 | genetic counselling e-letter ===
+Cancer Genetics Service | {{address|30 Outram Walk, Level 6}}, Singapore {{postal_code|169611}}
+{{date_other|29 September 2026}}
+Ms {{name|Lakshmi Pillai-Hendricks}}
+{{address|Blk 609 Clementi West St 1 #07-1243}}
+Singapore {{postal_code|120609}}
+Dear {{name|Lakshmi}},
+Re: your genetic test result (lab ref {{other_id|GEN-26-01433}})
+As discussed by phone on {{date_other|25/09}}, the test found a {{genetic|pathogenic BRCA2 variant, c.5946delT}}, which raises your risk of breast and ovarian cancer. We recommend testing for your sister {{name|Priya}} and, at age 18, your daughter {{name|Anjali}}.
+Pedigree: I-2 {{name|K.P.}} (mother, ovarian cancer, died {{date_of_death|2019}}); II-1 proband; II-3 sister untested.
+Next steps: annual breast MRI from now, discussion of risk-reducing salpingo-oophorectomy after childbearing, and a follow-up counselling session in 6 weeks.
+Genetic counsellor: {{name|Rachel Ho}}
+=== v26_n31 | SMS reminder gateway log ===
+sender_id=CLINIC-APPT; batch 0930-A
+to;sent_at;status;text
+{{phone|+6591830472}};{{date_other|2026-09-30}} 09:00;DELIVERED;"Dear {{name|CHONG W*** M**}}, your Eye Clinic appt is on {{date_other|05/10/2026}} 10:20 AM. Reply 1 to confirm, 2 to change."
+{{phone|+6587712093}};{{date_other|2026-09-30}} 09:00;FAILED;"Dear {{name|S***** BTE A****}}, your Diabetes Clinic appt is on {{date_other|06/10/2026}} 8:40 AM."
+{{phone|+6598204416}};{{date_other|2026-09-30}} 09:01;DELIVERED;"Dear Mr {{name|RAMASAMY}}, reminder: Dental appt {{date_other|Mon 5 Oct}} 2:30 PM."
+REPLIES
+{{phone|+6591830472}};{{date_other|2026-09-30}} 09:14;"1. pls send letters to {{email|wm.chong@mail.example.com}}"
+{{phone|+6598204416}};{{date_other|2026-09-30}} 09:31;"this is his son {{name|Vikram}}. father passed away on {{date_of_death|26 Sept}}, pls cancel"
+=== v26_n32 | vaccination record (digital certificate) ===
+Certificate ID {{other_id|VAX-SG-9F3A-22C1-7B0E}}
+Name: {{name|黄美玲}} / {{name|WONG MEI LING}}
+NRIC {{national_id|T1387981D}}   Passport {{national_id|K4471902P}}   DOB {{dob|12 Jul 2013}}
+Parent: {{name|Wong Kah Seng}} (father), {{phone|9446 0731}}
+Dose;Vaccine;Lot;Date;Given at
+HPV-1;9vHPV;X023417;{{date_other|14 Mar 2024}};Westhill Primary School (school health team)
+HPV-2;9vHPV;X031188;{{date_other|02-Oct-2024}};Westhill Primary School
+Tdap;Tdap-IPV;TB7720;{{date_other|2024/03/14}};Westhill Primary School
+Influenza;QIV;FL2591;{{date_other|11.11.2025}};Jurong West Polyclinic
+Administered by SN {{name|Ng Hui Ling}}.
+Remark: mother {{name|Tan Siew Peng}} asked for a printed copy for the school.

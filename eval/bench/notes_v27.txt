@@ -1,0 +1,418 @@
+# notes_v27 — held-out Singapore-style clinical/admin notes with gold spans.
+# SYNTHETIC: NOT REAL PATIENT DATA. Every person, name, NRIC/FIN, MRN, phone number, address, email and health detail below is invented for testing; any match to a real person, number or mailbox is coincidental.
+# Written by an author (writer L) who did not see the system under test, its rules, or earlier evaluation sets; written from general knowledge only.
+# Theme of this set: social care, legal and financial casework (32 notes, 5 of them negative controls with no spans).
+#
+# FORMAT: each note starts with a line "=== v27_nNN | <kind> ==="; the note text is every line after it up to the next "===" header line.
+# Gold spans are inline as {{label|text}}; the note text contains only "text". Spans are never nested, never contain "{{", "}}" or "|",
+# and have no leading/trailing spaces. Anything outside {{...}} is not an identifier.
+# LABELS: identifiers = name, national_id, mrn, case_visit, address, postal_code, phone, fax, email, dob, date_of_death, device,
+#   biometric, photo, other_id; SHI = hiv_sti, mental_health, substance_use, genetic, reproductive_sexual, other_sensitive;
+#   other = date_other (dates of the person's care/case events that are not a DOB or date of death).
+# CONVENTIONS:
+# - Honorifics/titles (Dr, Mr, Mrs, Ms, Mdm, SN, Insp, ASP, A/Prof ...) are outside name spans; a name span covers the full name as written.
+# - Every mention of a person is labelled name, including repeats, surnames alone after a title, given names alone, nicknames,
+#   aliases ("@" names), names in Chinese characters, lower-case names, and INITIALS used for a person.
+# - "Singapore" is outside address spans; the postal code is its own postal_code span and keeps the "S" prefix when written "S307591".
+# - Organisation names (hospitals, clinics, companies, ministries, NGOs, dormitories, courts) are decoys and never marked. But every
+#   phone, fax, email, street address and postal code is marked wherever it appears (letterheads, footers, hotlines, generic mailboxes),
+#   and organisation registration numbers (UEN, EA licence no.) are other_id.
+# - Field captions (NRIC, FIN, MRN, Tel, Fax, HP, DID, UEN) are outside spans; only the value is labelled.
+# - national_id = NRIC/FIN/passport/birth certificate numbers. All full NRIC/FIN values have valid checksums. Partially masked NRICs
+#   (digits replaced by X or *, or only the last characters given) are still national_id but cannot be checksum-verified. No deliberately invalid IDs in this set.
+# - mrn = hospital/polyclinic record numbers; case_visit = admission/ED/encounter numbers of a hospital episode; device = vehicle plates,
+#   implant serial numbers; photo = a photo file of the person; other_id = court/police/coroner/tribunal case numbers, claim, policy,
+#   proposal, bill and invoice numbers, bank accounts, work-permit numbers, practitioner registration (MCR) numbers, staff IDs,
+#   agency case references, agent codes, lab accession numbers.
+# - Dates of letters, notes, messages and appointments about the person's case are date_other; form revision dates, "effective"
+#   dates of schedules and policy review years are unmarked decoys. Ages, times, ward/bed/room numbers, lab values, doses unmarked.
+# - SHI choices: psychiatric diagnoses/symptoms (incl. suicidal thoughts) = mental_health; alcohol, tobacco and drug use = substance_use;
+#   violence, abuse, exploitation and hepatitis B carrier status = other_sensitive; pregnancy and termination = reproductive_sexual;
+#   genetic test results = genetic; HIV and STIs = hiv_sti. Dementia, stroke, autism/intellectual disability, epilepsy and physical
+#   injuries are NOT labelled SHI.
+# - Deliberately invalid IDs: none.
+
+=== v27_n01 | deputyship application note ===
+MEDICAL SOCIAL WORK - DEPUTYSHIP APPLICATION NOTE
+Eastbay General Hospital, Medical Social Work Dept, {{address|10 Tampines Harbour Drive}}, Singapore {{postal_code|529876}}. Tel {{phone|6788 2100}}
+
+Patient: {{name|LIM KOK WAH}}, 81 y/o male, NRIC {{national_id|S4823671E}}, MRN {{mrn|EB0047731Z}}
+Admission no. {{case_visit|IP-26-118803}}, admitted {{date_other|03/06/2026}} after a fall at home.
+Mr {{name|Lim}} has advanced Alzheimer's dementia (MMSE 8/30 on {{date_other|9 Jun}}) and was assessed by the geriatrician as lacking capacity for property and affairs. He cannot return home alone; nursing home placement is planned.
+Family meeting {{date_other|12.06.2026}}: son {{name|Lim Wei Jie}} (NRIC {{national_id|S8399014G}}, HP {{phone|9123 4876}}) and daughter {{name|Lim Hui Min}} ("{{name|Mindy}}") agreed to apply jointly as deputies. A second son lives in Perth and will send his consent by email.
+Home: {{address|Blk 412 Bedok North Ave 2 #11-305}}, Singapore {{postal_code|460412}} (HDB 3-room, fully paid).
+Assets per family: HDB flat, CPF balances, a DBS savings account (pension credited). Ward bill ~$2,400/month after MediShield Life.
+Plan: deputyship forms and doctor's affidavit to Family Justice Courts; filing ref to follow. Interim cheque payments through the daughter.
+Signed: {{name|S.H. Osman}}, Senior MSW
+
+=== v27_n02 | LPA certificate issuer record ===
+LASTING POWER OF ATTORNEY (FORM 1) - CERTIFICATE ISSUER'S RECORD OF INTERVIEW
+Certificate issuer: Dr {{name|Chandran Pillai}}, MCR No. {{other_id|M12345K}}, Kembangan Family Clinic, tel {{phone|6448 0917}}
+Donor: {{name|GOH, Mei Ling Theresa}}   NRIC {{national_id|S6812345C}}   DOB {{dob|14-Feb-1968}}
+Donor contact: {{phone|8233 0461}}
+Donees: (1) {{name|Goh Jun Kai}}, son, NRIC {{national_id|T0312456D}}; (2) {{name|Ong Bee Hoon}}, sister-in-law, NRIC {{national_id|S5512345D}}.
+Interview on {{date_other|Sat 21 Mar 2026}}, 10.40 am, donor seen alone (donees asked to wait outside).
+Donor could explain what an LPA is, who her donees are, and that they may decide on personal welfare and property and affairs if she loses capacity. She knows she can revoke it while she has capacity. No sign of fraud or undue pressure; she said her son "will handle the money, my sister-in-law will see to my care".
+Donor volunteered that she is on treatment for {{mental_health|major depressive disorder}} (stable on sertraline 50 mg). In my opinion this does not affect her capacity to make this LPA.
+OPG application ref {{other_id|LPA-2026-0381947}}. Initialled {{name|TG}} / {{name|CP}}.
+
+=== v27_n03 | social services case note ===
+FSC CASE NOTE - Woodgrove Family Service Centre
+Case ref {{other_id|WFSC/26/0712}}   Worker: {{name|Nadia Rahim}} (Social Worker)   Date: {{date_other|2026-07-08}}
+Client: {{name|Muthu Krishnan}} @ {{name|Krish}}, 44, NRIC {{national_id|S7811203D}}
+Spouse: {{name|Kavitha d/o Ramasamy}}, 39. Children: {{name|Divya}} (12) and {{name|Arjun}} (9), both at Woodgrove Primary.
+Address: {{address|Blk 671A Woodlands Drive 71, #04-112}}, Singapore {{postal_code|731671}}
+Presenting issues: rental arrears ($1,860) and an SP utilities cut-off notice. Client was retrenched in {{date_other|May 2026}} and says he is drinking "a lot more" ({{substance_use|about 6 cans of beer a day}}). Seen separately, {{name|Kavitha}} disclosed that he {{other_sensitive|pushed her against the wall during an argument}} last month; no injuries, children not present.
+Plan: (1) ComCare short-term assistance application; (2) referral to community addictions service, client agreeable; (3) safety check with the wife on her own mobile {{phone|8765 2210}} (safe to call after 10 am); (4) school counsellor to monitor the elder child.
+Next review {{date_other|22/7}}.
+
+=== v27_n04 | family violence safety plan ===
+PERSONAL SAFETY PLAN (completed with client; client keeps a copy only if safe)
+Client: {{name|NUR AISYAH BINTE ABDUL KADIR}}   DOB: {{dob|3 Sept 1990}}   NRIC: {{national_id|S9012876J}}
+Prepared with: {{name|Jasmine Tay}}, Harbourlight FV Specialist Centre, on {{date_other|17 Aug 2026}}
+Nature of violence: {{other_sensitive|repeated physical assault and threats to kill by husband}}; last incident {{date_other|14/08/2026}} (bruising of left forearm, seen at polyclinic). Client is {{reproductive_sexual|about 14 weeks pregnant}}.
+Husband: {{name|Zulkifli bin Hassan}}; drives a company lorry, plate {{device|GBC 4417K}}; usually home after 7 pm.
+Safe people: sister {{name|Aini}} - {{phone|9011 6243}} (code phrase "can you buy kaya"); neighbour Mdm {{name|Ho}} on the same floor has agreed to let her in.
+Go-bag: her IC, son {{name|Irfan}}'s birth certificate ({{national_id|T1023458H}}), bank card, spare phone charger, medication.
+If she has to leave: call the centre hotline (number saved under a false name); crisis shelter address will be given only by phone.
+Legal: PPO application filed, Family Justice Courts case {{other_id|SS 4412/2026}}; mention date {{date_other|2 Sep}}.
+
+=== v27_n05 | eligibility criteria sheet ===
+HOME HELP AND ESCORT SERVICE - ELIGIBILITY CRITERIA (rev. 4, effective 1 April 2026)
+1. Singapore Citizen or PR aged 60 and above, or aged 18-59 with a disability certified by a doctor.
+2. Per-capita monthly household income of $1,800 and below (sliding subsidy 25% to 80%).
+3. Needs help with at least 1 ADL (e.g. bathing, toileting) or 2 IADLs (e.g. shopping, cleaning).
+4. No live-in foreign domestic worker, OR the FDW is unable to perform the tasks (documented by referrer).
+5. Lives within the service boundary (Bedok, Tampines and Pasir Ris planning areas).
+Exclusions: clients needing skilled nursing (refer to home nursing); clients with active infectious TB until cleared by a doctor.
+Documents: NRIC of the client and all household members; latest 3 months' payslips or CPF contribution history; Form HH-02 signed by the referrer.
+Processing time: 10 working days. Appeals go to the Centre Manager within 14 days of the outcome letter.
+
+=== v27_n06 | disability services assessment ===
+DISABILITY SERVICES - FUNCTIONAL ASSESSMENT (Day Activity Centre intake)
+Name: {{name|TAN, Jia Hao Benedict}}   Age 23   NRIC: {{national_id|T0198765D}}
+Diagnoses: autism spectrum disorder with moderate intellectual disability; epilepsy (last seizure {{date_other|Jan 2026}}).
+Genetics: fragile X testing in {{date_other|2008}}: {{genetic|FMR1 normal, 29 CGG repeats}}; chromosomal microarray {{genetic|no pathogenic copy number variant}}.
+Assessed by {{name|Priya Menon}} (OT) with mother Mdm {{name|Wong Siew Lan}} (HP {{phone|9688 1027}}); father joined by video.
+ADL: feeds self independently; needs verbal prompts for toileting and showering; cannot handle money. Uses about 50 words and a picture board.
+Behaviour: self-hits when routines change; calms with music. No aggression towards others reported.
+Transport: his mother drives him (car {{device|SKP 6620E}}); drop-off before 8.30 am.
+Recommendation: DAC placement 3 days/week from {{date_other|1 Oct 2026}}; Enabling Services ref {{other_id|EM-DS-0098812}}.
+Assessor contact: {{email|priya.menon@dac.example.org}}
+
+=== v27_n07 | eldercare day centre record ===
+Silver Bay Senior Care Centre - Weekly Care Record
+Centre: {{address|Blk 118 Pasir Ris St 11, #01-30}}, Singapore {{postal_code|510118}}
+Week of {{date_other|14-18 Sep 2026}} (Room B, Group 2)
+1. {{name|CHUA Ah Bee}} ({{name|蔡亚美}}) - attended Mon-Fri; BP stable. Thu 11.20 am found sitting on toilet floor, no injury; daughter-in-law {{name|Serene}} informed via WhatsApp {{phone|+65 9734 0188}}.
+2. {{name|Rahmah bte Said}} - absent Tue (fever 38.2); daughter {{name|Faridah}} called to inform.
+3. Mr {{name|Gerald Anthony Fernandez}} ("Uncle {{name|Gerry}}") - joined music therapy; tends to wander near exit, door alarm on.
+4. {{name|LEE Swee Huat}} - BP 168/94 on Wed, repeat 150/88; wife told to bring him to GP.
+Staff on duty: SN {{name|Ma Thida}} and two care associates.
+
+=== v27_n08 | home help service record ===
+HOME HELP SERVICE - VISIT LOG
+Client: Madam {{name|KOH Geok Eng}}, 88, lives alone at {{address|Blk 23 Jalan Bukit Merah #03-1452}}, {{postal_code|S150023}}
+{{date_other|Mon 7/9}} - HHA {{name|Eko}}: bathing, laundry, cleaned kitchen. 6 unopened boxes of laxative found.
+{{date_other|Wed 9/9}} - HHA {{name|Lorna Bautista}}: client unsure what day it is; Tuesday slots of pill box untouched.
+{{date_other|Fri 11/9}} - HHA {{name|E. Prasetyo}}: client said her nephew "{{name|Ah Seng}}" took her ATM card last week and has not returned it; HHA informed supervisor.
+The supervisor phoned the nephew, {{name|Koh Ah Seng}}, at {{phone|9845 0032}}; he denies. Passbook shows 4 withdrawals of $500. Concern of {{other_sensitive|financial exploitation of a vulnerable elder}}; APS referral sent {{date_other|11.09.26}}.
+A neighbour keeps a spare key.
+
+=== v27_n09 | work injury compensation claim ===
+WORK INJURY COMPENSATION - EMPLOYER'S NOTIFICATION (summary copy)
+Employer: Kiat Lee Engineering Pte Ltd, UEN {{other_id|201812345K}}
+Address: {{address|8 Tuas South Link 3}}, Singapore {{postal_code|637711}}; Tel {{phone|6861 4400}}
+Injured employee: {{name|MD RAHMAN SHOHEL}} (Bangladesh), FIN {{national_id|G5123987W}}, Work Permit {{other_id|024 615 873}}, Passport {{national_id|BX0491276}}
+Accident: {{date_other|22 July 2026}}, about 14:20, level 3 scaffold, Tuas worksite.
+Description: fell about 2.5 m from scaffold platform onto right side; right wrist deformity. Taken to Westgate General Hospital A&E (case no. {{case_visit|AE26-0722-0156}}). MC {{date_other|22/07}} to {{date_other|20/08/2026}}.
+Lodging: Tuas View Dormitory, {{address|70 Tuas South Avenue 1, Blk C #02-14}}, Singapore {{postal_code|637558}}
+Worker HP {{phone|8402 7791}}; family in Bangladesh informed by the worker.
+Witness: site foreman. MOM ref {{other_id|WIC/2026/074412}}.
+
+=== v27_n10 | doctor's report for WIC claim ===
+Westgate General Hospital - Department of Hand and Reconstructive Microsurgery
+{{address|1 Jurong East Street 21}}, Singapore {{postal_code|609606}}   Tel {{phone|6716 2000}}
+MEDICAL REPORT (Work Injury Compensation Act)
+Re: {{name|Shohel Md Rahman}}, FIN {{national_id|G5123987W}}, MRN {{mrn|WG 3318 0274}}
+He attended our A&E on {{date_other|22nd July 2026}} after a fall at work. X-rays showed a comminuted intra-articular fracture of the right distal radius. He underwent open reduction and internal fixation with a volar locking plate (serial {{device|VLP-2207-55813}}) on {{date_other|24/7/2026}}.
+Reviews on {{date_other|5 Aug}} and {{date_other|2 Sep 2026}}: wound healed; wrist range of motion about 60% of the left side; grip 18 kg (right) vs 41 kg (left).
+Social: {{substance_use|smokes about 10 cigarettes a day}}; right-hand dominant; no previous wrist injury.
+Medical leave {{date_other|22 Jul}} to {{date_other|20 Sep 2026}}, then light duties (no lifting over 5 kg). Permanent incapacity will be assessed in {{date_other|Jan 2027}}.
+Dr {{name|Lee Hong Wei Alvin}}, Consultant, MCR {{other_id|M67890A}}
+
+=== v27_n11 | fee schedule ===
+MEDICAL REPORT FEE SCHEDULE (Medical Records Office) - w.e.f. 1 January 2026
+Report type                                   Fee (before GST)
+Simple memo / certificate of attendance       $35
+Standard medical report (1 episode)           $120
+Insurance attending physician statement       $150
+WIC medical report (incl. impairment)         $250
+Court-ordered / specialist report             $400 - $1,200 (by quote)
+Mental capacity assessment report             $480
+Copy of case notes (per page, min $50)        $1.20
+Express service (5 working days)              +50%
+Notes: Fees are payable upfront. Reports are released only to the patient, an authorised representative with written consent, or as required by law. Turnaround is 15 working days from receipt of payment and a completed request form MR-07 (version 3.2). GST at the prevailing rate applies.
+
+=== v27_n12 | insurance underwriting questionnaire ===
+PERSONAL MEDICAL QUESTIONNAIRE (Life and Critical Illness) - Lionpeak Assurance Ltd
+Proposal no. {{other_id|LP-UW-2026-551902}}   Life assured: {{name|WONG KAR MUN, VIVIAN}}
+NRIC {{national_id|S8045123G}}   DOB {{dob|08/11/1980}}   Occupation: accountant
+Mobile {{phone|9455-3108}}   Email {{email|vivian.wkm@example.com}}
+Q1 Height / weight: 158 cm / 61 kg
+Q4 Ever treated for anxiety, depression or any mental disorder? YES - {{mental_health|postnatal depression}} in 2019, treated by Dr {{name|Ang Boon Keng}} (Seaview Psychiatry Clinic); off medication since {{date_other|Mar 2021}}.
+Q6 Ever tested positive for HIV, hepatitis B or C? YES - {{other_sensitive|hepatitis B carrier}}, 6-monthly liver scan, last {{date_other|June 2026}} normal.
+Q8 Are you currently pregnant? YES - {{reproductive_sexual|20 weeks, second pregnancy}}.
+Q9 Family history / genetic tests: mother had breast cancer at 46; applicant tested in 2023: {{genetic|BRCA2 pathogenic variant detected}}; on annual MRI screening.
+Q10 Tobacco: never. Alcohol: occasional.
+Declared on {{date_other|30 Aug 2026}} before the agent (agent code {{other_id|AG-77310}}).
+
+=== v27_n13 | attending physician statement ===
+ATTENDING PHYSICIAN'S STATEMENT - Critical Illness claim no. {{other_id|CL/26/0098-334}}
+Patient: {{name|Ramesh s/o Naidu Govindasamy}}   NRIC {{national_id|S5190276I}}   DOB {{dob|1951-04-17}}   Hospital no. {{mrn|NE-2209815-J}}
+1. Diagnosis: acute anterior ST-elevation myocardial infarction on {{date_other|02 May 2026}}; PCI with one stent to the LAD.
+2. First symptoms: evening of {{date_other|1 May 2026}} (chest tightness at home).
+3. Past history: type 2 diabetes since 2009, hypertension; {{substance_use|ex-smoker, 40 pack-years, quit 2015}}; {{hiv_sti|HIV infection on ART since 2012}}, viral load undetectable.
+4. Admission {{case_visit|ADM 26-05-00413}}: {{date_other|2/5/26}} to {{date_other|7/5/26}}. Echo: LVEF 40%.
+5. Is the patient able to work? Not before {{date_other|1 Aug 2026}}.
+A/Prof {{name|Elaine Kwok}}, Northeast Heart Centre, tel {{phone|6555 8000 ext 4127}}
+
+=== v27_n14 | migrant worker NGO casework note ===
+Harbour Hands Migrant Workers' Centre - CASEWORK NOTE
+Case {{other_id|HH-CW-26-0391}}   Caseworker: {{name|Lydia}}
+Client: {{name|ALAMGIR HOSSAIN}}, born {{dob|12 Jan 1994}}, FIN {{national_id|F7712340R}}, passport {{national_id|EB 0731846}}
+WhatsApp {{phone|+65 8611 0428}}; family in Dhaka not yet told
+Employer: Sunfold Construction Pte Ltd (UEN {{other_id|201409876W}}); director Mr {{name|Teo Chee Keong}}, HP {{phone|9007 3321}}
+Issues: salary unpaid for {{date_other|June-Aug 2026}} ($1,650 x 3); employer holding his passport; told he will be "sent home" on {{date_other|30/9}}. Client reports {{mental_health|poor sleep, low mood and thoughts of ending his life}}.
+Actions: salary claim lodged with TADM, ref {{other_id|TADM/SC/2026/18822}}; asked MOM for a Special Pass; our volunteer doctor saw him on {{date_other|19 Sep}} and referred him to the psychiatric emergency service the same night.
+Client moved to our shelter at {{address|19 Geylang Lorong 23}}, Singapore {{postal_code|388379}}. The director later called the office demanding the worker's address; not given.
+
+=== v27_n15 | financial assistance means test ===
+MEDICAL FINANCIAL ASSISTANCE (MediFund) - MEANS TEST WORKSHEET
+Applicant (patient): {{name|Ong Siew Choo}}   NRIC {{national_id|S2876543F}}   MRN {{mrn|0083 4417 2}}
+Bill ref {{other_id|INV-EB-26-4471023}}; outstanding $14,286.50 for episode {{case_visit|IP-26-093315}} ({{date_other|15.4.26}} to {{date_other|2.5.26}})
+Household members:
+  {{name|Ong Siew Choo}}   self       67   $0 (homemaker)
+  {{name|TEO Boon Huat}}   husband    70   $620 (part-time cleaner)
+  {{name|Teo Li Ting}}     daughter   38   $2,100 (admin assistant)
+Per capita income: $2,720 / 3 = $907 (grandson lives with his father). Medisave: patient $3,105; spouse $1,240.
+Assessed by {{name|M. Kumaran}} (MSW) on {{date_other|20 May 2026}}; verified by the MSW team lead.
+Outcome: 85% MediFund plus Medisave $1,500; balance $642.98 by GIRO instalments from the daughter's bank account. Daughter's contact {{phone|9233 7410}}.
+
+=== v27_n16 | blank claim form ===
+CLAIM FORM - HOSPITAL CASH BENEFIT (Form HC-3, 2025 edition)
+Section A: Particulars of Insured
+Full name (as in NRIC/passport): ______________________
+NRIC / FIN / Passport no.: ____________   Date of birth: __ / __ / ____
+Policy no.: ______________   Mobile: ____________   Email: ____________________
+Section B: Hospitalisation details
+Hospital: ______________________   Date admitted: __ / __ / ____   Date discharged: __ / __ / ____
+Diagnosis (to be completed by attending doctor): ______________________
+Section C: Payment
+Bank name: __________   Account no.: ______________   (PayNow to NRIC is also accepted)
+Declaration: I declare that the information given is true and complete. I authorise any hospital, doctor or other person who has attended or examined me to disclose to the Company any information about my medical history.
+Signature of insured: __________________   Date: __________
+For office use: Claim no. ____________   Assessed by: ____________
+
+=== v27_n17 | housing appeal letter ===
+{{name|Haslinda binte Jamal}}
+{{address|Blk 305 Ubi Avenue 1 #09-87}}
+Singapore {{postal_code|400305}}
+
+{{date_other|1 September 2026}}
+
+The Branch Manager, Housing Board (Geylang Branch)
+
+APPEAL FOR TRANSFER TO A RENTAL FLAT WITH LIFT ACCESS - your ref {{other_id|HB/RENT/26/77841}}
+
+Dear Sir/Madam,
+I live with my mother Mdm {{name|Salmah binte Yusof}}, 74, who had a stroke in {{date_other|March 2026}} and now uses a wheelchair. Our lift only stops at the 8th and 10th floors, so I must carry her down one flight of stairs every time she goes for her clinic appointments. I also have {{mental_health|bipolar disorder}} and when I am unwell I cannot manage this alone. My son is 17 and helps after school but he is having his O-levels.
+I attach a memo from Dr {{name|Kwek}} of Kallang Ridge Polyclinic. I hope you will consider our appeal.
+Yours faithfully,
+{{name|Haslinda}}
+({{name|HASLINDA BTE JAMAL}}, NRIC {{national_id|S7756342C}})
+
+=== v27_n18 | medical supporting memo for housing ===
+Kallang Ridge Polyclinic, {{address|2 Ubi Crescent}}, Singapore {{postal_code|408563}}   Tel {{phone|6643 6969}}   Fax {{fax|6643 6960}}
+MEMO - To whom it may concern
+Re: Mdm {{name|SALMAH BTE YUSOF}} (NRIC {{national_id|S3921475Z}}, DOB {{dob|19/06/1952}}) and her daughter (main caregiver)
+She is followed up at this polyclinic (patient no. {{mrn|KRP-0217-5590}}). She had a left middle cerebral artery infarct on {{date_other|11/03/2026}} with residual right-sided weakness; she is wheelchair-bound and cannot manage stairs.
+Her caregiver is also under our care for {{mental_health|bipolar affective disorder}}, currently stable on lithium; physical strain and poor sleep are known triggers for relapse.
+I support the family's request for a flat on a floor served by the lift.
+Dr {{name|Kwek Shu Fen}}, Family Physician, {{date_other|28 Aug 2026}}
+
+=== v27_n19 | court-ordered medical report ===
+IN THE STATE COURTS OF THE REPUBLIC OF SINGAPORE
+Magistrate's Arrest Case No. {{other_id|MAC-904127-2026}}
+Public Prosecutor v {{name|CHEN XIAOLONG}} ({{name|陈小龙}}), PRC national, FIN {{national_id|M4123456X}}, passport {{national_id|E81236457}}
+PSYCHIATRIC REPORT pursuant to the court order dated {{date_other|4 Aug 2026}}
+Prepared by Dr {{name|Natalie Sim Yu Xuan}}, Consultant Forensic Psychiatrist, Lakeside Psychiatric Institute, {{address|88 Lakeside Grove}}, Singapore {{postal_code|539770}}
+1. The accused, 31, was remanded from {{date_other|29 Jul 2026}} and interviewed on {{date_other|6, 11 and 14 Aug 2026}} with a Mandarin interpreter.
+2. Collateral: telephone interview with his former employer Ms {{name|Huang Lei}} ({{phone|+86 139 1234 5678}}) and his flatmate.
+3. Charges: theft and voluntarily causing hurt on {{date_other|27 July 2026}}.
+4. History: {{substance_use|daily methamphetamine use for about 8 months}}; urine screen on arrest positive for amphetamines. Diagnosis: {{mental_health|methamphetamine-induced psychotic disorder, now in remission}}.
+5. Opinion: he was not of unsound mind at the material time and is fit to plead.
+{{name|N. Sim}}, MCR {{other_id|M09121H}}, {{date_other|20 August 2026}}
+
+=== v27_n20 | mediation record ===
+NEIGHBOURLY MEDIATION CENTRE - RECORD OF MEDIATION SESSION
+Case no. {{other_id|NMC-26-1187}}   Session: {{date_other|Sat, 12 Sep 2026}}, 10 am
+Party A: Mr {{name|Arumugam Sivakumar}} and Mrs {{name|Vasanthi Sivakumar}}, {{address|Blk 88 Telok Blangah Heights #10-412}}
+Party B: Mr {{name|Hong Zi Rui}}, the flat directly above (Singapore {{postal_code|100088}})
+Mediators: {{name|Abdul Malik Rahim}} (lead) and one co-mediator
+Issues: knocking and dragging noises after midnight; water stains on Party A's ceiling.
+Party B explained that his adult son {{name|Ethan}} has {{mental_health|schizophrenia}} and is restless at night when his medication is changed. Party A said they had not known and were sympathetic.
+Agreement: (1) Party B will put felt pads on furniture and engage a contractor for the leak by {{date_other|30 Sep}}; (2) Party A will contact him directly by SMS at {{phone|9618 2025}} before complaining to the Town Council; (3) review by phone on {{date_other|24/10/2026}}.
+Signed: {{name|A.S.}} / {{name|H.Z.R.}} (wife of Party A absent at signing)
+
+=== v27_n21 | will witness capacity note ===
+CLINIC NOTE - Assessment of testamentary capacity (requested by solicitors)
+Requesting firm: Lee and Rajan LLP, attn Ms {{name|Cheryl Lee}}, {{email|cheryl.lee@leerajan.example.com}}
+Testator: Mr {{name|Francis Xavier de Souza}}, 86, NRIC {{national_id|SXXXX431E}}, DOB {{dob|25.12.1939}}
+Address: {{address|31 Frankel Avenue}}, Singapore {{postal_code|458214}}
+Seen at home on {{date_other|Tuesday 18th August 2026}}, 3 pm. His daughter was asked to leave the room.
+Findings: alert, oriented; MoCA 24/30. Knows his estate (the house, CPF, shares, about $200k in fixed deposits). Names his children {{name|Marianne de Souza}}, {{name|Peter de Souza}} and {{name|Clarissa Pereira}}, and explained he is leaving less to his son because "he already got the condo from me". No delusions, no low mood; mild hearing loss.
+Opinion: he has testamentary capacity. The will was signed at 3.40 pm; witnessed by me and the solicitor.
+Dr {{name|Benjamin Oei}}, Geriatrician, Oei Medical, {{address|101 Thomson Road #08-05}}, {{postal_code|S307591}}
+
+=== v27_n22 | funeral and estate assistance note ===
+MSW NOTE - Funeral and estate assistance (low-income deceased, no family present)
+Deceased: {{name|NG KIM HOCK}} @ {{name|HUANG JINFU}} ({{name|黄金福}}), NRIC {{national_id|S5038817D}}, born {{dob|7 Jul 1950}}
+Died {{date_of_death|02 Sep 2026}} at 04:15 in Ward 64 bed 12. Cause of death certified by the ward doctor: metastatic hepatocellular carcinoma; background {{substance_use|alcohol use disorder for over 20 years}}. CCOD no. {{other_id|CCOD 2026-0094831}}.
+Next of kin: estranged brother {{name|Ng Kim Swee}}, last known at {{address|Blk 7 North Bridge Road #05-61}}, Singapore {{postal_code|190007}}; letters and calls unanswered on {{date_other|2/9}} and {{date_other|3/9}}.
+A karaoke friend will attend the wake.
+Arranged: community funeral assistance with Hope Casket Services; cremation on {{date_other|8 Sept}}.
+Estate: POSB passbook balance $2,341.07, a/c {{other_id|POSB 148-21093-5}}; to notify the Public Trustee if unclaimed.
+Prepared by {{name|Rachel Toh}}, MSW, {{date_other|04/09/2026}}
+
+=== v27_n23 | training agenda ===
+IN-SERVICE TRAINING: MENTAL CAPACITY ACT FOR FRONTLINE STAFF - AGENDA
+Venue: Training Room 3 (Level 2)   Time: 0900-1630
+0900  Registration and pre-test
+0915  Principles: presumption of capacity, best interests, least restrictive option
+1015  The two-stage test: impairment, then the functional test (understand, retain, use or weigh, communicate)
+1100  Tea break
+1115  Case study 1: refusal of nursing home placement
+1215  Lunch
+1300  LPA vs deputyship: who decides what; role of the certificate issuer
+1400  Case study 2: suspected financial exploitation and making an APS referral
+1500  Documentation standards and Form MCA-1 (v2.1)
+1545  Post-test and evaluation
+1630  End
+Facilitators: Senior Medical Social Worker; Consultant Geriatrician; Legal Counsel (invited).
+Pre-reading: Code of Practice chapters 3 to 5; departmental SOP MSW-SOP-014.
+
+=== v27_n24 | email thread with employer ===
+From: {{name|Fiona Chee}} <{{email|fiona.chee@msw.eastbay.example.org}}>
+To: HR Admin, Brightmart
+Date: {{date_other|Mon, 14 Sep 2026}} 09:12
+Subject: RE: Staff on prolonged MC - Mr {{name|Yap}}
+
+Dear {{name|Ivan}},
+Thank you for your call on Friday. With Mr {{name|Yap}}'s written consent, I can share that he is recovering from a {{mental_health|depressive episode}} and his psychiatrist supports a graded return from {{date_other|1 Oct}}: 4 hours a day for 2 weeks, no night shifts. Please continue to use his staff ID {{other_id|BM-004517}} for the leave records rather than his NRIC.
+Regards,
+{{name|Fiona Chee}}
+Medical Social Worker, Eastbay General Hospital, DID {{phone|6788 2156}}
+
+-----Original Message-----
+From: {{name|Ivan Lim}} <{{email|ivan.lim@brightmart.example.com}}>
+Sent: {{date_other|Fri, 11 Sep 2026}} 17:40
+Hi, we have had {{name|YAP CHONG MING}} on MC since {{date_other|3 Aug}}, all certs from the same clinic. His supervisor needs to plan the roster. Can you tell us when he will be back?
+{{name|Ivan Lim}} / HR Manager / Brightmart Retail Pte Ltd / UEN {{other_id|199912345D}}
+
+=== v27_n25 | WhatsApp transcript caregiver and case manager ===
+[Chat pasted into case file on {{date_other|23/09/2026}} with consent of caregiver]
+{{date_other|21/09/26}}
+[8:02 PM] {{name|Lin Mei}}: hi {{name|Joyce}}, mum fell again this afternoon. no injury but she keep saying want to go back to the old house
+[8:05 PM] {{name|Joyce}} (CM): Hi, thanks for telling me. Did you call her GP?
+[8:07 PM] {{name|Lin Mei}}: dr {{name|raj}} not open on sunday. i called the 24hr nurse line
+[8:09 PM] {{name|Joyce}} (CM): ok. Please bring her for review on {{date_other|Tue 29 Sep}}, 10.30am, Clinic B. Bring her IC and the yellow book
+[8:15 PM] {{name|Lin Mei}}: <attached: {{photo|IMG-20260921-WA0007.jpg}}> this is her knee
+[8:16 PM] {{name|Lin Mei}}: also my bro {{name|Wei Han}} say he cannot help anymore, he {{substance_use|relapsed on drugs again}}
+[8:17 PM] {{name|Lin Mei}}: mum new hp no. {{phone|8123 0967}}, the old one lost
+[8:20 PM] {{name|Joyce}} (CM): Noted and updated for Mdm {{name|Lin Ah Moi}}. Take care.
+
+=== v27_n26 | policy FAQ ===
+FAQ: SHARING PATIENT INFORMATION WITH EMPLOYERS, INSURERS AND FAMILY
+Q: Can I tell a patient's employer the diagnosis?
+A: Only with the patient's written consent, and only what is needed (e.g. fitness for work, expected return date). Use a staff ID rather than an identity number where possible.
+Q: An insurer has called asking for a patient's records. What do I do?
+A: Do not release anything over the phone. Ask the insurer to send a written request together with the patient's signed authorisation, and route it to Medical Records.
+Q: A family member wants an update but the patient has capacity and has said no.
+A: Respect the patient's decision. Explain this to the family member politely and document the conversation.
+Q: What if there is a risk of serious harm to the patient or others?
+A: Disclosure without consent may be justified. Discuss with your supervisor, record your reasons and disclose only what is needed.
+Q: How long do we keep consent forms?
+A: They are part of the medical record and are kept for the retention period in Records Policy RP-03 (last reviewed 2025).
+
+=== v27_n27 | police request and hospital reply ===
+POLICE - Bedok Division, Investigation Branch
+Our ref: {{other_id|BDPD/IB/26/004581}}   Date: {{date_other|10 Sep 2026}}
+To: Medical Records Officer, Eastbay General Hospital
+REQUEST FOR MEDICAL REPORT
+Injured: {{name|PHAM THI LAN}} (Vietnamese), FIN {{national_id|G8034561K}}, seen at your Emergency Department on {{date_other|5 Sep 2026}} (ED reg. no. {{case_visit|E26-0905-3318}}).
+She alleges she was {{other_sensitive|beaten with a broom handle by her partner}}, {{name|TRAN Van Hung}} (FIN {{national_id|G6672103K}}), at their rented flat.
+Please state the nature and extent of injuries and whether they are consistent with her account.
+IO: Insp {{name|Mohd Firdaus bin Ahmad}}, DID {{phone|6244 1830}}, {{email|io.bedok@police.example.org}}
+
+Reply from Medical Records, {{date_other|17/09/2026}}: Report by Dr {{name|Kong Wai Leng}} (ED) enclosed: two linear bruises over the left upper arm and a 2 cm scalp laceration, consistent with the history given.
+
+=== v27_n28 | MSW letter to MOM about FDW ===
+Eastbay General Hospital - Medical Social Work
+{{date_other|25 September 2026}}
+Foreign Manpower Management Division, Ministry of Manpower
+Attn: Mr {{name|Desmond Kang}}
+
+Dear Sir,
+RE: FDW {{name|SRI WAHYUNI}} (Indonesia), FIN {{national_id|F2345678T}}, Work Permit no. {{other_id|0 1489 2263 5}}
+Employers: Mr {{name|Lau Chin Hwee}} and Mrs {{name|Lau-Tham Pei Shan}}, {{address|17 Sunrise Close}}, Singapore {{postal_code|788432}}
+Ms {{name|Wahyuni}} was admitted on {{date_other|19/9/2026}} (admission {{case_visit|IP-26-140027}}) with dehydration and weight loss of 7 kg. She disclosed that she had been {{other_sensitive|slapped and given only one meal a day by her employer}}. With her consent we also inform you that she is {{reproductive_sexual|about 9 weeks pregnant}}.
+She does not wish to return to the household and is staying at a shelter after discharge. Her agency (Maju Jaya Employment Agency, EA licence {{other_id|19C9876}}) has been informed. Her mother in Indonesia can be reached at {{phone|+62 812 3456 7890}}.
+Yours sincerely,
+{{name|Nurul Huda Zainal}}
+Medical Social Worker
+
+=== v27_n29 | patient feedback and reply ===
+ONLINE FEEDBACK FORM - Feedback ID {{other_id|FB-2026-08-3391}}
+Name: {{name|lim siew peng}}
+Contact: {{phone|96204417}} / {{email|sp.lim1975@example.com}}
+Patient (if different): my father {{name|LIM AH HUAT}}, MRN {{mrn|EB0091123K}}
+Feedback: I am very unhappy. My father was charged $3,880 for 5 days in a B2 ward ({{date_other|3-8 Aug}}) but the nurse told us MediShield would cover everything. Nobody from billing explained. Also the doctor (Dr {{name|Melvin}}?) loudly discussed his {{substance_use|drinking problem}} in front of the other patients in the cubicle.
+
+Reply sent {{date_other|21 Aug 2026}}:
+Dear Ms {{name|Lim}},
+Thank you for your feedback. We are sorry for the distress caused. Dr {{name|Melvin Goh}} has been spoken to about patient privacy. The MediShield Life claim was submitted on {{date_other|19/8}} and the balance payable will be about $1,150; our Patient Relations Executive will call you to explain.
+Patient Relations Office, {{email|feedback@eastbay.example.org}}
+
+=== v27_n30 | coroner correspondence ===
+CORONER'S COURT - REQUEST FOR MEDICAL RECORDS
+Coroner's case no. {{other_id|CC 2026/1182}}
+Deceased: {{name|Rajkumar s/o Murugan}}, Indian national, passport {{national_id|Z4518823}}, FIN {{national_id|M5520193L}}
+Date of death: {{date_of_death|16th Sept 2026}}; found unresponsive at his workplace, {{address|50 Kaki Bukit Place, #03-07}}, Singapore {{postal_code|416228}}
+He attended your ED on {{date_other|14/09/2026}} (visit {{case_visit|E26-0914-0442}}) and was discharged with a diagnosis of gastritis.
+Police IO: ASP {{name|Lim Teck Soon}}. Blood ethanol at autopsy 290 mg/100 mL; his roommate reports {{substance_use|heavy daily drinking}}.
+Please send the ED notes and triage record by {{date_other|7 Oct 2026}}. Coroner's Officer: {{email|coroner.officer3@courts.example.net}}
+
+Reply: records dispatched {{date_other|29/09/2026}} by the Head, Medical Records.
+
+=== v27_n31 | insurance claim outcome letter ===
+Lionpeak Assurance Ltd, {{address|9 Raffles Quay #22-01}}, Singapore {{postal_code|048619}}
+Customer hotline {{phone|1800 220 1188}}
+{{date_other|29 September 2026}}
+Ms {{name|DEVI d/o SUBRAMANIAM}}
+{{address|512 Serangoon North Ave 4 #07-33}}
+Singapore {{postal_code|550512}}
+INTEGRATED SHIELD CLAIM OUTCOME - Policy {{other_id|IS 0044-7781-23}}, Claim {{other_id|CL-IS-26-0710922}}
+Insured: self; Northeast Heart Centre, admitted {{date_other|02/08/2026}} to {{date_other|06/08/2026}}
+Dear Ms {{name|Devi}},
+We have approved $12,450.20, paid directly to the hospital. Co-insurance of $1,383.36 applies and will be billed to you by the hospital. Please note that claims related to your declared {{mental_health|generalised anxiety disorder}} remain excluded under endorsement E-12.
+Yours sincerely,
+{{name|Bernard Quek}}, Claims Manager
+
+=== v27_n32 | SMS reminders ===
+[SMS to {{phone|9155 0832}}, sent {{date_other|28/09/2026}} 09:00]
+EastbayGH: Appt for {{name|TOH K.L.}} (IC ending {{national_id|067B}}) at MSW Clinic 3 on {{date_other|Thu 01 Oct}} 2:30pm. Bring IC, CPF statement and last 3 payslips. To change, call {{phone|6788 2100}}.
+[SMS to {{phone|9123 4876}}, sent {{date_other|29/09/2026}} 18:30]
+FJC: Hearing of {{other_id|FC/OSM 2231/2026}} (deputyship, {{name|LIM KOK WAH}}) on {{date_other|06-Oct-2026}} 10:00, Chamber 4B. Applicant to attend.
+[SMS to {{phone|+65 9455 3108}}, sent {{date_other|30/09/2026}} 11:02]
+Lionpeak: Your proposal {{other_id|LP-UW-2026-551902}} is pending a medical report from your doctor. Reply STOP to opt out.

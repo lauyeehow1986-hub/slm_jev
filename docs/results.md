@@ -1,4 +1,4 @@
-# Results: slm:jev against structured_deidentification's detectors (P7 to P24, notes_v22–v24)
+# Results: slm:jev against structured_deidentification's detectors (P7 to P25, notes_v25–v27)
 
 Date: 2026-09-26. **Synthetic data only.** Every number here comes from invented notes. None of
 them says how any system does on real clinical text (see *Caveats*).
@@ -1128,6 +1128,33 @@ model runs for the swept words) gives these in-sample numbers:
 No gold is lost on any set. The price is precision: rule-found spans the judge used to drop now
 reach a reviewer. These are dev numbers; the blind gate on notes_v25–v27 decides.
 
+### notes_v25–v27 (pooled blind for P25): 96 notes, 75,648 characters
+
+- **Gold:** 894 identifier spans (771 direct; 391 names), 15 negative notes. Three new writers:
+  surgery, anaesthesia, dental, TCM and private clinics; digital health and data exchange; social
+  care, legal and financial casework.
+- **Frozen:** the code and calibration before the writers started, the sets on arrival; intact
+  before the run and after each set. The gate is unchanged from 0019.
+
+| set | recall | direct recall (95% CI) | precision (95% CI) | F1 | ECE (95% CI) |
+|---|---|---|---|---|---|
+| notes_v25 | 0.990 | 0.988 (252 of 255; 0.966–0.996) | 0.865 (0.825–0.897) | 0.923 | 0.089 (0.055–0.137) |
+| notes_v26 | 0.973 | 0.969 (246 of 254; 0.939–0.984) | 0.866 (0.825–0.898) | 0.916 | 0.067 (0.040–0.112) |
+| notes_v27 | 0.990 | 0.996 (261 of 262; 0.979–0.999) | 0.908 (0.871–0.935) | 0.947 | 0.053 (0.027–0.092) |
+| **pooled** | 0.984 | **0.984** (759 of 771; 0.973–0.991) | **0.879** (0.857–0.898) | **0.929** | **0.064** (0.046–0.090) |
+
+- **Verdict: FAIL** on precision and ECE. Direct recall passes in a pooled blind run for the
+  first time (3 spans to spare), and F1 passes.
+- **Cause (post hoc):** the token sweep. Of its 171 candidates 8 were gold, and the judge's
+  calibrated confidence on them was far too high (ECE 0.29). It kept 37 false positives:
+  eponyms, job titles, demonyms, lone town names, acronyms. Re-scored without the sweep, the run
+  would have had precision 0.913 and ECE 0.034, but direct recall 0.979, failing by one span.
+- **12 direct misses**, 11 never proposed: a lower-case dictated passage with spaced IDs and a
+  spoken DOB and address, OCR'd digits, a lower-case name, a lone given name, initials.
+- **Other systems, F1 on v25/v26/v27:** slm:jev alone 0.921/0.908/0.953, rules + PF
+  0.884/0.843/0.933, PF 0.768/0.788/0.883, MediPhi 0.477/0.370/0.485.
+- **Latency:** 63.9 s per 1k chars (mean); per-note p95 99.0 s, 131.1 s, 111.3 s.
+
 ## Caveats
 
 - **Synthetic.** Every set is invented. notes_v1 was written by the author of the P2 generator,
@@ -1137,8 +1164,8 @@ reach a reviewer. These are dev numbers; the blind gate on notes_v25–v27 decid
 - **Found on the benchmark.** A fix for an error found on a set must be checked on a new, unseen
   set, or the benchmark becomes a training set. P8 to P12 changed slm_jev in response to sd20 and
   notes_v1 to notes_v4, so those are dev sets now and their numbers are optimistic. Only each
-  round's blind run counts, and notes_v5 to notes_v24 are dev sets from here on.
-- **One writer per set.** Each blind set had one writer (an agent working from a brief). Twenty-four
+  round's blind run counts, and notes_v5 to notes_v27 are dev sets from here on.
+- **One writer per set.** Each blind set had one writer (an agent working from a brief). Twenty-seven
   sets of about 30 notes are still a narrow sample of how people write.
 - **Run variation.** The llama.cpp baselines vary by one to three spans from run to run.
 - **Different outputs.** slm:jev also outputs category, sensitivity and a review flag, which these

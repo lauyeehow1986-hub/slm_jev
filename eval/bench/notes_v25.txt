@@ -1,0 +1,437 @@
+# notes_v25 — held-out Singapore-style clinical/admin notes with gold spans.
+# SYNTHETIC: NOT REAL PATIENT DATA. Every person, name, NRIC/FIN, MRN, phone number, address, email and health detail below is invented for testing; any match to a real person, number or mailbox is coincidental.
+# Written by an author (writer J) who did not see the system under test, its rules, or any earlier evaluation sets. Theme: surgery, anaesthesia, dental, TCM and private clinics.
+# FORMAT: each note begins with a line "=== v25_nNN | <kind> ===". The note text is every line after it up to the next "===" header line.
+# Gold spans are inline as {{label|text}}; the note text contains only "text". Spans are never nested, never contain "{{", "}}" or "|", and have no leading/trailing spaces. Anything outside {{...}} is not an identifier.
+# LABELS (identifiers): name, national_id, mrn, case_visit, address, postal_code, phone, fax, email, dob, date_of_death, device, biometric, photo, other_id
+# LABELS (SHI): hiv_sti, mental_health, substance_use, genetic, reproductive_sexual, other_sensitive
+# LABELS (other): date_other = any date of the patient's care/events that is not a DOB or date of death.
+# CONVENTIONS:
+# - Honorifics/titles (Dr, Mr, Mrs, Ms, Mdm, SN, Prof, A/Prof, etc.) are outside name spans. Every person is named and every mention is labelled, including repeats, surnames alone after a title, given names alone, nicknames, lower-case and Chinese-character names.
+# - INITIALS used for a person (in any form) are labelled name.
+# - "Singapore" and the postal code are outside address spans; the postal code is its own postal_code span (keeps an "S" prefix inside the span when written e.g. "S228199").
+# - Organisation names (hospitals, clinics, companies, ministries, insurers, schools) are decoys and never marked. Every phone, fax, email, street address and postal code is marked wherever it appears, including letterheads, footers, hotlines, switchboards and generic mailboxes. Company/organisation registration numbers (UEN, GST reg. no.) are other_id.
+# - Field captions (NRIC, FIN, MRN, Tel, Fax, HP, DID, UEN) are outside spans; only the value is labelled.
+# - national_id = NRIC/FIN/passport numbers; full NRIC/FIN values all have VALID checksums. Masked NRICs (e.g. SXXXX960C) are still national_id. No deliberately invalid IDs in this set.
+# - mrn = hospital/clinic patient record numbers; case_visit = admission/episode/case numbers; device = serial numbers of devices/implants, vehicle plates; photo = identifiers of clinical photographs of a person; biometric = biometric record references; other_id = any other identifying number, code, handle or URL (practitioner registration nos., policy/claim/invoice/MC nos., lab accession nos., work permit nos., staff IDs, blood unit numbers, bank accounts, social handles).
+# - Decoys left unmarked: ward/bed/theatre numbers, drug doses, lab values, times, FDI tooth numbers, acupuncture point codes, TOSP/ICD codes, device model/REF/LOT/batch numbers, autoclave cycle numbers, eponyms (e.g. Calot's triangle), document version dates.
+# - Emails/URLs use only example.com / example.org / example.net (or subdomains).
+# - 5 negative-control notes contain no spans at all: v25_n22, v25_n23, v25_n24, v25_n25, v25_n26.
+
+=== v25_n01 | pre-anaesthetic assessment ===
+PRE-ANAESTHETIC ASSESSMENT CLINIC (PAC) - Level 3, Clinic K
+Patient: {{name|LIM BOON HUAT}}    NRIC: {{national_id|S5733311A}}    MRN: {{mrn|SH-0482219-7}}
+DOB: {{dob|14/03/1958}} (68 y)    HP: {{phone|9134 5520}}
+Listed for: laparoscopic cholecystectomy on {{date_other|21 Oct 2026}} under Dr {{name|Wee Kok Leong}} (HPB).
+Seen in PAC on {{date_other|5/10/26}} by Dr {{name|Priya Nair}}, anaesthesia MO.
+PMHx: T2DM on metformin 850 mg BD; HTN on amlodipine 5 mg OM; OSA on home CPAP.
+Social: ex-smoker 30 pack-years (quit 2015). Admits {{substance_use|drinking 6-8 cans of beer daily}}; counselled re withdrawal risk, CIWA to be charted post-op.
+Airway: Mallampati II, TMD > 6 cm, full neck ROM. Loose upper incisor (21) - warned of dental damage.
+CPAP: ResMed AirSense 10, S/N {{device|23161489502}} - pt to bring machine on day of surgery.
+Labs: Hb 13.2, Cr 98, K 4.1, HbA1c 7.4%. ECG SR 72, no acute changes.
+ASA III. Plan: GA + ETT, PONV prophylaxis, omit metformin morning of op.
+NOK: wife Mdm {{name|Teo Siew Lan}}, {{phone|+65 8277 1043}}.
+Assessed by {{name|P. Nair}} / MCR {{other_id|M71234A}}
+
+=== v25_n02 | anaesthesia record ===
+ANAESTHESIA RECORD          OT 4          Episode {{case_visit|ADM/26/0193384}}
+Name: {{name|Lim, Boon Huat}}   MRN {{mrn|SH 0482219 7}}   Wt 82 kg   ASA III
+Date: {{date_other|2026-10-21}}
+Anaesthetist: Dr {{name|Hamid bin Osman}}    Anaes. nurse: SN {{name|Kyaw Zin Htet}}
+Induction 0842: propofol 150 mg, fentanyl 100 mcg, rocuronium 50 mg. ETT 8.0 cuffed @ 22 cm, CL grade 1. Teeth checked pre/post - 21 intact.
+Maintenance: sevoflurane 1.0 MAC in O2/air 50%. Monitoring: ECG, SpO2, NIBP q5min, EtCO2, BIS 40-55, TOF.
+0915 BP 82/45 -> phenylephrine 100 mcg x2, responded.
+0950 dexamethasone 8 mg, ondansetron 4 mg. Sugammadex 200 mg at 1012; TOF ratio 0.95.
+Extubated awake 1018. EBL 50 ml. Hartmann's 1000 ml. UO not measured.
+PACU: Aldrete 9 at 1050; CPAP applied in recovery with own machine.
+Handed over to SN {{name|Rohaya}} PACU bay 3.
+Signed {{name|HBO}}
+
+=== v25_n03 | operating theatre list ===
+MAIN OT - THEATRE 2 - ELECTIVE LIST - TUESDAY {{date_other|21.10.2026}}
+Surgeon: A/Prof {{name|Rachel Koh Hui Min}}   Anaesthetist: Dr {{name|Lee Jun Wei}}   Scrub: SN {{name|Maricel Dela Cruz}}
+No | Time | Patient | MRN | Age/Sex | Procedure | Anaes | Remarks
+1 | 0800 | {{name|ABDUL RAHMAN BIN SALLEH}} | {{mrn|M2201945}} | 62M | R inguinal hernia repair (mesh) | GA | -
+2 | 0930 | {{name|CHUA MEI LING, JOANNE}} | {{mrn|M2307718}} | 41F | Excision lipoma upper back | LA | day case
+3 | 1100 | {{name|SELVAM S/O SUBRAMANIAM}} | {{mrn|M1988302}} | 55M | Excision sebaceous cyst neck | LA | on clopidogrel - stopped 7/7
+4 | 1300 | {{name|NGUYEN THI HOA}} | {{mrn|M2410056}} | 33F | Lap appendicectomy | GA | ex-ED; FIN {{national_id|M8774313J}}, MRN merge pending
+5 | 1500 | {{name|TAN K.H.}} | {{mrn|M2111469}} | 70M | R 2nd toe ray amputation | spinal | MRSA - last case
+Case 4 needs Vietnamese interpreter: interpreter desk {{phone|6123 4400 ext 2271}}.
+List compiled by {{name|Grace Lim}} (OT scheduling).
+
+=== v25_n04 | surgical safety checklist ===
+SURGICAL SAFETY CHECKLIST - THEATRE 2
+SIGN IN (before induction) 1250
+[x] Identity confirmed verbally and against wristband: {{name|NGUYEN THI HOA}} / {{mrn|M2410056}} / DOB {{dob|03-JUN-1993}}
+[x] Procedure: laparoscopic appendicectomy. Site marking N/A.
+[x] Consent signed with interpreter Mr {{name|Pham Van Long}}.
+[x] Allergy: penicillin (rash). Urine β-hCG negative ({{date_other|21/10}}).
+[x] Difficult airway / aspiration risk: no. Expected blood loss < 500 ml.
+TIME OUT 1312
+Team: surgeon {{name|R. Koh}}, anaesthetist {{name|J.W. Lee}}, scrub {{name|Maricel}}, circulating {{name|Siti Zulaikha}}.
+Antibiotic: clindamycin 600 mg IV at 1305 (pen allergy).
+Imaging displayed: CT abdomen/pelvis accession {{other_id|RAD-26-5583190}}.
+SIGN OUT 1355
+Instrument, swab and needle counts correct - verified {{name|MDC}} / {{name|SZ}}.
+Specimen: appendix -> histology, lab no. {{other_id|H26-14472}}.
+Equipment issues: laparoscope light cable flicker - reported to biomed.
+Checklist coordinator: {{name|siti zulaikha bte ismail}}
+
+=== v25_n05 | operation note ===
+OPERATION NOTE
+Patient: Mr {{name|LIM Boon Huat}}, 68M, NRIC {{national_id|SXXXX311A}}, Ward 7A bed 12
+Date of operation: {{date_other|Tuesday 21 October 2026}}
+Surgeon: Dr {{name|Wee Kok Leong}}   Assistant: Dr {{name|Farah Hanim}}   Anaesthetist: Dr {{name|Hamid}}
+Procedure: Laparoscopic cholecystectomy (TOSP SF701G)
+Indication: recurrent biliary colic, 2 admissions in 2026.
+Findings: thick-walled gallbladder, dense omental adhesions to fundus, multiple faceted stones. Critical view of safety achieved; Calot's triangle cleared.
+Steps: open Hasson entry at umbilicus, 4 ports. Adhesiolysis. Cystic duct and artery doubly clipped (Hem-o-lok ML) and divided. Retrograde dissection off liver bed with hook diathermy. GB retrieved in Endobag via umbilicus. Haemostasis secured. Fascia 0 PDS, skin 4-0 Monocryl.
+EBL 50 ml. No drain. Complications: nil.
+Post-op: DAT, IV paracetamol, discharge POD 1 if well. CIWA monitoring.
+Review in Dr {{name|Wee}}'s clinic in 2/52, clinic line {{phone|6321 7788}}.
+Specimen: GB to histology.
+Dictated {{name|WKL}} 1035
+
+=== v25_n06 | histology report ===
+DEPARTMENT OF ANATOMICAL PATHOLOGY - SURGICAL PATHOLOGY REPORT
+Lab no.: {{other_id|H26-14501}}     Received: {{date_other|21/10/2026}} 14:22
+Patient: {{name|LIM BOON HUAT}}     MRN: {{mrn|SH-0482219-7}}     M/68
+Requesting clinician: Dr {{name|K.L. Wee}}, Hepatobiliary Surgery
+Specimen: gallbladder (cholecystectomy).
+Macroscopy: gallbladder 85 x 35 mm, wall up to 6 mm. Mucosa velvety. Multiple yellow-green faceted calculi, largest 14 mm. Cystic duct margin inked. Representative sections 1A-1C.
+Microscopy: transmural chronic inflammation, Rokitansky-Aschoff sinuses, mural fibrosis. No dysplasia. No malignancy seen.
+DIAGNOSIS: Chronic calculous cholecystitis.
+Reported by Dr {{name|Ong Pei Shan}}, Consultant Pathologist. Authorised {{date_other|23-10-2026}}.
+Copy to: Dr {{name|Wee}}'s clinic secretary {{name|Shanti}}.
+
+=== v25_n07 | implant and prosthesis register extract ===
+IMPLANT REGISTRY - EXTRACT (Orthopaedic Surgery)
+Patient: {{name|GOMES, Adrian Francis}}   NRIC {{national_id|S6015609C}}   MRN {{mrn|ORT-77310452}}
+Procedure: right total knee replacement, {{date_other|09 Sep 2026}}. Surgeon: Mr {{name|Arjun Menon}}.
+Implants (REF / LOT are catalogue and batch numbers):
+- Femoral component CR size 5, REF 5510-F-501, LOT 2603114, S/N {{device|FK5-0049217}}
+- Tibial baseplate size 4, REF 5520-T-400, LOT 2602987, S/N {{device|TB4-0083321}}
+- Polyethylene insert 10 mm, REF 5530-P-410, S/N {{device|PI10-554102}}
+- Bone cement 40 g x2, LOT 25K1190 (no serial)
+Previous implants on record: dual-chamber pacemaker (2019), S/N {{device|PJN 718 204 S}} - MRI conditional.
+Implant card issued to patient. Registry notified via {{email|implants@registry.example.org}}.
+Entered by {{name|Jasmine Ho}}, OT nurse, {{date_other|10/09/2026}}; checked {{name|J.H.}} / {{name|A.M.}}
+
+=== v25_n08 | day-surgery discharge ===
+DAY SURGERY CENTRE - DISCHARGE SUMMARY
+Name: {{name|Chua Mei Ling Joanne}}   NRIC {{national_id|S8299230H}}   MRN {{mrn|M2307718}}
+Admitted and discharged: {{date_other|21 Oct 2026}}
+Procedure: excision of lipoma, upper back, under LA (lignocaine 1% with adrenaline, 10 ml).
+Surgeon: A/Prof {{name|Rachel Koh}}
+Wound: 4 cm, subcuticular Monocryl 4-0, waterproof film dressing.
+Medications: paracetamol 1 g QDS PRN x 5 days; no antibiotics.
+Advice: keep dressing dry 48 h; no heavy lifting or swimming until review; watch for redness, discharge or fever.
+Escort home: husband {{name|Benjamin Seah}}, HP {{phone|9688 0217}}.
+Address on record: {{address|Blk 418 Bedok North Ave 2, #08-133}}, Singapore {{postal_code|460418}}
+Follow-up: Specialist Clinic B on {{date_other|04/11/2026}} 10.20 am; histology result then.
+Nurse telephone follow-up tomorrow. Discharging nurse: {{name|Nurul Huda}}
+
+=== v25_n09 | post-op wound-care phone follow-up ===
+TELEPHONE FOLLOW-UP, POD 1 - DAY SURGERY
+{{date_other|22.10.26}} 1015. Pt's own mobile {{phone|8122-6409}} unanswered x2; called husband's HP {{phone|9688 0217}}, handed phone to pt.
+Pt: {{name|Joanne}} ({{mrn|M2307718}}), s/p excision lipoma.
+Pain 2/10 on paracetamol. Dressing dry with small ooze ~1 cm. No fever, no spreading redness.
+Pt asks whether paracetamol and the LA are safe as she is {{reproductive_sexual|trying to conceive}} - reassured, will inform A/Prof {{name|Koh}}.
+Asked about swimming - advised not until review.
+Advised to call Day Surgery hotline {{phone|6226 5300}} (0800-1700) or attend ED with red flags.
+Called by SN {{name|Low Hui Ying}}; reviewed {{name|NH}}.
+
+=== v25_n10 | surgical consent with interpreter ===
+CONSENT FOR OPERATION / PROCEDURE
+Patient: {{name|MD RAKIBUL HASAN}}   FIN {{national_id|G4571115W}}   MRN {{mrn|M2412290}}
+Work permit no. WP {{other_id|0 2318 4597}}   Employer: Kim Seng Builders Pte Ltd (UEN {{other_id|201812345K}})
+Procedure: open reduction and internal fixation (plate) of left distal radius fracture.
+Risks explained: infection, bleeding, nerve or tendon injury, stiffness, malunion, CRPS, later plate removal. Alternative: cast with risk of malunion.
+Language: Bengali. Interpreter: Mr {{name|Sohel Rana}}, staff interpreter ID {{other_id|INT-0457}}.
+Interpreter declaration: I have translated the above to the patient, who indicated understanding. Signed {{name|Sohel Rana}}.
+Patient unable to sign (dominant hand injured); right thumbprint taken, biometric ref {{biometric|TP-R-88213}}.
+Witness: SN {{name|Ong Li Ting}}
+Doctor: Dr {{name|Daniel Tay Jun Hao}}, MCR {{other_id|M68412Z}}
+Date: {{date_other|17/10/2026}}
+Employer informed: site supervisor Mr {{name|Goh Chee Keong}}, HP {{phone|9011 4428}}. Pt asked that wife in Dhaka be called after surgery: {{phone|+880 1719-004321}}.
+
+=== v25_n11 | dental chart ===
+DENTAL CHART
+Patient: {{name|SIM Wei Jie, Marcus}}   DOB {{dob|2 Feb 2011}}   NRIC {{national_id|T1577680Z}}   Pt no. {{mrn|DC-015532}}
+Parent: mother Mdm {{name|Yeo Hwee Ping}}, HP {{phone|9733 4810}}
+Visit {{date_other|30 Sep 2026}}
+FDI: 16 O amalgam (sound); 26 fissure sealant; 36 MO caries - GIC restoration today; 46 sealant intact; 13 and 23 erupting.
+Perio: BPE 1/1/1/1/1/1. OH fair, plaque on lower anteriors.
+Occlusion: Class II div 1, overjet 7 mm, deep bite. Lip incompetence.
+Radiographs: 2 BWs + OPG taken. Intra-oral photos x5, files {{photo|MS_IO_20260930_01}} to {{photo|MS_IO_20260930_05}}.
+Plan: orthodontic referral (letter sent); fluoride varnish; recall 6 months.
+Treating dentist: Dr {{name|Kavitha d/o Ramasamy}}; DSA: {{name|Aini}}.
+Next visit {{date_other|14-10-2026}}.
+
+=== v25_n12 | dental referral letter ===
+Smile Bright Dental Surgery
+{{address|231 Bain Street, #02-41}}, Singapore {{postal_code|180231}}
+Tel {{phone|6338 2104}}   Fax {{fax|6338 2105}}   {{email|hello@smilebright.example.com}}   UEN {{other_id|53312877W}}
+
+{{date_other|30 September 2026}}
+
+Dr {{name|Chan Yee Mun}}
+Orthodontics, Central Dental Specialist Centre
+
+Dear Dr {{name|Chan}},
+Re: {{name|Marcus SIM Wei Jie}} (DOB {{dob|02.02.2011}}; NRIC {{national_id|T1577680Z}})
+Thank you for seeing this 15-year-old with a Class II division 1 malocclusion, overjet 7 mm, deep bite and moderate lower crowding. Caries risk is moderate; 36 restored today. OPG and bitewings enclosed.
+Medical: mild asthma, salbutamol PRN. His mother mentions he has been teased about his teeth and is seeing the school counsellor for {{mental_health|low mood}}; she would be grateful for an early appointment.
+Mother, Mdm {{name|Yeo}}, can be reached at {{phone|9733 4810}} or {{email|hp.yeo@mail.example.net}}.
+Yours sincerely,
+Dr {{name|KAVITHA D/O RAMASAMY}}
+
+=== v25_n13 | TCM consultation ===
+仁和堂中医诊所 Jen He Tang TCM Clinic - 初诊 First Consultation
+Patient 病人: {{name|黄美玲}} / {{name|WONG Mei Ling}}   NRIC {{national_id|S7923682I}}   49 F   Tel {{phone|8566 3901}}
+Date 日期: {{date_other|2026年10月3日}}
+主诉 CC: insomnia, hot flushes, irritability x 6 months; menses irregular since 2025.
+Hx: {{mental_health|generalised anxiety disorder}} diagnosed at polyclinic, on sertraline 50 mg ON. Advised not to stop Western medication.
+舌 Tongue: red, thin coating, slightly dry. 脉 Pulse: thin, rapid.
+辨证 Pattern: Kidney yin deficiency with Liver yang rising.
+Rx: 知柏地黄丸 加减 granules, 7 days, 2x/day after meals. Acupuncture course x 6 (see record).
+Referred by colleague "{{name|Ah Lian}}".
+Physician: {{name|陈志强}} ({{name|Tan Chee Keong}}), TCM reg. no. {{other_id|TCM-P08812}}
+
+=== v25_n14 | acupuncture record ===
+ACUPUNCTURE TREATMENT RECORD
+Patient: {{name|Wong M.L.}}   Card no. {{mrn|JHT-2026-0577}}
+Needles: single-use stainless 0.25 x 40 mm, LOT 2408A (batch only).
+S1 {{date_other|03/10}}: HT7, SP6, KI3, LR3, Yintang. 30 min, e-stim 2 Hz LR3-KI3. Tolerated well.
+S2 {{date_other|07/10}}: + PC6, Anmian. Sleeping ~5 h vs 3 h before. Hot flushes less.
+S3 {{date_other|10 Oct}}: small haematoma at L SP6 after removal, pressure 2 min, settled. Pt anxious about bruising - reassured.
+S4 due {{date_other|Tue 14/10}} 3 pm. SMS reminder sent to {{phone|8566 3901}}.
+Practitioner: {{name|CK Tan}} / {{name|TCK}}
+
+=== v25_n15 | private GP clinic visit ===
+GREENRIDGE FAMILY CLINIC - CONSULTATION NOTE
+Patient: {{name|RAJENDRAN s/o PERUMAL}}   52 M   NRIC {{national_id|S7168960C}}
+Panel: Harbourline Logistics (corporate), staff no. {{other_id|HL-EMP-20417}}
+Date: {{date_other|Mon, 06-Oct-2026}}
+S: Day 10 after haemorrhoidectomy at a private hospital. Persistent anal pain on defecation, some bright-red spotting. No fever. Also requests {{hiv_sti|HIV and syphilis screening}} after unprotected contact abroad ~8 weeks ago; worried.
+O: T 36.8. Perianal wounds healing, no abscess, mild oedema.
+A: Post-op pain, normal healing. Sexual health screen.
+P: sitz baths, lactulose 15 ml BD, paracetamol, topical lignocaine. Bloods: HIV Ag/Ab combo, RPR/TPPA - accession {{other_id|PL7731902}}. Counselled on window period; repeat at 3 months.
+MC 2 days.
+Pt prefers results by phone, not SMS: {{phone|+65-9871-2203}}. Do not leave voicemail.
+Dr {{name|Melissa Fernandez}}
+
+=== v25_n16 | medical certificate ===
+GREENRIDGE FAMILY CLINIC
+{{address|Blk 682 Jurong West Central 1, #01-58}}, Singapore {{postal_code|640682}}  Tel: {{phone|6795 0682}}
+MEDICAL CERTIFICATE                                  MC No. {{other_id|MC-0023187}}
+This is to certify that {{name|Rajendran S/O Perumal}} (NRIC/FIN {{national_id|SXXXX960C}}) was examined on {{date_other|6 Oct 2026}} and is unfit for duty from {{date_other|06/10/2026}} to {{date_other|07/10/2026}} inclusive (2 days).
+Remarks: diagnosis withheld at patient's request.
+Dr {{name|MELISSA FERNANDEZ}}, MCR No. {{other_id|M55871J}}
+Verify this MC at {{other_id|https://mc.example.com/v/0023187}}
+
+=== v25_n17 | aesthetic clinic consultation and photo log ===
+LUMINE AESTHETICS - CONSULTATION
+{{address|8 Scotts Rise, #05-12}}, Singapore {{postal_code|S228199}} | {{phone|6733 9180}}
+Client: Ms {{name|Natalie Kwek}}   DOB {{dob|19.11.1990}}   Malaysian passport {{national_id|A51234567}}
+Instagram (client gave for appt reminders): {{other_id|@nat.kwek.glow}}
+Concerns: melasma both cheeks, rolling acne scars. Isotretinoin course ended 2025. No keloid history.
+Assessment: mixed melasma; Fitzpatrick IV.
+Plan: picosecond laser x 6 sessions q4 weeks; TCA CROSS to icepick scars; strict SPF.
+Photo log (clinical record only - client DECLINED marketing use):
+Photo ID | Date | View
+{{photo|LMN-NK-0001}} | {{date_other|02/10/2026}} | frontal, before
+{{photo|LMN-NK-0002}} | {{date_other|02/10/2026}} | left oblique, before
+{{photo|LMN-NK-0003}} | {{date_other|02/10/2026}} | right oblique, before
+{{photo|LMN-NK-0004}} | (pending) | frontal, after session 3
+Photos taken by therapist {{name|Clara}} on clinic iPad (no personal phones).
+Doctor: Dr {{name|Edwin Yap}}
+
+=== v25_n18 | optometry and contact-lens record ===
+OPTOMETRY & CONTACT LENS RECORD
+Customer: {{name|Ng, Kah Hui Valerie}}   DOB {{dob|1996-07-08}}   NRIC {{national_id|S9676837J}}   Cust no. {{other_id|OPT/0099382}}
+Address: {{address|12 Jalan Kembangan}}, Singapore {{postal_code|419105}}   Mobile {{phone|9001 3378}}   Email {{email|valng96@example.net}}
+Exam {{date_other|11 Oct 2026}}
+VA unaided R 6/60, L 6/60. Subjective: R -4.25/-0.75 x 180 6/6; L -4.00/-0.50 x 10 6/6.
+K readings R 43.25/44.00, L 43.50/44.25. Slit lamp: mild papillae upper lids; cornea clear.
+CL fit: monthly silicone hydrogel BC 8.6 DIA 14.2, R -4.00 L -3.75. Good centration and movement.
+Advice: no overnight wear, no tap water, replace case monthly.
+Review {{date_other|Apr 2027}}.
+Optometrist: {{name|Tham Jia Yi}} (Optometrist reg. {{other_id|OPT-2245}})
+
+=== v25_n19 | podiatry note ===
+PODIATRY - HIGH-RISK DIABETIC FOOT CLINIC
+{{name|TAN KIM HOCK}}   MRN {{mrn|M2111469}}   DOB {{dob|11 Jan 1956}}   NRIC {{national_id|S1478932D}}
+Date: {{date_other|28/10/2026}} - 1 week after R 2nd toe ray amputation.
+Wound 1.5 x 0.8 cm, granulating, no slough, no probe to bone. Mild maceration edges.
+ABPI R 0.82, L 0.88. Monofilament absent at 4/10 sites bilaterally.
+Dressing: alginate + foam, change alternate days. Offloading: post-op shoe; no barefoot walking.
+Pt {{substance_use|still smoking about 10 sticks a day}}; brief advice given, keen on quitline.
+Social: lives alone at {{address|Blk 55 Lengkok Bahru, #12-401}}, Singapore {{postal_code|150055}}. Daughter {{name|Tan Li Ping}} visits weekends ({{phone|8355 7021}}).
+Referred for community nursing dressing.
+Podiatrist: {{name|Amanda Teo}}
+
+=== v25_n20 | physiotherapy post-op rehab plan ===
+PHYSIOTHERAPY - POST-OP TOTAL KNEE REPLACEMENT REHAB PLAN
+Patient: {{name|Adrian Gomes}}   MRN {{mrn|ORT-77310452}}
+Surgery: R TKR {{date_other|9/9/2026}} (Mr {{name|Menon}})
+Phase 1 (wk 0-2): knee ROM 0-90, quads sets, SLR, ankle pumps, gait with frame -> stick.
+Phase 2 (wk 2-6): ROM to 110, static bike, step-ups, closed-chain strengthening.
+Phase 3 (wk 6-12): balance, stairs reciprocal, return to driving once off opioids and good quads control.
+Status {{date_other|23 Sep 2026}}: ROM 5-95, extension lag 5 degrees, walking with stick indoors. Pain 3/10.
+Goal: return to work as private-hire driver (vehicle {{device|SLA 4821 H}}) by week 10.
+Wife {{name|Doreen}} assists with home exercises; pacemaker noted - no TENS.
+Home exercise videos: {{other_id|https://rehab.example.org/p/ag-77310}}
+Physiotherapist: {{name|Gurpreet Kaur}}; PTA {{name|Jun}}
+
+=== v25_n21 | specialist clinic invoice ===
+TESSENSOHN VEIN & GENERAL SURGERY CLINIC PTE LTD
+{{address|21 Tessensohn Lane, #04-09}}, Singapore {{postal_code|217622}}   Tel {{phone|6250 3317}}   Fax {{fax|6250 3318}}
+GST Reg. No. {{other_id|201733456M}}
+TAX INVOICE   No. {{other_id|INV-2026-10-0412}}   Date {{date_other|24/10/2026}}
+Bill to: {{name|WEE, Siew Kiang}}   NRIC {{national_id|S6927889B}}
+{{address|47 Pasir Ris Heights}}, Singapore {{postal_code|518889}}
+Insurer: Integrated Shield, policy {{other_id|IP-8800-3341-02}}; claim ref {{other_id|CLM/26/778104}}
+Item                                              Qty   Amount (S$)
+Specialist consultation, first visit               1        180.00
+Duplex ultrasound, lower limb venous               1        420.00
+Endovenous laser ablation R GSV (TOSP SL703V)      1      6,800.00
+Compression stockings class II                     2        136.00
+Subtotal 7,536.00   GST 9% 678.24   TOTAL 8,214.24
+Payment: bank transfer to account {{other_id|072-441822-6}} quoting the invoice no.
+Attending surgeon: Dr {{name|Benedict Lau}}
+Queries: {{email|billing@tvgs.example.com}}
+
+=== v25_n22 | OT instrument count sheet template ===
+OPERATING THEATRE - INSTRUMENT, SWAB AND SHARPS COUNT SHEET (TEMPLATE, rev. 4, 2025)
+Theatre: ____  Case no.: ____________  Patient label: affix here
+Item                     | Initial | Added | 1st closing | Final
+Raywec swabs (5s)        |         |       |             |
+Abdominal packs          |         |       |             |
+Needles (suture)         |         |       |             |
+Blades no. 10 / 11 / 15  |         |       |             |
+Artery forceps, curved   |         |       |             |
+Diathermy tip / scratch pad |      |       |             |
+Rules: counts are done aloud by scrub and circulating nurse together; any discrepancy must be reported to the surgeon before wound closure and an X-ray considered. Retained-item events follow the incident policy. Both nurses sign and print their names in the boxes provided.
+Scrub nurse sign: ________   Circulating nurse sign: ________
+
+=== v25_n23 | fasting instruction leaflet ===
+BEFORE YOUR OPERATION - FASTING INSTRUCTIONS (adults)
+- Stop solid food 6 hours before your admission time.
+- You may drink clear fluids (water, clear apple juice, isotonic drinks, black tea or coffee without milk) until 2 hours before admission.
+- Do not chew gum or eat sweets on the morning of surgery.
+- Diabetes: do not take diabetes tablets on the morning of surgery unless told otherwise; bring your glucometer.
+- Blood thinners (e.g. warfarin, clopidogrel, apixaban) must be stopped only on your doctor's advice.
+- Remove nail polish, jewellery and contact lenses.
+If you have a cold or fever in the days before your operation, call the number printed on your appointment letter. Leaflet version 3.1, reviewed 01/2026.
+
+=== v25_n24 | sterilisation log ===
+CSSD STEAM STERILISER LOG - Autoclave B (model STX-660), chamber 600 L
+Cycle 4471 | 134 C, 3.5 min hold | Bowie-Dick: pass | Load: ortho trays x6, lap sets x2 | BI read 24 h: negative | released
+Cycle 4472 | 134 C, 3.5 min hold | Load: dental cassettes x12, handpieces x8 | CI class 5: pass | released
+Cycle 4473 | 121 C, 15 min hold | Load: rubber items | printout faded - repeat cycle
+Cycle 4474 | 121 C, 15 min hold | Load: repeat of 4473 | pass | released
+Weekly leak test passed. Water conductivity 3.1 uS/cm. Filter change due next month. No recalls this week.
+
+=== v25_n25 | clinic price list ===
+PRICE LIST (effective 2026, prices before GST)
+Consultation, general practitioner .......... $38
+Consultation, after hours / Sunday .......... $58
+Wound dressing, simple ...................... $25
+Removal of stitches ......................... $30
+Ingrown toenail wedge resection (LA) ........ $280
+Excision of small skin lesion (LA) .......... $450
+Scale and polish (dental) ................... $95
+Acupuncture session (30 min) ................ $60
+Influenza vaccination ....................... $35
+Corporate and insurance panels accepted. Medisave claimable items marked at counter.
+
+=== v25_n26 | surgical teaching outline ===
+TEACHING OUTLINE - ACUTE ABDOMEN FOR HOUSE OFFICERS (week 3)
+1. History: onset, migration of pain (periumbilical to RIF), vomiting, last menstrual period in women.
+2. Signs: Murphy's sign, Rovsing's sign, McBurney's point tenderness, Cullen's and Grey Turner's signs.
+3. Scoring: Alvarado score; when to image; CT vs ultrasound in pregnancy.
+4. Biliary anatomy: Calot's triangle, the critical view of safety (Strasberg), Hartmann's pouch.
+5. Incisions: Kocher, Lanz, Pfannenstiel, midline - pros and cons.
+6. Consent: risks to cover; using interpreters; capacity.
+7. Case discussion: 33-year-old woman with RIF pain and fever (anonymised vignette).
+Reading: department handbook chapter 4; WHO Surgical Safety Checklist.
+
+=== v25_n27 | email thread - surgery rescheduling ===
+From: {{name|Grace Lim}} <{{email|grace.lim@ot.example.com}}>
+To: Ortho Booking <{{email|ortho.booking@hospital.example.org}}>
+Cc: {{email|arjun.menon@hospital.example.org}}
+Sent: {{date_other|Thu, 2 Oct 2026}} 09:14
+Subject: RE: Reschedule - {{name|HO WAI KIT}} {{mrn|M2209876}} L THR
+
+Hi team,
+Pt's son {{name|Jason Ho}} called ({{phone|9620 1185}}) - his dad started apixaban last week for new AF. Mr {{name|Menon}} says hold 48 h and keep the date if INR/renal OK; otherwise push to {{date_other|16/10}}.
+Pls also note pt's NRIC on the booking form was wrong; correct one is {{national_id|S2880407E}}.
+Thanks,
+{{name|Grace}}
+OT Scheduling | DID {{phone|6326 1145}}
+
+-----Original Message-----
+From: Ortho Booking
+Sent: Wed, 1 Oct 2026 17:40
+Subject: Reschedule - {{name|HO WAI KIT}} {{mrn|M2209876}} L THR
+Listed {{date_other|9 Oct}}. Pre-op bloods done {{date_other|29/9}}. Anaesthetist Dr {{name|Lee}} to review anticoagulation.
+- {{name|wl}}
+
+=== v25_n28 | WhatsApp transcript - dental clinic ===
+[{{date_other|11/10/26}}, 9:02 am] Smile Bright Dental: Hi {{name|Siti}}, reminder of your scaling and filling appt tmr 10:30 am with Dr {{name|Kavitha}}. Reply YES to confirm.
+[11/10/26, 9:15 am] {{phone|+65 9447 2086}}: Yes confirm. But I am {{reproductive_sexual|20 weeks pregnant}}, can do x-ray or not?
+[11/10/26, 9:20 am] Smile Bright Dental: Noted, we will avoid x-ray unless needed and use lead apron. Please bring your NRIC and pink form.
+[11/10/26, 9:22 am] {{phone|+65 9447 2086}}: Ok. My IC is {{national_id|T0372635A}}. My husband {{name|Faizal}} will come with me
+[11/10/26, 9:23 am] {{phone|+65 9447 2086}}: insurance card no {{other_id|GE-5521-0098-77}}
+[11/10/26, 9:30 am] Smile Bright Dental: Thank you Puan {{name|Siti Mariam binte Jamaludin}}. See you tomorrow. - {{name|Aini}}
+
+=== v25_n29 | insurance pre-authorisation letter ===
+Dr {{name|Shirley Wong Ai Ling}}, Breast & Reconstructive Surgery
+{{address|6 Napier Road, #09-03}}, Singapore {{postal_code|258499}}   Tel {{phone|6736 4120}}   Fax {{fax|6736 4121}}   {{email|swong.breast@clinic.example.com}}
+
+{{date_other|1 October 2026}}
+
+Claims Department, Harbour Assurance Ltd
+{{address|10 Collyer Quay, #21-01}}, Singapore {{postal_code|049315}}
+
+Re: Pre-authorisation - prophylactic bilateral mastectomy with immediate reconstruction
+Insured: Mrs {{name|Priscilla D'Souza-Lee}}   NRIC {{national_id|S8807908F}}   DOB {{dob|27 April 1984}}   Policy {{other_id|HA-IP-0071 4452}}
+Mrs {{name|D'Souza-Lee}} was found to carry a {{genetic|BRCA2 pathogenic variant (c.5946delT)}} on germline testing in {{date_other|March 2026}}. Her mother died of ovarian cancer at 51 and her sister {{name|Monica}} is a {{genetic|confirmed BRCA2 carrier}}. After genetic counselling she has elected risk-reducing surgery, planned for {{date_other|12 Nov 2026}}. Estimated bill S$38,000 (ward B1, 4 days).
+Kindly confirm coverage. Please reply to my practice manager {{name|Lydia Chong}} at the email above.
+Yours faithfully,
+{{name|S. Wong}}
+
+=== v25_n30 | complaint letter and clinic reply ===
+To: The Clinic Manager, Smile Bright Dental Surgery
+From: {{name|Kenneth Rozario}}, {{address|Blk 803 Woodlands Drive 72, #05-220}}, Singapore {{postal_code|730803}}; {{email|k.rozario@example.com}}; {{phone|9188 6042}}
+Date: {{date_other|8 Oct 2026}}
+Dear Sir/Madam,
+On {{date_other|29.9.2026}} Dr {{name|Lee Hong Ming}} removed my lower right wisdom tooth (48). Since then my lower lip and chin are numb. When I called on {{date_other|2/10}} the receptionist, {{name|Michelle}}, said it was "normal" and Dr {{name|Lee}} did not call back. I have been {{mental_health|anxious and unable to sleep}} because of this. I want a proper review and a refund of $1,250.
+{{name|Kenneth R.}}
+
+REPLY ({{date_other|9 Oct 2026}}): Dear Mr {{name|Rozario}}, we are sorry for your experience. Dr {{name|Lee}} will see you on {{date_other|10/10/2026}} and refer you to an oral-maxillofacial surgeon if sensory change persists. Our clinic manager {{name|Joyce Tan}} will contact you at {{phone|9188 6042}}. Regards, {{name|J. Tan}}
+
+=== v25_n31 | medical social worker letter to employer ===
+MEDICAL SOCIAL WORK DEPARTMENT
+{{date_other|24 October 2026}}
+To: Ms {{name|Jacqueline Ng}}, HR Manager, Kim Seng Builders Pte Ltd ({{email|hr@kimseng.example.com}})
+Re: Mr {{name|Md Rakibul Hasan}}, FIN {{national_id|G4571115W}}, WP {{other_id|0 2318 4597}}
+Mr {{name|Rakibul}} underwent ORIF of the left wrist on {{date_other|17/10/2026}} after a fall at the worksite and was discharged on {{date_other|20/10/2026}}. He has hospitalisation leave until {{date_other|20/11/2026}} and will need light duties (no lifting, no use of left hand) for a further 6 weeks.
+As this is a work injury, a WICA claim has been filed (MOM ref {{other_id|WIC/26/104882}}). Please ensure his medical leave wages are paid and that he can attend physiotherapy and the fracture clinic on {{date_other|31 Oct}}.
+He resides at {{address|21 Tuas South Avenue 9, Block C Room 3-17}}, Singapore {{postal_code|637587}}; transport to appointments is required.
+He has expressed worry about repatriation; please contact me before any decision.
+{{name|Nadia Rahim}}, Medical Social Worker, Tel {{phone|6321 4459}}, Fax {{fax|6321 4400}}
+cc: Ministry of Manpower, Work Injury Compensation Dept
+
+=== v25_n32 | intra-operative transfusion record ===
+BLOOD TRANSFUSION RECORD - OT 6 (emergency)
+Patient: {{name|GOH, Ah Moi}} ({{name|吴亚妹}})   NRIC {{national_id|S0453331C}}   MRN {{mrn|M1874420}}   Episode {{case_visit|EM-26-0881245}}
+Procedure: hemiarthroplasty L hip for #NOF, {{date_other|19-Oct-2026}}
+Group O RhD pos; antibody screen negative; electronic crossmatch.
+Unit 1 DIN {{other_id|W0426 26 118934}} PRBC, start 1532, end 1650
+Unit 2 DIN {{other_id|W0426 26 118977}} PRBC, start 1655, end 1805
+Bedside check by SN {{name|Rohani}} and Dr {{name|Lee Jun Wei}}. No transfusion reaction.
+Consent: pt delirious; discussed with son Mr {{name|Goh Teck Seng}} ({{phone|9355 2014}}); FDW {{name|Ma. Lourdes Bautista}} (FIN {{national_id|F0322861N}}) present at bedside.
+Hearing aid L ear, S/N {{device|HA-0P4419273}}, returned to son.
+Addendum: pt passed away in ward 9B on {{date_of_death|27/10/2026}} at 0412 h; case reported to the Coroner (ref {{other_id|CC/2026/01893}}). Certified by Dr {{name|Aditi Sharma}}.

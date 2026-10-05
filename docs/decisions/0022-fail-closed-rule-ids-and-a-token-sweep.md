@@ -1,7 +1,8 @@
 # 0022: Fail closed on rule-found IDs, sweep rare capitalised words, then a fourth pooled blind gate (P25)
 
-Date: 2026-10-04. Status: **accepted**. Dev replay on notes_v1–v24 and sd20: passes the gate on
-every grouping, but these are dev sets. The blind gate on notes_v25–v27 is below.
+Date: 2026-10-04. Status: **accepted**; the token sweep is **not** a release candidate. Dev replay
+on notes_v1–v24 and sd20: passes on every grouping. Blind on notes_v25–v27 (pooled): **FAIL** on
+precision (0.879) and ECE (0.064); direct recall (0.984) and F1 pass.
 
 ## Context
 P24 (0021) failed the pooled blind gate on notes_v22–v24 on direct-identifier recall alone:
@@ -102,3 +103,73 @@ The protocol is the same as 0019–0021:
   first;
 - the sets run one after another;
 - `eval/pool.py` decides on pooled counts.
+
+## Evidence (blind): notes_v25–v27, pooled
+- **Frozen:** the code (with `slmjev/vocab.py`), `models/calibration_p22.json` and `eval/pool.py`
+  were hashed before the writers started (`results/notes_v25_v27_code_freeze.sha256`). The sets
+  were added once they arrived (`results/notes_v25_v27_blind_freeze.sha256`, 21 files). The
+  freeze was intact before the run and after each set.
+- **The sets:** 75,648 characters; 894 identifier gold (771 direct, 391 names); 15 negative notes.
+
+| set | recall | direct recall (95% CI) | precision (95% CI) | F1 | ECE (95% CI) |
+|---|---|---|---|---|---|
+| notes_v25 | 0.990 | 0.988 (252 of 255; 0.966–0.996) | 0.865 (0.825–0.897) | 0.923 | 0.089 (0.055–0.137) |
+| notes_v26 | 0.973 | 0.969 (246 of 254; 0.939–0.984) | 0.866 (0.825–0.898) | 0.916 | 0.067 (0.040–0.112) |
+| notes_v27 | 0.990 | 0.996 (261 of 262; 0.979–0.999) | 0.908 (0.871–0.935) | 0.947 | 0.053 (0.027–0.092) |
+| **pooled** | 0.984 | **0.984** (759 of 771; 0.973–0.991) | **0.879** (0.857–0.898) | **0.929** | **0.064** (0.046–0.090) |
+
+**The gate fails on precision and ECE.** Direct recall passes for the first time in a pooled
+blind run, with 3 spans to spare (756 needed).
+
+**12 direct misses**, 11 never proposed:
+- a dictated passage in lower case, with a spaced NRIC and MRN, a spoken date of birth and a
+  spoken address;
+- an OCR'd phone with letters for digits (`6S38 2O14`) and an OCR'd `S/0` name;
+- a lower-case full name, a lone given name, two pairs of initials;
+- a three-digit emergency number labelled phone.
+
+One pair of initials was proposed and sent to review with an SHI label.
+
+**124 false positives** (29 on negative notes):
+- **37 from the token sweep:** eponyms (`Hartmann`, `Calot`, `Murphy`, `Alvarado`), job titles
+  (`Pathologist`, `Podiatrist`, `Caseworker`, `Testator`), demonyms and countries (`Malaysian`,
+  `Bangladesh`, `Myanmar`), Singapore towns written alone (`Bedok`, `Tampines`), acronyms and HL7
+  field codes (`MCR`, `EMR`, `XPN`, `XAD`).
+- **87 from the other proposers**, as in earlier rounds: headings and captions, eponyms found by
+  NER in a surgical teaching outline, HL7 and FHIR message IDs and URLs, a chatbot's `BOT` label,
+  PF date fragments, organisation and role names.
+
+### What caused the failure (post hoc; the blind row stands)
+The judge is badly calibrated on swept words. Over 171 swept candidates, 8 were gold. The mean
+calibrated confidence was 0.34 and the ECE 0.29. The calibration map was fitted before the sweep
+existed, and the sweep's candidates are a population it never saw.
+
+Re-scoring the blind run without parts of P25 gives (post hoc, so none of these is a result):
+
+| variant | direct recall | precision | ECE | verdict |
+|---|---|---|---|---|
+| as run (P25) | 0.984 (759) | 0.879 | 0.064 | FAIL (precision, ECE) |
+| without the token sweep | 0.979 (755) | 0.913 | 0.034 | FAIL (direct recall, by 1 span) |
+| without fail-closed | 0.984 (759) | 0.882 | 0.064 | FAIL (precision, ECE) |
+| without both | 0.979 (755) | 0.916 | 0.034 | FAIL (direct recall, by 1 span) |
+
+The sweep bought 4 direct gold spans for 37 false positives and the ECE failure. Fail-closed kept
+no direct gold on these sets and cost 7 false positives.
+
+**Latency:** 63.9 s per 1k characters (mean); per-note p95 99.0 s, 131.1 s and 111.3 s.
+
+**Other systems, F1 on v25/v26/v27:**
+- slm:jev alone 0.921/0.908/0.953;
+- rules + PF 0.884/0.843/0.933;
+- PF 0.768/0.788/0.883;
+- MediPhi 0.477/0.370/0.485.
+
+notes_v25–v27 are dev sets from here on.
+
+## Where the series stands
+Four pooled blind rounds (P22–P25) have each failed a different check, by small margins: direct
+recall by 9, 2, 3 spans; then precision and ECE. On about 800 direct gold spans, one span is
+0.13 points of recall. Each round's fixes for the last round's misses cost precision on the next
+writers' text, or the reverse. More rounds on synthetic sets by new writers mostly measure the
+next writer's style. See the eval log and `docs/results.md`.
+
