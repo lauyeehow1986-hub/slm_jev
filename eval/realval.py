@@ -5,7 +5,7 @@ count it. They print counts, hashes and note IDs, never note text, and they refu
 a git working tree or a synced folder::
 
     python eval/realval.py pack --out C:/slmjev_kit --judge models/p5/<judge>.gguf \\
-        --calibration models/calibration_p22.json --llama <llama.cpp bin dir> \\
+        --calibration models/calibration_p22.json --ollama <Ollama install dir> \\
         --python <portable python dir> --pf-model <privacy filter dir> --sd-repo <SD checkout>
     python eval/realval.py check D:/realval/sets/part_B1.txt
     python eval/realval.py hash D:/realval/freeze.sha256 <file or folder> ...
@@ -13,9 +13,11 @@ a git working tree or a synced folder::
     python eval/realval.py guard D:/realval/reports/B1.json
 
 ``pack`` builds a portable kit: one folder to copy onto the approved machine and run with no
-admin install. It holds the code at a commit, the judge, the calibration, llama.cpp (CPU only,
-with its Visual C++ runtime DLLs beside it), a portable Python with Privacy Filter and Presidio,
-batch launchers, and a ``MANIFEST.sha256`` that ``verify`` checks on arrival.
+admin install. It holds the code at a commit, the judge, the calibration, a portable Ollama
+(CPU only, the judge already imported into its own model store; docs/decisions/0025) and/or
+llama.cpp (CPU only, with its Visual C++ runtime DLLs beside it), a portable Python with Privacy
+Filter and Presidio, batch launchers, and a ``MANIFEST.sha256`` that ``verify`` checks on
+arrival. Ollama is the kit's backend whenever it is bundled.
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 from collections import Counter
 from pathlib import Path
@@ -39,11 +42,15 @@ sys.path[:0] = [str(_EVAL), str(_EVAL.parent)]
 import bench  # noqa: E402
 import pool  # noqa: E402
 
+from slmjev.engine import DEFAULT_OLLAMA_MODEL  # noqa: E402
+
 MANIFEST = "MANIFEST.sha256"
 SECS_PER_1K = 64  # P25 blind mean on this laptop's CPU (0022)
 SYNC_MARKERS = ("onedrive", "dropbox", "google drive", "googledrive", "icloud")
 VC_RUNTIME = ("msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll", "vcomp140.dll")
 SKIP_LLAMA = ("ggml-cuda.dll",)  # the target is CPU only; this one is 220 MB
+# the target is CPU only: Ollama's GPU libraries are 2.7 GB; the quantizer is never used
+SKIP_OLLAMA = ("cuda_*", "rocm*", "vulkan*", "mlx*", "llama-quantize*", "libllama-quantize*")
 SMOKE_SET = "eval/bench/notes_v27.txt"
 SMOKE_NOTES = 4
 
@@ -220,8 +227,14 @@ def _bat(lines: list[str]) -> str:
     return "\r\n".join(["@echo off", "setlocal", *lines]) + "\r\n"
 
 
-def launchers(judge: str) -> dict[str, str]:
-    """The kit's batch files. Every path is relative to the kit folder (%~dp0)."""
+def launchers(judge: str, ollama: bool = True, llama: bool = False) -> dict[str, str]:
+    """The kit's batch files. Every path is relative to the kit folder (%~dp0). The judge runs
+    on the bundled Ollama if there is one, else on the bundled llama.cpp."""
+    backend = ([r'set "SLMJEV_BACKEND=ollama"', r'set "SLMJEV_OLLAMA=%KIT%ollama\ollama.exe"',
+                r'set "SLMJEV_OLLAMA_MODELS=%KIT%ollama\models"'] if ollama
+               else [r'set "SLMJEV_BACKEND=llama"'])
+    if llama:
+        backend.append(r'set "SLMJEV_LLAMA_SERVER=%KIT%llama\llama-server.exe"')
     run = (r'"%PY%" "%KIT%slm_jev\eval\bench.py" --systems rules,ner,pf,jev+pf+ner.person '
            r'--pf-model "%KIT%pf" --calibration "%SLMJEV_CALIBRATION%"')
     rv = r'"%PY%" "%KIT%slm_jev\eval\realval.py"'
@@ -239,7 +252,7 @@ def launchers(judge: str) -> dict[str, str]:
             r'set "SE_PF_DIR=%KIT%pf"',
             r'set "SLMJEV_SD_ROOT=%KIT%sd"',
             r'set "SLMJEV_ROOT=%KIT%slm_jev"',
-            r'set "SLMJEV_LLAMA_SERVER=%KIT%llama\llama-server.exe"',
+            *backend,
             rf'set "SLMJEV_JUDGE_MODEL=%KIT%models\{judge}"',
             r'set "SLMJEV_CALIBRATION=%KIT%models\calibration.json"',
             "set SLMJEV_TOKEN_SWEEP=",
@@ -305,14 +318,55 @@ Reports (step 5) contain note text: keep them on this machine. Only pooled.json 
 your cause counts leave it, after the data controller has checked them.
 
 Contents: slm_jev\\ (code), sd\\ (structured_deidentification's engines), python\\ (portable
-Python {pyver} with Privacy Filter, Presidio and spaCy), pf\\ (Privacy Filter model), llama\\
-(llama.cpp, CPU, with the Visual C++ runtime DLLs beside it), models\\ (the judge and its
-calibration), smoke\\ (synthetic notes only).
-Antivirus: if llama\\llama-server.exe is quarantined, or a run stops with "judge backend
-down", ask IT to allow this folder in the endpoint protection. On the development laptop the
-security software froze a copied llama-server.exe (every thread suspended) 10-30 s into its
-first run; the judge then stops the run after 3 failed calls instead of crawling for hours.
+Python {pyver} with Privacy Filter, Presidio and spaCy), pf\\ (Privacy Filter model),
+{engine}, models\\ (the judge and its calibration), smoke\\ (synthetic notes only).
+The judge runs on {backend}. Each run starts it on a free loopback port and stops it at the end;
+it never uses the network.{ollama_note}
+Antivirus: if a run stops with "judge backend down", or an .exe here is quarantined, ask IT to
+allow this folder in the endpoint protection. On the development laptop the security software
+froze a copied llama-server.exe (every thread suspended) 10-30 s into its first run; the judge
+then stops the run after 3 failed calls instead of crawling for hours.
 """
+OLLAMA_NOTE = """
+The Ollama here is a CPU-only copy of Ollama {version} that runs from this folder: its model
+store is ollama\\models (the judge, imported as "{model}"), cloud models are off, and nothing is
+pulled. The engine checks that the model Ollama serves is byte for byte models\\{judge} before
+judging. Ollama may create a key pair in %USERPROFILE%\\.ollama the first time it starts."""
+
+
+def import_ollama_model(exe: Path, models: Path, gguf: Path, name: str) -> None:
+    """Import ``gguf`` as ``name`` into the Ollama model store ``models``, using the portable
+    Ollama ``exe`` itself, and check that the stored blob is that file. No network: the model
+    comes from the local file and nothing is pulled."""
+    from slmjev import judge as J
+    from slmjev import server
+
+    models.mkdir(parents=True, exist_ok=True)
+    srv = server.start_ollama(exe, models)
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            mf = Path(tmp) / "Modelfile"
+            mf.write_text(f"FROM {gguf.resolve()}\nTEMPLATE {{{{ .Prompt }}}}\n",
+                          encoding="utf-8")
+            env = os.environ | {"OLLAMA_HOST": srv.url.removeprefix("http://")}
+            p = subprocess.run([str(exe), "create", name, "-f", str(mf)], env=env,
+                               capture_output=True, text=True, timeout=1800)
+            if p.returncode:
+                raise SystemExit(f"ollama create failed: {(p.stderr or p.stdout)[-500:]}")
+        if J.Ollama(srv.url, name).model_digest() != sha256(gguf):
+            raise SystemExit(f"Ollama's {name!r} is not {gguf.name}")
+    finally:
+        srv.stop()
+
+
+def _ollama_version(exe: Path) -> str:
+    try:
+        out = subprocess.run([str(exe), "--version"], capture_output=True, text=True,
+                             timeout=60).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    m = re.search(r"(\d+\.\d+\.\d+)", out)
+    return m.group(1) if m else ""
 
 
 def pack(a: argparse.Namespace) -> None:
@@ -323,9 +377,15 @@ def pack(a: argparse.Namespace) -> None:
     for p in (a.judge, a.calibration):
         if not p.is_file():
             raise SystemExit(f"missing file: {p}")
-    server = next((a.llama / n for n in ("llama-server.exe", "llama-server")
-                   if (a.llama / n).is_file()), None)
-    if not server:
+    if not (a.ollama or a.llama):
+        raise SystemExit("bundle a judge backend: --ollama and/or --llama")
+    ollama_exe = a.ollama and next((a.ollama / n for n in ("ollama.exe", "ollama")
+                                    if (a.ollama / n).is_file()), None)
+    if a.ollama and not (ollama_exe and (a.ollama / "lib" / "ollama").is_dir()):
+        raise SystemExit(f"no portable Ollama (ollama.exe and lib\\ollama) in {a.ollama}")
+    server = a.llama and next((a.llama / n for n in ("llama-server.exe", "llama-server")
+                               if (a.llama / n).is_file()), None)
+    if a.llama and not server:
         raise SystemExit(f"no llama-server in {a.llama}")
     py = a.python / ("python.exe" if os.name == "nt" else "bin/python3")
     if not py.is_file():
@@ -342,13 +402,23 @@ def pack(a: argparse.Namespace) -> None:
     (out / "models").mkdir()
     shutil.copy2(a.judge, out / "models" / a.judge.name)
     shutil.copy2(a.calibration, out / "models" / "calibration.json")
-    step("llama.cpp ...")
-    shutil.copytree(a.llama, out / "llama",
-                    ignore=shutil.ignore_patterns(*SKIP_LLAMA, "*.pdb", "*.lib", "*.exp"))
-    sysdir = Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "System32"
-    for dll in VC_RUNTIME:
-        if (sysdir / dll).is_file() and not (out / "llama" / dll).exists():
-            shutil.copy2(sysdir / dll, out / "llama" / dll)
+    if a.ollama:
+        step("ollama ...")
+        (out / "ollama").mkdir()
+        shutil.copy2(ollama_exe, out / "ollama" / ollama_exe.name)
+        shutil.copytree(a.ollama / "lib", out / "ollama" / "lib",
+                        ignore=shutil.ignore_patterns(*SKIP_OLLAMA, "*.pdb"))
+        step("ollama: importing the judge ...")
+        import_ollama_model(out / "ollama" / ollama_exe.name, out / "ollama" / "models",
+                            out / "models" / a.judge.name, a.ollama_model)
+    if a.llama:
+        step("llama.cpp ...")
+        shutil.copytree(a.llama, out / "llama",
+                        ignore=shutil.ignore_patterns(*SKIP_LLAMA, "*.pdb", "*.lib", "*.exp"))
+        sysdir = Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "System32"
+        for dll in VC_RUNTIME:
+            if (sysdir / dll).is_file() and not (out / "llama" / dll).exists():
+                shutil.copy2(sysdir / dll, out / "llama" / dll)
     step("python ...")
     shutil.copytree(a.python, out / "python",
                     ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
@@ -357,16 +427,23 @@ def pack(a: argparse.Namespace) -> None:
     (out / "smoke").mkdir()
     src = (out / "slm_jev" / SMOKE_SET).read_text(encoding="utf-8")
     (out / "smoke" / "smoke_notes.txt").write_text(smoke_set(src), encoding="utf-8")
-    for name, text in launchers(a.judge.name).items():
+    for name, text in launchers(a.judge.name, bool(a.ollama), bool(a.llama)).items():
         (out / name).write_bytes(text.encode("utf-8"))
     try:
         pyver = subprocess.run([str(py), "-c", "import sys; print(sys.version.split()[0])"],
                                capture_output=True, text=True, timeout=60).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         pyver = ""
+    engines = [r"ollama\ (portable Ollama, CPU only, with the judge imported)"] * bool(a.ollama)
+    engines += [r"llama\ (llama.cpp, CPU, with the Visual C++ runtime DLLs beside it)"] * bool(
+        a.llama)
+    note = OLLAMA_NOTE.format(version=_ollama_version(out / "ollama" / ollama_exe.name) or "?",
+                              model=a.ollama_model, judge=a.judge.name) if a.ollama else ""
     (out / "README_KIT.txt").write_bytes(KIT_README.format(
         date=time.strftime("%Y-%m-%d"), sha=sha[:7], sd_sha=sd_sha[:7], smoke_n=SMOKE_NOTES,
-        secs=SECS_PER_1K, pyver=pyver or "3.x").replace("\n", "\r\n").encode("utf-8"))
+        secs=SECS_PER_1K, pyver=pyver or "3.x", engine=", ".join(engines),
+        backend="the bundled Ollama" if a.ollama else "the bundled llama-server",
+        ollama_note=note).replace("\n", "\r\n").encode("utf-8"))
     step("manifest ...")
     n = write_manifest(out / MANIFEST, [out])
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
@@ -386,7 +463,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--sd-commit", default="HEAD")
     p.add_argument("--judge", type=Path, required=True)
     p.add_argument("--calibration", type=Path, required=True)
-    p.add_argument("--llama", type=Path, required=True, help="folder with llama-server")
+    p.add_argument("--ollama", type=Path, help="Ollama install folder (ollama.exe, lib)")
+    p.add_argument("--ollama-model", default=DEFAULT_OLLAMA_MODEL,
+                   help="the name the judge is imported under")
+    p.add_argument("--llama", type=Path, help="folder with llama-server (optional fallback)")
     p.add_argument("--python", type=Path, required=True, help="portable Python folder")
     p.add_argument("--pf-model", type=Path, required=True)
     p = sub.add_parser("check", help="validate annotated sets; print counts only")

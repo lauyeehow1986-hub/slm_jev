@@ -143,3 +143,65 @@ def test_labels_load_and_cache_copy():
     a = load_labels()
     a["version"] = "tampered"
     assert load_labels()["version"] == "labels.v1"
+
+
+def test_ollama_runs_on_loopback_with_its_own_store_and_no_cloud():
+    env = server.ollama_env("kit/ollama/models", 50123)
+    assert env["OLLAMA_HOST"] == "127.0.0.1:50123"
+    assert env["OLLAMA_MODELS"] == "kit/ollama/models"
+    assert env["OLLAMA_NO_CLOUD"] == "1" and env["OLLAMA_NOPRUNE"] == "1"
+
+
+def test_start_ollama_needs_the_binary_and_the_model_folder(tmp_path, monkeypatch):
+    monkeypatch.delenv(server.ENV_OLLAMA, raising=False)
+    with pytest.raises(FileNotFoundError, match="ollama binary"):
+        server.start_ollama()
+    exe = tmp_path / "ollama.exe"
+    exe.write_bytes(b"")
+    with pytest.raises(FileNotFoundError, match="model folder"):
+        server.start_ollama(exe, tmp_path / "no-models")
+
+
+class _Proc:
+    def __init__(self, code=None):
+        self.returncode, self._handle, self.args = code, 0, None
+
+    def poll(self):
+        return self.returncode
+
+    def terminate(self):
+        self.returncode = 1
+
+    def wait(self, timeout=None):
+        return self.returncode
+
+
+def test_start_ollama_waits_for_it_to_answer(tmp_path, monkeypatch):
+    exe = tmp_path / "ollama.exe"
+    exe.write_bytes(b"")
+    (tmp_path / "models").mkdir()
+    seen = {}
+
+    def popen(cmd, env, **kw):
+        seen.update(cmd=cmd, env=env)
+        return _Proc()
+
+    monkeypatch.setattr(server.subprocess, "Popen", popen)
+    monkeypatch.setattr(server, "_kill_with_parent", lambda p: None)
+    answers = iter([0, 200])
+    monkeypatch.setattr(server, "_get", lambda url, key: next(answers))
+    monkeypatch.setattr(server.time, "sleep", lambda s: None)
+    srv = server.start_ollama(exe, port=50124)  # the model folder defaults to one beside it
+    assert seen["cmd"] == [str(exe), "serve"] and srv.url == "http://127.0.0.1:50124"
+    assert seen["env"]["OLLAMA_MODELS"] == str(tmp_path / "models")
+    assert seen["env"]["OLLAMA_NO_CLOUD"] == "1"
+
+
+def test_start_ollama_reports_an_exit(tmp_path, monkeypatch):
+    exe = tmp_path / "ollama.exe"
+    exe.write_bytes(b"")
+    (tmp_path / "models").mkdir()
+    monkeypatch.setattr(server.subprocess, "Popen", lambda cmd, env, **kw: _Proc(code=1))
+    monkeypatch.setattr(server, "_kill_with_parent", lambda p: None)
+    with pytest.raises(RuntimeError, match="exited"):
+        server.start_ollama(exe)

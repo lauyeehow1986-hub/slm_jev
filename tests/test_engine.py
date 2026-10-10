@@ -164,6 +164,7 @@ def io_env(monkeypatch, tmp_path):
                    {"prompt": J.PROMPT_VERSION, "model": "judge.gguf"})
     monkeypatch.setenv(engine.ENV_CALIBRATION, str(cal))
     monkeypatch.setenv(engine.ENV_URL, "http://127.0.0.1:9")
+    monkeypatch.setenv(engine.ENV_BACKEND, "llama")
     fake = SpanFake({"Tan Ah Kow": {"name": 0.99}})
     monkeypatch.setattr(engine.J, "LlamaServer", lambda url, key: fake)
     yield monkeypatch
@@ -192,9 +193,13 @@ def test_main_forbids_the_network_and_fails_loudly(io_env, capsysbinary):
     assert engine.main([]) == 2  # a bad request is an error, never an empty result
 
 
-def test_probe_reports_missing_files(monkeypatch, capsys):
-    for v in (engine.ENV_URL, engine.server.ENV_BIN, engine.server.ENV_MODEL):
+@pytest.mark.parametrize(("backend", "server_file"), [("", "ollama"), ("llama", "llama_server")])
+def test_probe_reports_missing_files(monkeypatch, capsys, backend, server_file):
+    for v in (engine.ENV_URL, engine.server.ENV_BIN, engine.server.ENV_MODEL,
+              engine.server.ENV_OLLAMA):
         monkeypatch.delenv(v, raising=False)
+    monkeypatch.setenv(engine.ENV_BACKEND, backend)
+    monkeypatch.setenv(engine.ENV_OLLAMA_URL, "http://127.0.0.1:9")  # nobody answers there
     monkeypatch.setenv(engine.ENV_CALIBRATION, "no/such/file.json")
     try:
         assert engine.main(["--probe"]) == 0
@@ -202,6 +207,7 @@ def test_probe_reports_missing_files(monkeypatch, capsys):
         netguard.allow_network()
     p = json.loads(capsys.readouterr().out)
     assert p["ok"] is False and p["detector"] == "slm:jev" and not any(p["found"].values())
+    assert p["backend"] == (backend or "ollama") and server_file in p["found"]
 
 
 def test_records_follow_the_span_schema():
@@ -279,3 +285,43 @@ def test_an_unknown_backend_is_refused():
         engine.open_backend(engine.settings({"backend": "vllm"}))
     assert engine.probe({"backend": "vllm"})["ok"] is False
 
+
+def test_ollama_is_the_default_backend(monkeypatch):
+    monkeypatch.delenv(engine.ENV_BACKEND, raising=False)
+    assert engine.settings({})["backend"] == "ollama"
+
+
+def test_the_portable_ollama_is_started_checked_and_stopped(monkeypatch, tmp_path):
+    f = _gguf(tmp_path)
+    stopped = []
+
+    class Srv:
+        url = "http://127.0.0.1:9"
+
+        def stop(self):
+            stopped.append(True)
+
+    started = []
+    monkeypatch.setattr(engine.server, "start_ollama",
+                        lambda exe, models: started.append((exe, models)) or Srv())
+    monkeypatch.setenv(engine.server.ENV_OLLAMA_MODELS, "kit/ollama/models")
+    cfg = engine.settings({"model": str(f), "backend": "ollama", "ollama": "kit/ollama.exe"})
+    monkeypatch.setattr(J.Ollama, "model_digest", lambda self: engine._sha256(f))
+    backend, model, stop = engine.open_backend(cfg)
+    assert started == [("kit/ollama.exe", "kit/ollama/models")] and backend.url == Srv.url
+    assert not stopped
+    stop()
+    assert stopped == [True]
+    monkeypatch.setattr(J.Ollama, "model_digest", lambda self: "0" * 64)
+    with pytest.raises(ValueError, match="is not judge.gguf"):
+        engine.open_backend(cfg)
+    assert stopped == [True, True]  # a refused model never leaves the server running
+
+
+def test_ollama_backend_refuses_a_missing_gguf_before_starting_anything(monkeypatch, tmp_path):
+    monkeypatch.setattr(engine.server, "start_ollama",
+                        lambda *a: pytest.fail("started without a GGUF to check"))
+    cfg = engine.settings({"model": str(tmp_path / "none.gguf"), "backend": "ollama",
+                           "ollama": "kit/ollama.exe"})
+    with pytest.raises(ValueError, match="SLMJEV_JUDGE_MODEL"):
+        engine.open_backend(cfg)

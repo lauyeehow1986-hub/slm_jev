@@ -1,7 +1,10 @@
-"""Launch a llama-server for the judge with the flags fixed in docs/decisions/0002.
+"""Launch the judge's model server: llama-server with the flags fixed in docs/decisions/0002,
+or a portable ``ollama serve`` (docs/decisions/0025).
 
-Loopback only, a fresh random API key per launch, no web UI, reasoning off, CPU by default. The
-key is returned to the caller and never written to disk or logs by this module.
+Loopback only. llama-server gets a fresh random API key per launch, no web UI, reasoning off,
+CPU by default; the key is returned to the caller and never written to disk or logs by this
+module. Ollama has no API key, so it is started on a free port of its own, with its own model
+store and cloud models off, and the engine checks the model it serves before trusting it.
 """
 
 from __future__ import annotations
@@ -21,6 +24,8 @@ from slmjev.netguard import loopback_request
 
 ENV_BIN = "SLMJEV_LLAMA_SERVER"
 ENV_MODEL = "SLMJEV_JUDGE_MODEL"
+ENV_OLLAMA = "SLMJEV_OLLAMA"
+ENV_OLLAMA_MODELS = "SLMJEV_OLLAMA_MODELS"
 
 
 def _kill_with_parent(proc: subprocess.Popen) -> object | None:
@@ -63,6 +68,18 @@ def _kill_with_parent(proc: subprocess.Popen) -> object | None:
     return job if ok else None
 
 
+def _kill_job(job: object | None) -> None:
+    """End every process left in ``job`` (a server's children)."""
+    if job is None or sys.platform != "win32":
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    k32.TerminateJobObject(job, 1)
+
+
 @dataclass
 class Server:
     proc: subprocess.Popen
@@ -77,6 +94,8 @@ class Server:
                 self.proc.wait(timeout=15)
             except subprocess.TimeoutExpired:
                 self.proc.kill()
+        # ``ollama serve`` runs the model in a child process, which terminate() leaves behind
+        _kill_job(self.job)
 
     def __enter__(self) -> Server:
         return self
@@ -156,3 +175,45 @@ def start(binary: str | os.PathLike | None = None, model: str | os.PathLike | No
         time.sleep(0.5)
     srv.stop()
     raise TimeoutError(f"llama-server not healthy after {wait}s")
+
+
+def ollama_env(models: str | os.PathLike, port: int) -> dict[str, str]:
+    """``ollama serve``'s settings for the judge: loopback only, the kit's own model store
+    (``models``), cloud models off, nothing pruned, one model and one request at a time."""
+    return {"OLLAMA_HOST": f"127.0.0.1:{port}", "OLLAMA_MODELS": str(models),
+            "OLLAMA_NO_CLOUD": "1", "OLLAMA_NOPRUNE": "1", "OLLAMA_NUM_PARALLEL": "1",
+            "OLLAMA_MAX_LOADED_MODELS": "1"}
+
+
+def start_ollama(binary: str | os.PathLike | None = None,
+                 models: str | os.PathLike | None = None, *, port: int | None = None,
+                 log: str | os.PathLike | None = None, wait: float = 120) -> Server:
+    """Start a portable ``ollama serve`` and wait until it answers. ``binary`` and ``models``
+    default to ``$SLMJEV_OLLAMA`` and ``$SLMJEV_OLLAMA_MODELS`` (else ``models`` beside the
+    binary). Nothing is pulled: the model must already be in ``models``. Ollama has no API key,
+    so the caller must check the model it serves (``engine.open_backend`` does)."""
+    port = port or free_port()
+    binary = binary or os.environ.get(ENV_OLLAMA)
+    if not binary or not Path(binary).is_file():
+        raise FileNotFoundError(f"ollama binary not found: {binary!r}")
+    models = models or os.environ.get(ENV_OLLAMA_MODELS) or Path(binary).parent / "models"
+    if not Path(models).is_dir():
+        raise FileNotFoundError(f"Ollama model folder not found: {str(models)!r}")
+    out = open(log, "ab") if log else subprocess.DEVNULL  # noqa: SIM115 - child inherits it
+    try:
+        proc = subprocess.Popen([str(binary), "serve"], env=os.environ | ollama_env(models, port),
+                                stdout=out, stderr=subprocess.STDOUT)
+    finally:
+        if log:
+            out.close()
+    srv = Server(proc, f"http://127.0.0.1:{port}", "", job=_kill_with_parent(proc))
+    deadline = time.monotonic() + wait
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            srv.stop()
+            raise RuntimeError(f"ollama serve exited with code {proc.returncode}")
+        if _get(srv.url + "/api/version", None) == 200:
+            return srv
+        time.sleep(0.5)
+    srv.stop()
+    raise TimeoutError(f"ollama serve not answering after {wait}s")

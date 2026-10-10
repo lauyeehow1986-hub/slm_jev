@@ -121,6 +121,15 @@ def test_launchers_only_use_kit_relative_paths():
     assert "set SLMJEV_TOKEN_SWEEP=\r\n" in env  # the sweep stays off
     assert "jev+pf+ner.person" in bats["5_run_set.bat"]
     assert "guard" in bats["5_run_set.bat"] and "guard" in bats["6_pool.bat"]
+    # the bundled Ollama is the backend, with the kit's own model store; no llama.cpp unless
+    # it is bundled too
+    assert r'set "SLMJEV_BACKEND=ollama"' in env
+    assert r'set "SLMJEV_OLLAMA=%KIT%ollama\ollama.exe"' in env
+    assert r'set "SLMJEV_OLLAMA_MODELS=%KIT%ollama\models"' in env
+    assert "SLMJEV_LLAMA_SERVER" not in env
+    env = realval.launchers("judge.gguf", ollama=False, llama=True)["env.bat"]
+    assert r'set "SLMJEV_BACKEND=llama"' in env and "SLMJEV_OLLAMA" not in env
+    assert r'set "SLMJEV_LLAMA_SERVER=%KIT%llama\llama-server.exe"' in env
 
 
 def _git(repo, *args):
@@ -140,17 +149,42 @@ def test_pack_builds_a_kit_that_verifies(tmp_path, monkeypatch):
     (repo / "uncommitted.txt").write_text("not in the kit", encoding="utf-8")
     src = tmp_path / "src"
     for d, files in {"llama": ["llama-server.exe", "ggml.dll", "ggml-cuda.dll"],
+                     "ollama": ["ollama.exe", "ollama app.exe", "unins000.exe"],
+                     "ollama/lib/ollama": ["llama-server.exe", "ggml-cpu-x64.dll",
+                                           "llama-quantize.exe", "LLAMA_CPP_LICENSE"],
+                     "ollama/lib/ollama/cuda_v12": ["ggml-cuda.dll"],
                      "python": ["python.exe"], "pf": ["config.json"]}.items():
         (src / d).mkdir(parents=True)
         for f in files:
             (src / d / f).write_text(f, encoding="utf-8")
     (src / "judge.gguf").write_text("gguf", encoding="utf-8")
     (src / "cal.json").write_text("{}", encoding="utf-8")
+    imported = []
+
+    def fake_import(exe, models, gguf, name):  # the real one runs ollama create
+        models.mkdir(parents=True)
+        (models / "manifest").write_text(name, encoding="utf-8")
+        imported.append((exe.name, gguf.name, name))
+
+    monkeypatch.setattr(realval, "import_ollama_model", fake_import)
+    monkeypatch.setattr(realval, "_ollama_version", lambda exe: "0.35.0")
     out = tmp_path / "kit"
     realval.main(["pack", "--out", str(out), "--repo", str(repo), "--sd-repo", str(repo),
                   "--judge", str(src / "judge.gguf"), "--calibration", str(src / "cal.json"),
-                  "--llama", str(src / "llama"), "--python", str(src / "python"),
-                  "--pf-model", str(src / "pf")])
+                  "--ollama", str(src / "ollama"), "--llama", str(src / "llama"),
+                  "--python", str(src / "python"), "--pf-model", str(src / "pf")])
+    # a CPU-only Ollama: no GPU libraries, no tray app or uninstaller, no quantizer
+    assert imported == [("ollama.exe", "judge.gguf", "slmjev-judge-p5")]
+    kit_ollama = out / "ollama"
+    assert (kit_ollama / "ollama.exe").is_file() and (kit_ollama / "models").is_dir()
+    assert (kit_ollama / "lib" / "ollama" / "llama-server.exe").is_file()
+    assert (kit_ollama / "lib" / "ollama" / "LLAMA_CPP_LICENSE").is_file()
+    assert not (kit_ollama / "lib" / "ollama" / "cuda_v12").exists()
+    assert not (kit_ollama / "lib" / "ollama" / "llama-quantize.exe").exists()
+    assert not (kit_ollama / "ollama app.exe").exists()
+    assert not (kit_ollama / "unins000.exe").exists()
+    readme = (out / "README_KIT.txt").read_text(encoding="utf-8")
+    assert "Ollama 0.35.0" in readme and "slmjev-judge-p5" in readme
     assert (out / "slm_jev" / realval.SMOKE_SET).is_file()
     assert not (out / "slm_jev" / "uncommitted.txt").exists()
     assert (out / "models" / "judge.gguf").is_file()
@@ -165,3 +199,18 @@ def test_pack_builds_a_kit_that_verifies(tmp_path, monkeypatch):
                       "--judge", str(src / "judge.gguf"), "--calibration",
                       str(src / "cal.json"), "--llama", str(src / "llama"), "--python",
                       str(src / "python"), "--pf-model", str(src / "pf")])
+
+
+def test_pack_needs_a_judge_backend(tmp_path, monkeypatch):
+    monkeypatch.setattr(realval, "unsafe_reason", lambda p: None)
+    src = tmp_path / "src"
+    src.mkdir()
+    for f in ("judge.gguf", "cal.json"):
+        (src / f).write_text("x", encoding="utf-8")
+    common = ["pack", "--out", str(tmp_path / "kit"), "--sd-repo", str(tmp_path),
+              "--judge", str(src / "judge.gguf"), "--calibration", str(src / "cal.json"),
+              "--python", str(src), "--pf-model", str(src)]
+    with pytest.raises(SystemExit, match="--ollama"):
+        realval.main(common)
+    with pytest.raises(SystemExit, match="no portable Ollama"):
+        realval.main([*common, "--ollama", str(src)])

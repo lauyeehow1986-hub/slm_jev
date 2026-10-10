@@ -23,7 +23,7 @@ Everything runs from one folder that you copy onto the machine: no install and n
 python eval/realval.py pack --out C:/slmjev_kit ^
     --judge models/p5/slmjev-judge-p5-qwen3-1.7b-Q4_K_M.gguf ^
     --calibration models/calibration_p22.json ^
-    --llama <llama.cpp bin/Release folder> ^
+    --ollama "%LOCALAPPDATA%\Programs\Ollama" ^
     --python <portable Python with Presidio, spaCy en_core_web_lg, onnxruntime, tokenizers> ^
     --pf-model <Privacy Filter model folder> ^
     --sd-repo <structured_deidentification checkout> --sd-commit <commit with run_engine.py>
@@ -37,12 +37,23 @@ What the kit holds:
 | `sd\` | structured_deidentification at one commit (its `run_engine.py` engines) |
 | `python\` | a portable Python 3.12 that runs Privacy Filter, Presidio and spaCy |
 | `pf\` | the Privacy Filter ONNX model |
-| `llama\` | llama.cpp for CPU, with the Visual C++ runtime DLLs it needs copied beside it; CUDA is left out |
+| `ollama\` | a portable, CPU-only copy of Ollama (`ollama.exe` and `lib\ollama`, without the GPU libraries) and its own model store, `ollama\models`, with the judge already imported |
 | `models\` | the judge GGUF and its calibration (`calibration.json`) |
 | `smoke\` | four synthetic notes for the smoke test |
 
 It also has numbered `.bat` launchers whose paths are all relative to the kit folder,
-`README_KIT.txt`, and `MANIFEST.sha256`. The kit is about 4.7 GB. The token sweep stays off.
+`README_KIT.txt`, and `MANIFEST.sha256`. The token sweep stays off.
+
+**The judge runs on Ollama** (decision 0025):
+- Each run starts the kit's own `ollama serve` on a free loopback port, with cloud models off
+  and nothing pulled, and stops it at the end.
+- Before judging, the engine checks that the model Ollama serves is, byte for byte, the GGUF in
+  `models\`.
+- No install and no Visual C++ runtime are needed: Ollama uses only the runtime built into
+  Windows 10 and 11.
+- An Ollama already installed on the machine is not used and not touched.
+- `--llama <llama.cpp bin/Release folder>` also bundles llama.cpp in `llama\`. The kit still
+  runs on Ollama; set `SLMJEV_BACKEND=llama` in `env.bat` to switch.
 
 `pack` refuses to write into a git working tree or a synced folder. So do the kit's `hash` and
 run commands, because the stray home repository (`C:\Users\<you>\.git`) picks up any folder
@@ -68,14 +79,18 @@ under it.
 - Run `2_smoke.bat D:\realval\smoke`, which runs four synthetic notes end to end in a few
   minutes.
 - **Antivirus.** Ask IT to allow the kit folder in the endpoint protection *before* the smoke
-  test. Security software can quarantine `llama\llama-server.exe`, or freeze it silently.
+  test. An approval for an installed Ollama may not cover a copy run from a folder.
+  - Security software can quarantine an `.exe` in the kit, or freeze it silently.
+  - The kit's Ollama runs the model in `ollama\lib\ollama\llama-server.exe`, signed by Ollama
+    Inc.
   - On the development laptop, AVG/McAfee-class protection suspended every thread of a copied
-    `llama-server.exe` 10–30 s into judging. The original build folder was not affected, and
-    neither were short test prompts.
+    `llama-server.exe` (the Unsloth build) 10–30 s into judging. The original build folder was
+    not affected, and neither were short test prompts. Ollama's own copy was not suspended.
   - The symptom is a run that stops with `judge backend down: 3 calls in a row failed`. The judge
     gives up after three failed calls (about 6 minutes) rather than sending every span to review
     at two minutes each.
-  - In Task Manager, a frozen `llama-server.exe` shows 0% CPU while the run waits.
+  - In Task Manager, a frozen `llama-server.exe` (under `ollama.exe`) shows 0% CPU while the
+    run waits.
 - Optionally, reproduce a full synthetic set to check this CPU gives the same answers:
   ```
   5_run_set.bat <kit>\slm_jev\eval\bench\notes_v27.txt D:\realval\smoke\notes_v27.json

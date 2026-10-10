@@ -35,7 +35,7 @@ rules → candidate spans → batched typed judgments → calibrated spans → r
      ported from structured_deidentification's R detectors and parity-tested against them.
    - Layout shapes: ID columns, person slots, initials and table cells.
    - Privacy Filter and Presidio person spans.
-2. **Judge.** A LoRA-finetuned Qwen3-1.7B (Q4_K_M GGUF, served by a loopback llama-server) reads
+2. **Judge.** A LoRA-finetuned Qwen3-1.7B (Q4_K_M GGUF, served by a loopback Ollama) reads
    each candidate in context. Probabilities come from option-token logprobs, averaged over 4
    rotated option orders.
 3. **Calibrate and decide in code.** A per-call calibration map turns scores into probabilities.
@@ -49,7 +49,12 @@ rules → candidate spans → batched typed judgments → calibrated spans → r
 ```
 echo {"texts": ["Pt Tan Ah Kow, NRIC S1234567D ..."]} | python -m slmjev.engine
 ```
-Settings: `SLMJEV_LLAMA_SERVER`, `SLMJEV_JUDGE_MODEL`, `SLMJEV_CALIBRATION`; `--probe` checks them.
+Settings:
+- `SLMJEV_JUDGE_MODEL` and `SLMJEV_CALIBRATION`.
+- `SLMJEV_OLLAMA` (a portable `ollama.exe` to start) or `SLMJEV_OLLAMA_URL` (a running Ollama).
+- `SLMJEV_BACKEND=llama` with `SLMJEV_LLAMA_SERVER` runs on llama-server instead.
+
+`--probe` checks them.
 The models and calibration files are not in git.
 
 ## Results at a glance (synthetic only)
@@ -109,8 +114,8 @@ repeat on notes_v14 with the same frozen code failed.
   kind of candidate breaks it: the P25 token sweep scored ECE 0.29 on its own candidates.
 - **Fixes trade against each other.** Each round's fixes for the last round's misses cost
   precision on the next writers' text, or the reverse.
-- **Heavy setup:** a GGUF judge, a calibration file, a llama.cpp server binary (antivirus has
-  quarantined one before) and a bundled Python for Privacy Filter.
+- **Heavy setup:** a GGUF judge, a calibration file, a model server (a portable Ollama;
+  antivirus has frozen a copied llama-server before) and a bundled Python for Privacy Filter.
 
 ## Gaps
 - **No real-data evidence.** Every number comes from synthetic notes written by agents from
