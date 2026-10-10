@@ -33,7 +33,10 @@ The engine starts its own llama-server on loopback (``slmjev.server``), or uses 
 (``SLMJEV_LLM_URL`` + ``SLMJEV_LLM_KEY``), and forbids every non-loopback connection first.
 Settings come from the request (``llama_server``, ``model``, ``calibration``, ``threads``) or
 else the environment: ``SLMJEV_LLAMA_SERVER``, ``SLMJEV_JUDGE_MODEL``, ``SLMJEV_CALIBRATION``
-(default ``models/calibration.json``) and ``SLMJEV_THREADS``. ``--probe`` reports whether those
+(default ``models/calibration.json``) and ``SLMJEV_THREADS``. ``SLMJEV_BACKEND=ollama`` uses a
+running Ollama on loopback instead (``SLMJEV_OLLAMA_URL``, default ``http://127.0.0.1:11434``;
+``SLMJEV_OLLAMA_MODEL``, default ``slmjev-judge-p5``), after checking that it serves the very
+``SLMJEV_JUDGE_MODEL`` file the calibration was fitted on. ``--probe`` reports whether those
 files exist, without starting anything. Any failure exits 2 with ``{"error": ...}`` on stderr
 and nothing on stdout: a failed scan must never read as "no spans".
 
@@ -42,10 +45,11 @@ Other Python code (structured_deidentification's ``run_engine.py``) calls :func:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
-from collections.abc import Collection, Iterable, Sequence
+from collections.abc import Callable, Collection, Iterable, Sequence
 from pathlib import Path
 
 from slmjev import column as col
@@ -59,7 +63,11 @@ ENV_URL = "SLMJEV_LLM_URL"
 ENV_KEY = "SLMJEV_LLM_KEY"
 ENV_THREADS = "SLMJEV_THREADS"
 ENV_TOKEN_SWEEP = "SLMJEV_TOKEN_SWEEP"
+ENV_BACKEND = "SLMJEV_BACKEND"
+ENV_OLLAMA_URL = "SLMJEV_OLLAMA_URL"
+ENV_OLLAMA_MODEL = "SLMJEV_OLLAMA_MODEL"
 DEFAULT_CALIBRATION = Path("models/calibration.json")
+BACKENDS = ("llama", "ollama")
 PROD = {"choice_rotations": 4, "ask_noul": False, "ask_score": False, "fast_path": True}
 
 _RANK = {"identifier": 2, "review": 1, "not_identifier": 0}
@@ -196,7 +204,11 @@ def settings(request: dict | None = None) -> dict:
                                or DEFAULT_CALIBRATION),
             "threads": int(threads) if threads else None,
             "token_sweep": _flag(request.get("token_sweep", os.environ.get(ENV_TOKEN_SWEEP))),
-            "url": os.environ.get(ENV_URL)}
+            "url": os.environ.get(ENV_URL),
+            "backend": (request.get("backend") or os.environ.get(ENV_BACKEND) or "llama").lower(),
+            "ollama_url": os.environ.get(ENV_OLLAMA_URL) or "http://127.0.0.1:11434",
+            "ollama_model": (request.get("ollama_model") or os.environ.get(ENV_OLLAMA_MODEL)
+                             or "slmjev-judge-p5")}
 
 
 def probe(request: dict | None = None) -> dict:
@@ -206,8 +218,44 @@ def probe(request: dict | None = None) -> dict:
     have = {k: bool(v) and Path(v).is_file() for k, v in files.items()}
     if cfg["url"]:
         have["llama_server"] = have["model"] = True  # a running server is used instead
-    return {"ok": all(have.values()), "detector": J.DETECTOR, "prompt": J.PROMPT_VERSION,
-            "files": files, "found": have}
+    if cfg["backend"] == "ollama":
+        have["llama_server"] = True  # Ollama runs the model; the GGUF is still needed to check it
+    return {"ok": all(have.values()) and cfg["backend"] in BACKENDS, "detector": J.DETECTOR,
+            "prompt": J.PROMPT_VERSION, "backend": cfg["backend"], "files": files, "found": have}
+
+
+def _sha256(path: str | os.PathLike) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def open_backend(cfg: dict) -> tuple[J.Backend, str | None, Callable[[], None]]:
+    """The judge backend that ``cfg`` names, the model file its calibration must match, and a
+    function that stops whatever was started.
+
+    ``llama`` starts a loopback llama-server, or uses the running one at ``SLMJEV_LLM_URL``.
+    ``ollama`` uses a running Ollama, and first checks that the model it serves is
+    ``cfg["model"]`` byte for byte: Ollama names models freely, and a calibration only holds for
+    the file it was fitted on."""
+    if cfg["backend"] == "ollama":
+        if not cfg["model"]:
+            raise ValueError("the ollama backend needs the judge GGUF (SLMJEV_JUDGE_MODEL) to "
+                             "check that Ollama serves the same file")
+        backend = J.Ollama(cfg["ollama_url"], cfg["ollama_model"])
+        want, got = _sha256(cfg["model"]), backend.model_digest()
+        if got != want:
+            raise ValueError(f"Ollama model {cfg['ollama_model']!r} is not "
+                             f"{Path(cfg['model']).name} (sha256 {got[:12]}, not {want[:12]})")
+        return backend, cfg["model"], lambda: None
+    if cfg["backend"] != "llama":
+        raise ValueError(f"unknown backend {cfg['backend']!r}; use one of {BACKENDS}")
+    if cfg["url"]:
+        return J.LlamaServer(cfg["url"], os.environ.get(ENV_KEY)), None, lambda: None
+    srv = server.start(cfg["llama_server"], cfg["model"], threads=cfg["threads"])
+    return J.LlamaServer(srv.url, srv.key), cfg["model"], srv.stop
 
 
 def scan(request: dict) -> list[dict]:
@@ -216,19 +264,12 @@ def scan(request: dict) -> list[dict]:
     netguard.forbid_network()
     check(request)
     cfg = settings(request)
-    srv = None
+    backend, model, stop = open_backend(cfg)
     try:
-        if cfg["url"]:
-            url, key, model = cfg["url"], os.environ.get(ENV_KEY), None
-        else:
-            srv = server.start(cfg["llama_server"], cfg["model"], threads=cfg["threads"])
-            url, key, model = srv.url, srv.key, cfg["model"]
-        judge = J.Judge.calibrated(J.LlamaServer(url, key), cfg["calibration"], model=model,
-                                   **PROD)
+        judge = J.Judge.calibrated(backend, cfg["calibration"], model=model, **PROD)
         return run(request, judge, sweep_vocab(cfg))
     finally:
-        if srv:
-            srv.stop()
+        stop()
 
 
 def main(argv: list[str] | None = None) -> int:

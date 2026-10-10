@@ -884,3 +884,62 @@ def test_an_shi_category_on_a_name_shape_is_read_as_a_name():
     r = J.Judge(fake, fast_path=False).judge(
         t, J.Candidate(i + 1, i + 3, type="name", detector="shape:name_column"))
     assert r["category"] == "other_sensitive"
+
+
+_OLLAMA_OK = json.dumps({"response": "A", "prompt_eval_count": 40, "prompt_eval_cached_count": 30,
+                         "logprobs": [{"token": "A", "logprob": -0.1, "top_logprobs": [
+                             {"token": "A", "logprob": -0.1}, {"token": " B", "logprob": -2.5}]}]}
+                        ).encode("utf-8")
+
+
+def test_ollama_sends_the_rendered_prompt_raw_on_cpu_and_reads_first_token_logprobs(monkeypatch):
+    seen = []
+
+    def fake(url, method="GET", body=None, headers=None, timeout=None):
+        seen.append((url, json.loads(body)))
+        return 200, _OLLAMA_OK
+    monkeypatch.setattr(J, "loopback_request", fake)
+    b = J.Ollama("http://127.0.0.1:11434/", "slmjev-judge-p5")
+    dist = b.first_token("Text: {x}\n", "Q?")
+    url, body = seen[0]
+    assert url == "http://127.0.0.1:11434/api/generate"
+    assert body["raw"] is True and body["logprobs"] is True and body["model"] == "slmjev-judge-p5"
+    assert body["options"]["num_gpu"] == 0 and body["options"]["num_predict"] == 1
+    assert body["prompt"] == J.QWEN3_PROMPT.format(system=J.SYSTEM, user="Text: {x}\nQ?")
+    assert body["prompt"].endswith("<|im_start|>assistant\n<think>\n\n</think>\n\n")
+    assert dist == {"A": pytest.approx(0.9048, abs=1e-3), " B": pytest.approx(0.0821, abs=1e-3)}
+    assert b.calls[0]["prompt_n"] == 40 and b.calls[0]["cache_n"] == 30
+
+
+def test_ollama_stops_the_scan_when_it_is_down(monkeypatch):
+    _replies(monkeypatch, OSError("refused"), (500, b""), OSError("refused"))
+    b = J.Ollama("http://127.0.0.1:11434", "m", max_failures=3)
+    for _ in range(2):
+        with pytest.raises(J.JudgeError):
+            b.first_token("", "Q")
+    with pytest.raises(J.BackendDown, match="Is Ollama running"):
+        b.first_token("", "Q")
+
+
+def test_ollama_without_logprobs_is_a_failed_judgment_not_a_guess(monkeypatch):
+    _replies(monkeypatch, (200, json.dumps({"response": "A"}).encode("utf-8")))
+    with pytest.raises(J.JudgeError, match="no first-token logprobs"):
+        J.Ollama("http://127.0.0.1:11434", "m").first_token("", "Q")
+
+
+def test_ollama_must_be_on_loopback():
+    with pytest.raises(NetworkForbidden):
+        J.Ollama("http://10.0.0.5:11434", "m")
+
+
+def test_ollama_model_digest_is_the_blob_it_serves(monkeypatch):
+    d = "ab" * 32
+    show = {"modelfile": f"# Modelfile\nFROM C:/Users/x/.ollama/models/blobs/sha256-{d}\n"
+                         "TEMPLATE {{ .Prompt }}\n"}
+    _replies(monkeypatch, (200, json.dumps(show).encode("utf-8")),
+             (200, json.dumps({"modelfile": "FROM qwen3:1.7b\n"}).encode("utf-8")))
+    b = J.Ollama("http://127.0.0.1:11434", "m")
+    assert b.model_digest() == d
+    with pytest.raises(J.JudgeError, match="which file"):
+        b.model_digest()
+

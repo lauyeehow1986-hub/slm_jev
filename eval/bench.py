@@ -53,7 +53,7 @@ import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from slmjev import calibrate, engine, netguard, rules, server
+from slmjev import calibrate, engine, netguard, rules
 from slmjev import judge as J
 from slmjev.labels import load_labels
 
@@ -171,10 +171,9 @@ def run_jev(docs: list[dict], args, extra: list[list[dict]] | None = None
     candidate, dropped ones included, for the calibration check."""
     cfg = engine.settings({"calibration": args.calibration,
                            "token_sweep": getattr(args, "token_sweep", False)})
-    srv = server.start(cfg["llama_server"], cfg["model"], threads=cfg["threads"])
+    backend, model, stop = engine.open_backend(cfg)
     try:
-        judge = J.Judge.calibrated(J.LlamaServer(srv.url, srv.key), cfg["calibration"],
-                                   model=cfg["model"], **engine.PROD)
+        judge = J.Judge.calibrated(backend, cfg["calibration"], model=model, **engine.PROD)
         preds, secs, judged = [], [], []
         words = engine.sweep_vocab(cfg)
         for i, d in enumerate(docs, 1):
@@ -189,7 +188,7 @@ def run_jev(docs: list[dict], args, extra: list[list[dict]] | None = None
             print(f"  jev {i}/{len(docs)} {secs[-1]:.0f}s", file=sys.stderr, flush=True)
         return preds, sum(secs), secs, judged
     finally:
-        srv.stop()
+        stop()
 
 
 # --- scoring ---------------------------------------------------------------------------------

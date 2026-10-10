@@ -496,9 +496,45 @@ class Backend(Protocol):
         ...
 
 
+class _Transport:
+    """JSON over loopback HTTP, shared by the backends. Transport failures count toward
+    ``max_failures`` in a row (then :class:`BackendDown`); a good reply resets the count."""
+
+    NAME = "the backend"
+    timeout: float
+    max_failures: int
+    failures: int
+
+    def _post(self, url: str, body: dict, headers: Mapping[str, str] | None = None) -> dict:
+        try:
+            status, data = loopback_request(
+                url, method="POST", body=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json", **(headers or {})},
+                timeout=self.timeout)
+        except (http.client.HTTPException, OSError) as e:  # TimeoutError is an OSError
+            self._failed(f"{type(e).__name__}: {e}", e)
+        if status != 200:
+            self._failed(f"HTTP {status}")
+        self.failures = 0
+        try:
+            return json.loads(data.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            raise JudgeError(f"backend call failed: {type(e).__name__}: {e}") from e
+
+    def _failed(self, why: str, cause: BaseException | None = None) -> NoReturn:
+        self.failures += 1
+        if self.failures >= self.max_failures:
+            raise BackendDown(f"judge backend down: {self.failures} calls in a row failed "
+                              f"(last: {why}). Is {self.NAME} running, or is antivirus "
+                              "suspending it?") from cause
+        raise JudgeError(f"backend call failed: {why}") from cause
+
+
 @dataclass
-class LlamaServer:
+class LlamaServer(_Transport):
     """A llama-server on loopback, via its OpenAI-compatible chat endpoint (stdlib only)."""
+
+    NAME = "llama-server"
 
     url: str
     key: str | None = None
@@ -524,23 +560,9 @@ class LlamaServer:
                 "chat_template_kwargs": {"enable_thinking": False}}
         if self.model:
             body["model"] = self.model
-        headers = {"Content-Type": "application/json"}
-        if self.key:
-            headers["Authorization"] = f"Bearer {self.key}"
+        headers = {"Authorization": f"Bearer {self.key}"} if self.key else {}
         t0 = time.perf_counter()
-        try:
-            status, data = loopback_request(self.url + "/v1/chat/completions", method="POST",
-                                            body=json.dumps(body).encode("utf-8"),
-                                            headers=headers, timeout=self.timeout)
-        except (http.client.HTTPException, OSError) as e:  # TimeoutError is an OSError
-            self._failed(f"{type(e).__name__}: {e}", e)
-        if status != 200:
-            self._failed(f"HTTP {status}")
-        self.failures = 0
-        try:
-            resp = json.loads(data.decode("utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            raise JudgeError(f"backend call failed: {type(e).__name__}: {e}") from e
+        resp = self._post(self.url + "/v1/chat/completions", body, headers)
         secs = time.perf_counter() - t0
         t = resp.get("timings") or {}
         self.calls.append({"secs": secs, "prompt_n": t.get("prompt_n"),
@@ -551,13 +573,64 @@ class LlamaServer:
             raise JudgeError("backend returned no first-token logprobs") from e
         return {t["token"]: math.exp(t["logprob"]) for t in top}
 
-    def _failed(self, why: str, cause: BaseException | None = None) -> NoReturn:
-        self.failures += 1
-        if self.failures >= self.max_failures:
-            raise BackendDown(f"judge backend down: {self.failures} calls in a row failed "
-                              f"(last: {why}). Is llama-server running, or is antivirus "
-                              "suspending it?") from cause
-        raise JudgeError(f"backend call failed: {why}") from cause
+
+# Qwen3's chat template with thinking off: what llama-server renders for LlamaServer's request
+# (``--reasoning off``). Ollama's raw mode takes this finished prompt, so both backends feed
+# the model the same tokens.
+QWEN3_PROMPT = ("<|im_start|>system\n{system}<|im_end|>\n<|im_start|>user\n{user}<|im_end|>\n"
+                "<|im_start|>assistant\n<think>\n\n</think>\n\n")
+
+
+@dataclass
+class Ollama(_Transport):
+    """An Ollama server on loopback, via its native ``/api/generate`` in raw mode, so Ollama
+    applies no template of its own. Its OpenAI-compatible endpoint drops logprobs (stdlib
+    only). Ollama runs the same GGUF on its own bundled llama.cpp."""
+
+    NAME = "Ollama"
+
+    url: str
+    model: str
+    timeout: float = 120
+    top_logprobs: int = 20
+    ctx: int = 4096  # as server.command, so a note's context fits the same way
+    # CPU only, as server.command (``-ngl 0``) and the target machine; Ollama would otherwise
+    # offload to any GPU it finds, and GPU kernels round differently from the CPU ones
+    gpu_layers: int = 0
+    keep_alive: str = "30m"
+    max_failures: int = 3
+    calls: list[dict] = field(default_factory=list)
+    failures: int = field(default=0, repr=False)
+
+    def __post_init__(self) -> None:
+        check_loopback_url(self.url)
+        self.url = self.url.rstrip("/")
+
+    def first_token(self, prefix: str, question: str) -> dict[str, float]:
+        body = {"model": self.model, "raw": True, "stream": False,
+                "prompt": QWEN3_PROMPT.format(system=SYSTEM, user=prefix + question),
+                "logprobs": True, "top_logprobs": self.top_logprobs,
+                "keep_alive": self.keep_alive,
+                "options": {"num_predict": 1, "temperature": 0, "num_ctx": self.ctx,
+                            "num_gpu": self.gpu_layers}}
+        t0 = time.perf_counter()
+        resp = self._post(self.url + "/api/generate", body)
+        secs = time.perf_counter() - t0
+        n, cached = resp.get("prompt_eval_count"), resp.get("prompt_eval_cached_count")
+        self.calls.append({"secs": secs, "prompt_n": n, "cache_n": cached})
+        try:
+            top = resp["logprobs"][0]["top_logprobs"]
+        except (KeyError, IndexError, TypeError) as e:
+            raise JudgeError("backend returned no first-token logprobs") from e
+        return {t["token"]: math.exp(t["logprob"]) for t in top}
+
+    def model_digest(self) -> str:
+        """The SHA-256 of the GGUF that Ollama serves as ``model`` (its blob name)."""
+        show = self._post(self.url + "/api/show", {"model": self.model})
+        m = re.search(r"(?m)^FROM .*sha256[-:]([0-9a-f]{64})\s*$", show.get("modelfile") or "")
+        if not m:
+            raise JudgeError(f"Ollama does not say which file {self.model!r} is")
+        return m.group(1)
 
 
 # --- probability readout -------------------------------------------------------------------

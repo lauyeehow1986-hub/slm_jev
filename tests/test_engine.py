@@ -239,3 +239,43 @@ def test_scan_checks_the_request_before_starting_anything(monkeypatch):
             engine.scan({"texts": "not a list"})
     finally:
         netguard.allow_network()
+
+
+def _gguf(tmp_path):
+    f = tmp_path / "judge.gguf"
+    f.write_bytes(b"GGUF synthetic test bytes")
+    return f
+
+
+def test_the_ollama_backend_is_chosen_by_setting(monkeypatch, tmp_path):
+    f = _gguf(tmp_path)
+    monkeypatch.setenv(engine.ENV_BACKEND, "Ollama")
+    monkeypatch.setenv(engine.ENV_OLLAMA_MODEL, "judge-x")
+    cfg = engine.settings({"model": str(f)})
+    assert (cfg["backend"], cfg["ollama_model"]) == ("ollama", "judge-x")
+    assert cfg["ollama_url"] == "http://127.0.0.1:11434"
+    monkeypatch.setattr(J.Ollama, "model_digest", lambda self: engine._sha256(f))
+    backend, model, stop = engine.open_backend(cfg)
+    assert isinstance(backend, J.Ollama) and backend.model == "judge-x" and model == str(f)
+    stop()
+
+
+def test_ollama_serving_another_file_is_refused(monkeypatch, tmp_path):
+    f = _gguf(tmp_path)
+    monkeypatch.setattr(J.Ollama, "model_digest", lambda self: "0" * 64)
+    cfg = engine.settings({"model": str(f), "backend": "ollama"})
+    with pytest.raises(ValueError, match="is not judge.gguf"):
+        engine.open_backend(cfg)
+
+
+def test_ollama_needs_the_gguf_to_check_against(monkeypatch):
+    monkeypatch.delenv("SLMJEV_JUDGE_MODEL", raising=False)
+    with pytest.raises(ValueError, match="SLMJEV_JUDGE_MODEL"):
+        engine.open_backend(engine.settings({"backend": "ollama"}))
+
+
+def test_an_unknown_backend_is_refused():
+    with pytest.raises(ValueError, match="unknown backend"):
+        engine.open_backend(engine.settings({"backend": "vllm"}))
+    assert engine.probe({"backend": "vllm"})["ok"] is False
+
