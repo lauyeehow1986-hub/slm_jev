@@ -259,7 +259,7 @@ def launchers(judge: str, ollama: bool = True, llama: bool = False) -> dict[str,
             ""]),
         "1_verify_kit.bat": _bat([r'call "%~dp0env.bat"',
                                   rf'{rv} verify "%KIT%{MANIFEST}" || exit /b 1',
-                                  r'"%PY%" -m slmjev.engine --probe']),
+                                  r'"%PY%" -P -m slmjev.engine --probe']),
         "2_smoke.bat": _bat([
             r'call "%~dp0env.bat"',
             r'if "%~1"=="" (echo usage: 2_smoke.bat OUTPUT_FOLDER & exit /b 2)',
