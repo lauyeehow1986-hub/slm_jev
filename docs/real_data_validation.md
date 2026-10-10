@@ -95,9 +95,12 @@ under it.
   ```
   5_run_set.bat <kit>\slm_jev\eval\bench\notes_v27.txt D:\realval\smoke\notes_v27.json
   ```
-  It takes about 30 minutes. On the development laptop the configuration scored direct recall
-  0.996, precision 0.941, ECE 0.032 and F1 0.965 on that set; this was a replay, so expect
-  small differences.
+  It takes about 25 minutes. On the development laptop the kit's own Ollama scored direct recall
+  0.996, precision 0.932, ECE 0.034 and F1 0.960 on that set, identical to an installed Ollama.
+  - llama-server scored slightly differently (precision 0.941, ECE 0.032), because it runs another
+    build of llama.cpp.
+  - Another CPU may differ slightly too. Small differences are expected; large ones are worth
+    checking before step 3.
 
 ### 3. Draw the sample
 - **Stratify** by note type (discharge, referral, ED, letters, forms, messages), department and
