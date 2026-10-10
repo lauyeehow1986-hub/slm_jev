@@ -350,7 +350,8 @@ def import_ollama_model(exe: Path, models: Path, gguf: Path, name: str) -> None:
                           encoding="utf-8")
             env = os.environ | {"OLLAMA_HOST": srv.url.removeprefix("http://")}
             p = subprocess.run([str(exe), "create", name, "-f", str(mf)], env=env,
-                               capture_output=True, text=True, timeout=1800)
+                               capture_output=True, text=True, encoding="utf-8",
+                               errors="replace", timeout=1800)
             if p.returncode:
                 raise SystemExit(f"ollama create failed: {(p.stderr or p.stdout)[-500:]}")
         if J.Ollama(srv.url, name).model_digest() != sha256(gguf):
@@ -362,6 +363,7 @@ def import_ollama_model(exe: Path, models: Path, gguf: Path, name: str) -> None:
 def _ollama_version(exe: Path) -> str:
     try:
         out = subprocess.run([str(exe), "--version"], capture_output=True, text=True,
+                             encoding="utf-8", errors="replace",
                              timeout=60).stdout
     except (OSError, subprocess.SubprocessError):
         return ""
